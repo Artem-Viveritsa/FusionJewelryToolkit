@@ -1,0 +1,13 @@
+{
+	"autodeskProduct":	"Fusion360",
+	"type":	"addin",
+	"id":	"5e0d212a-608c-4329-bc29-1f33753b5450",
+	"author":	"Artem Viveritsa",
+	"description":	{
+		"": ""
+	},
+	"version":	"0.2.0",
+	"runOnStartup":	true,
+	"supportedOS":	"windows|mac",
+	"editEnabled":	true
+}
