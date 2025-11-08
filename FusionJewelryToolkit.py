@@ -1,11 +1,15 @@
 from .commands.GemstonesOnFaceAtPoints import GemstonesOnFaceAtPoints
 from .commands.ProngsOnFaceAtPoints import ProngsOnFaceAtPoints
-from .commands.Cutters import Cutters
+from .commands.ProngsBetweenGemstones import ProngsBetweenGemstones
+from .commands.ChannelsBetweenGemstones import ChannelsBetweenGemstones
+from .commands.CuttersForGemstones import CuttersForGemstones
 
 commands = [
     GemstonesOnFaceAtPoints,
     ProngsOnFaceAtPoints,
-    Cutters
+    ProngsBetweenGemstones,
+    ChannelsBetweenGemstones,
+    CuttersForGemstones,
     ]
 
 def run(context):

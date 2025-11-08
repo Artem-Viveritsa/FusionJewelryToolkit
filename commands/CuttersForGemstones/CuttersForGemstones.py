@@ -4,6 +4,7 @@ import adsk.core, adsk.fusion, traceback
 from ... import strings
 from ... import constants
 from ...helpers.showMessage import showMessage
+from ...helpers.Bodies import placeBody
 import math
 
 
@@ -26,42 +27,74 @@ _sizeRatioValueInput: adsk.core.ValueCommandInput = None
 _holeRatioValueInput: adsk.core.ValueCommandInput = None
 _coneAngleValueInput: adsk.core.ValueCommandInput = None
 
+_panel: adsk.core.ToolbarPanel = None
 
 RESOURCES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', '')
 
-COMMAND_ID = strings.PREFIX + strings.CUTTERS_COMMAND_NAME
+COMMAND_ID = strings.PREFIX + strings.CUTTERS_FOR_GEMSTONES
 CREATE_COMMAND_ID = COMMAND_ID + 'Create'
 EDIT_COMMAND_ID = COMMAND_ID + 'Edit'
 
-CREATE_COMMAND_NAME = 'Create Cutters at Gemstones'
-CREATE_COMMAND_DESCRIPTION = 'Creates cutters at selected gemstones.'
+createCommandInputDef = strings.InputDef(CREATE_COMMAND_ID, 'Create Cutters for Gemstones', 'Creates cutters for selected gemstones.')
+editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Cutters', 'Edits the parameters of existing cutters.')
 
-EDIT_COMMAND_NAME = 'Edit Cutters'
-EDIT_COMMAND_DESCRIPTION = 'Edits the parameters of existing cutters.'
+selectGemstonesInputDef = strings.InputDef(
+    'selectGemstones',
+    'Select Gemstones',
+    'Select the gemstones to make cutters.'
+    )
 
-SELECT_GEMSTONE_NAME = 'Select Gemstones'
-SELECT_GEMSTONE_PROMPT = 'Select the gemstones to make cutters.'
+heightInputDef = strings.InputDef(
+    'height', 
+    'Height', 
+    "Cutter height above girdle.\nHow far the cutter protrudes upward from the gemstone girdle."
+    )
+
+depthInputDef = strings.InputDef(
+    'depth', 
+    'Depth', 
+    "Cutter hole depth below girdle.\nHow deep the cutter cuts into the material beneath the girdle."
+    )
+
+sizeRatioInputDef = strings.InputDef(
+    'sizeRatio', 
+    'Size Ratio', 
+    "Cutter size relative to gemstone.\nScale the cutter from 0.7 to 1.3 of gemstone diameter (1.0 = exact match)."
+    )
+
+holeRatioInputDef = strings.InputDef(
+    'holeRatio', 
+    'Hole Ratio', 
+    "Hole size within cutter.\nRatio of hole diameter to cutter diameter, from 0.2 to 0.8 (0.5 = half diameter)."
+    )
+
+coneAngleInputDef = strings.InputDef(
+    'coneAngle', 
+    'Cone Angle', 
+    "Cutter cone angle.\nSlope of the conical section, from 30° to 60° (41° default)."
+    )
 
 
 def run(context):
+    """Initialize the cutters command by setting up command definitions and UI elements."""
     try:
-        global _app, _ui, _customFeatureDefinition
+        global _app, _ui, _panel, _customFeatureDefinition
         _app = adsk.core.Application.get()
         _ui  = _app.userInterface
 
-        createCommandDefinition = _ui.commandDefinitions.addButtonDefinition(CREATE_COMMAND_ID, 
-                                                                CREATE_COMMAND_NAME, 
-                                                                CREATE_COMMAND_DESCRIPTION, 
+        createCommandDefinition = _ui.commandDefinitions.addButtonDefinition(createCommandInputDef.id, 
+                                                                createCommandInputDef.name, 
+                                                                createCommandInputDef.tooltip, 
                                                                 RESOURCES_FOLDER)        
 
         solidWorkspace = _ui.workspaces.itemById('FusionSolidEnvironment')
-        panel = solidWorkspace.toolbarPanels.itemById('SolidCreatePanel')
-        control = panel.controls.addCommand(createCommandDefinition, '', False)     
+        _panel = solidWorkspace.toolbarPanels.itemById('SolidCreatePanel')
+        control = _panel.controls.addCommand(createCommandDefinition, '', False)     
         control.isPromoted = True
 
-        editCommandDefinition = _ui.commandDefinitions.addButtonDefinition(EDIT_COMMAND_ID, 
-                                                            EDIT_COMMAND_NAME, 
-                                                            EDIT_COMMAND_DESCRIPTION, 
+        editCommandDefinition = _ui.commandDefinitions.addButtonDefinition(editCommandInputDef.id, 
+                                                            editCommandInputDef.name, 
+                                                            editCommandInputDef.tooltip, 
                                                             RESOURCES_FOLDER)        
 
         createCommandCreated = CreateCommandCreatedHandler()
@@ -72,21 +105,22 @@ def run(context):
         editCommandDefinition.commandCreated.add(editCommandCreated)
         _handlers.append(editCommandCreated)
 
-        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(COMMAND_ID, strings.CUTTERS_COMMAND_NAME, RESOURCES_FOLDER)
+        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(COMMAND_ID, strings.CUTTERS_FOR_GEMSTONES, RESOURCES_FOLDER)
         _customFeatureDefinition.editCommandId = EDIT_COMMAND_ID
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
         _handlers.append(computeCustomFeature)
     except:
-        showMessage(f'Run Failed:\n{traceback.format_exc()}', True)
+        showMessage(f'Run failed:\n{traceback.format_exc()}', True)
 
 
 def stop(context):
+    """Clean up the cutters command by removing UI elements and handlers."""
     try:
-        solidWorkspace = _ui.workspaces.itemById('FusionSolidEnvironment')
-        panel = solidWorkspace.toolbarPanels.itemById('SolidCreatePanel')
-        control = panel.controls.itemById(CREATE_COMMAND_ID)
+        global _panel
+
+        control = _panel.controls.itemById(CREATE_COMMAND_ID)
         if control:
             control.deleteMe()
             
@@ -101,10 +135,13 @@ def stop(context):
         showMessage(f'Stop Failed:\n{traceback.format_exc()}', True)
 
 
-# This class handles the creation of the command dialog for creating new cutters at gemstones.
-# It sets up all necessary input controls, including selections for gemstones and value inputs for height and depth.
-# It also connects event handlers for validation, preview, and execution.
 class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
+    """Event handler for creating the command dialog for new cutters for gemstones.
+    
+    This handler sets up all necessary input controls including selections for gemstones 
+    and value inputs for height, depth, size ratio, hole ratio, and cone angle, and connects 
+    event handlers for validation, preview, and execution.
+    """
     def __init__(self):
         super().__init__()
     def notify(self, args):
@@ -116,32 +153,31 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             inputs = command.commandInputs
             defaultLengthUnits = _app.activeProduct.unitsManager.defaultLengthUnits
 
-            _gemstonesSelectionInput = inputs.addSelectionInput('selectGemstones', SELECT_GEMSTONE_NAME, SELECT_GEMSTONE_PROMPT)
+            _gemstonesSelectionInput = inputs.addSelectionInput(selectGemstonesInputDef.id, selectGemstonesInputDef.name, selectGemstonesInputDef.tooltip)
             _gemstonesSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Bodies)
-            _gemstonesSelectionInput.tooltip = SELECT_GEMSTONE_PROMPT
+            _gemstonesSelectionInput.tooltip = selectGemstonesInputDef.tooltip
             _gemstonesSelectionInput.setSelectionLimits(1)
 
             height = adsk.core.ValueInput.createByReal(0.04)
-            _heightValueInput = inputs.addValueInput('height', 'Height', defaultLengthUnits, height)
-            _heightValueInput.tooltip = "The height of the cutter body extending above the gemstone girdle.\nThis determines how far the cutter protrudes upwards from the girdle."
+            _heightValueInput = inputs.addValueInput(heightInputDef.id, heightInputDef.name, defaultLengthUnits, height)
+            _heightValueInput.tooltip = heightInputDef.tooltip
 
             depth = adsk.core.ValueInput.createByReal(0.15)
-            _depthValueInput = inputs.addValueInput('depth', 'Depth', defaultLengthUnits, depth)
-            _depthValueInput.tooltip = "The depth of the cutter hole below the gemstone girdle.\nThis controls how deep the cutter cuts into the material beneath the girdle."
+            _depthValueInput = inputs.addValueInput(depthInputDef.id, depthInputDef.name, defaultLengthUnits, depth)
+            _depthValueInput.tooltip = depthInputDef.tooltip
 
             sizeRatio = adsk.core.ValueInput.createByReal(1.0)
-            _sizeRatioValueInput = inputs.addValueInput('sizeRatio', 'Size Ratio', '', sizeRatio)
-            _sizeRatioValueInput.tooltip = "The ratio by which the cutter size is scaled relative to the gemstone diameter.\nValues from 0.7 to 1.3 allow shrinking or enlarging the cutter proportionally\n(1.0 = exact match to gemstone size)."
+            _sizeRatioValueInput = inputs.addValueInput(sizeRatioInputDef.id, sizeRatioInputDef.name, '', sizeRatio)
+            _sizeRatioValueInput.tooltip = sizeRatioInputDef.tooltip
 
             holeRatio = adsk.core.ValueInput.createByReal(0.5)
-            _holeRatioValueInput = inputs.addValueInput('holeRatio', 'Hole Ratio', '', holeRatio)
-            _holeRatioValueInput.tooltip = "The ratio of the hole diameter to the cutter diameter.\nValues from 0.2 to 0.8 control the size of the central hole relative to the outer cutter size\n(0.5 = half the diameter)."
+            _holeRatioValueInput = inputs.addValueInput(holeRatioInputDef.id, holeRatioInputDef.name, '', holeRatio)
+            _holeRatioValueInput.tooltip = holeRatioInputDef.tooltip
 
             coneAngle = adsk.core.ValueInput.createByReal(41.0)
-            _coneAngleValueInput = inputs.addValueInput('coneAngle', 'Cone Angle', '', coneAngle)
-            _coneAngleValueInput.tooltip = "The angle of the cutter cone in degrees.\nValues from 30 to 60 degrees control the slope of the conical section\n(41 = default angle)."
+            _coneAngleValueInput = inputs.addValueInput(coneAngleInputDef.id, coneAngleInputDef.name, '', coneAngle)
+            _coneAngleValueInput.tooltip = coneAngleInputDef.tooltip
 
-            # Connect to the needed command related events.
             onPreSelect = PreSelectHandler()
             command.preSelect.add(onPreSelect)
             _handlers.append(onPreSelect)
@@ -162,10 +198,13 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             showMessage(f'CreateCommandCreatedHandler: {traceback.format_exc()}\n', True)
 
 
-# This class handles the creation of the command dialog for editing existing cutter custom feature.
-# It retrieves the selected custom feature, populates inputs with existing parameter values and dependencies,
-# and connects event handlers for editing operations, including activation, validation, preview, and execution.
 class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
+    """Event handler for creating the command dialog for editing existing cutters.
+    
+    This handler retrieves the selected custom feature, populates inputs with existing parameter 
+    values and dependencies, and connects event handlers for editing operations including 
+    activation, validation, preview, and execution.
+    """
     def __init__(self):
         super().__init__()
     def notify(self, args):
@@ -177,41 +216,37 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             inputs = command.commandInputs
             defaultLengthUnits = _app.activeProduct.unitsManager.defaultLengthUnits
 
-            # Get the currently selected custom feature from the timeline.
             _editedCustomFeature = _ui.activeSelections.item(0).entity
             if _editedCustomFeature is None:
                 return
 
-            _gemstonesSelectionInput = inputs.addSelectionInput('selectGemstones', SELECT_GEMSTONE_NAME, SELECT_GEMSTONE_PROMPT)
+            _gemstonesSelectionInput = inputs.addSelectionInput(selectGemstonesInputDef.id, selectGemstonesInputDef.name, selectGemstonesInputDef.tooltip)
             _gemstonesSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Bodies)
-            _gemstonesSelectionInput.tooltip = SELECT_GEMSTONE_PROMPT
+            _gemstonesSelectionInput.tooltip = selectGemstonesInputDef.tooltip
             _gemstonesSelectionInput.setSelectionLimits(1)
 
-            # Get the collection of custom parameters for this custom feature.
             parameters = _editedCustomFeature.parameters
 
-            # Create value inputs using existing parameter expressions to preserve user-defined values and equations.
-            height = adsk.core.ValueInput.createByString(parameters.itemById('height').expression)
-            _heightValueInput = inputs.addValueInput('height', 'Height', defaultLengthUnits, height)
-            _heightValueInput.tooltip = "The height of the cutter body extending above the gemstone girdle.\nThis determines how far the cutter protrudes upwards from the girdle."
+            height = adsk.core.ValueInput.createByString(parameters.itemById(heightInputDef.id).expression)
+            _heightValueInput = inputs.addValueInput(heightInputDef.id, heightInputDef.name, defaultLengthUnits, height)
+            _heightValueInput.tooltip = heightInputDef.tooltip
 
-            depth = adsk.core.ValueInput.createByString(parameters.itemById('depth').expression)
-            _depthValueInput = inputs.addValueInput('depth', 'Depth', defaultLengthUnits, depth)
-            _depthValueInput.tooltip = "The depth of the cutter hole below the gemstone girdle.\nThis controls how deep the cutter cuts into the material beneath the girdle."
+            depth = adsk.core.ValueInput.createByString(parameters.itemById(depthInputDef.id).expression)
+            _depthValueInput = inputs.addValueInput(depthInputDef.id, depthInputDef.name, defaultLengthUnits, depth)
+            _depthValueInput.tooltip = depthInputDef.tooltip
 
-            sizeRatio = adsk.core.ValueInput.createByString(parameters.itemById('sizeRatio').expression)
-            _sizeRatioValueInput = inputs.addValueInput('sizeRatio', 'Size Ratio', '', sizeRatio)
-            _sizeRatioValueInput.tooltip = "The ratio by which the cutter size is scaled relative to the gemstone diameter.\nValues from 0.7 to 1.3 allow shrinking or enlarging the cutter proportionally\n(1.0 = exact match to gemstone size)."
+            sizeRatio = adsk.core.ValueInput.createByString(parameters.itemById(sizeRatioInputDef.id).expression)
+            _sizeRatioValueInput = inputs.addValueInput(sizeRatioInputDef.id, sizeRatioInputDef.name, '', sizeRatio)
+            _sizeRatioValueInput.tooltip = sizeRatioInputDef.tooltip
 
-            holeRatio = adsk.core.ValueInput.createByString(parameters.itemById('holeRatio').expression)
-            _holeRatioValueInput = inputs.addValueInput('holeRatio', 'Hole Ratio', '', holeRatio)
-            _holeRatioValueInput.tooltip = "The ratio of the hole diameter to the cutter diameter.\nValues from 0.2 to 0.8 control the size of the central hole relative to the outer cutter size\n(0.5 = half the diameter)."
+            holeRatio = adsk.core.ValueInput.createByString(parameters.itemById(holeRatioInputDef.id).expression)
+            _holeRatioValueInput = inputs.addValueInput(holeRatioInputDef.id, holeRatioInputDef.name, '', holeRatio)
+            _holeRatioValueInput.tooltip = holeRatioInputDef.tooltip
 
-            coneAngle = adsk.core.ValueInput.createByString(parameters.itemById('coneAngle').expression)
-            _coneAngleValueInput = inputs.addValueInput('coneAngle', 'Cone Angle', '', coneAngle)
-            _coneAngleValueInput.tooltip = "The angle of the cutter cone in degrees.\nValues from 30 to 60 degrees control the slope of the conical section\n(41 = default angle)."
+            coneAngle = adsk.core.ValueInput.createByString(parameters.itemById(coneAngleInputDef.id).expression)
+            _coneAngleValueInput = inputs.addValueInput(coneAngleInputDef.id, coneAngleInputDef.name, '', coneAngle)
+            _coneAngleValueInput.tooltip = coneAngleInputDef.tooltip
 
-            # Connect to the needed command related events.
             onPreSelect = PreSelectHandler()
             command.preSelect.add(onPreSelect)
             _handlers.append(onPreSelect)
@@ -240,12 +275,20 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             showMessage(f'EditCommandCreatedHandler: {traceback.format_exc()}\n', True)
 
 
-# Controls what the user can select when the command is running.
-# This checks to make sure the gemstones are valid bodies and not external references.
 class PreSelectHandler(adsk.core.SelectionEventHandler):
+    """Event handler for controlling user selection during command execution.
+    
+    This handler checks to ensure the gemstones are valid bodies and not external references.
+    """
     def __init__(self):
+        """Initialize the PreSelectHandler."""
         super().__init__()
     def notify(self, args):
+        """Handle the selection event to validate user selections.
+
+        Args:
+            args: The selection event arguments.
+        """
         try:
             eventArgs = adsk.core.SelectionEventArgs.cast(args)
             entity = eventArgs.selection.entity
@@ -274,8 +317,8 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
             showMessage(f'PreSelectHandler: {traceback.format_exc()}\n', True)
 
 
-# Event handler for the validateInputs event.
 class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
+    """Event handler for the validateInputs event."""
     def __init__(self):
         super().__init__()
     def notify(self, args):
@@ -293,12 +336,12 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                     eventArgs.areInputsValid = False
                     return
 
-            # Verify the inputs have valid expressions.
+            
             if not all([_depthValueInput.isValidExpression, _heightValueInput.isValidExpression, _sizeRatioValueInput.isValidExpression, _holeRatioValueInput.isValidExpression, _coneAngleValueInput.isValidExpression]):
                 eventArgs.areInputsValid = False
                 return
 
-            # Enforce minimum size constraints to prevent degenerate geometry.
+            
             if _depthValueInput.value < 0:
                 eventArgs.areInputsValid = False
                 return
@@ -322,8 +365,9 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
         except:
             showMessage(f'ValidateInputsHandler: {traceback.format_exc()}\n', True)
 
-# Event handler for the executePreview event.
+
 class ExecutePreviewHandler(adsk.core.CommandEventHandler):
+    """Event handler for the executePreview event."""
     def __init__(self):
         super().__init__()
     def notify(self, args):
@@ -354,7 +398,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
 
             if not cutters: return
 
-            # Create a base feature to contain the cutter bodies, allowing them to be grouped and managed as a single unit.
+            
             component = gemstones[0].parentComponent
 
             baseFeature = component.features.baseFeatures.add()
@@ -367,8 +411,9 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
         except:
             showMessage(f'ExecutePreviewHandler: {traceback.format_exc()}\n', True)
 
-# Event handler for the execute event of the create command.
+
 class CreateExecuteHandler(adsk.core.CommandEventHandler):
+    """Event handler for the execute event of the create command."""
     def __init__(self):
         super().__init__()
     def notify(self, args):
@@ -381,7 +426,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
 
             flippedStates = getFlipStatesForGemstones(gemstones)
 
-            # Create a base feature and add the cutter bodies.
+            
             component = gemstones[0].parentComponent
             baseFeature = component.features.baseFeatures.add()
             baseFeature.startEdit()
@@ -399,31 +444,31 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             
             customFeatureInput = component.features.customFeatures.createInput(_customFeatureDefinition)
 
-            # Add all dependencies first using the first face to establish the feature's geometric relationships.
+            
             for i in range(len(gemstones)):
                 gemstone = gemstones[i]
-                # Use the first face as dependency to support different gemstone cuts
+                
                 if gemstone.faces.count == 0:
                     eventArgs.executeFailed = True
                     return
                 firstGemstoneFace = gemstone.faces[0]
                 customFeatureInput.addDependency(f'firstGemstoneFace{i}', firstGemstoneFace)
 
-            # Add all parameters with their expressions to support user-defined equations and parametric updates.
+            
             height = adsk.core.ValueInput.createByString(_heightValueInput.expression)             
-            customFeatureInput.addCustomParameter('height', 'Height', height, defaultLengthUnits, True) 
+            customFeatureInput.addCustomParameter(heightInputDef.id, heightInputDef.name, height, defaultLengthUnits, True) 
             
             depth = adsk.core.ValueInput.createByString(_depthValueInput.expression)
-            customFeatureInput.addCustomParameter('depth', 'Depth', depth, defaultLengthUnits, True)
+            customFeatureInput.addCustomParameter(depthInputDef.id, depthInputDef.name, depth, defaultLengthUnits, True)
             
             sizeRatio = adsk.core.ValueInput.createByString(_sizeRatioValueInput.expression)
-            customFeatureInput.addCustomParameter('sizeRatio', 'Size Ratio', sizeRatio, '', True)
+            customFeatureInput.addCustomParameter(sizeRatioInputDef.id, sizeRatioInputDef.name, sizeRatio, '', True)
 
             holeRatio = adsk.core.ValueInput.createByString(_holeRatioValueInput.expression)
-            customFeatureInput.addCustomParameter('holeRatio', 'Hole Ratio', holeRatio, '', True)
+            customFeatureInput.addCustomParameter(holeRatioInputDef.id, holeRatioInputDef.name, holeRatio, '', True)
 
             coneAngle = adsk.core.ValueInput.createByString(_coneAngleValueInput.expression)
-            customFeatureInput.addCustomParameter('coneAngle', 'Cone Angle', coneAngle, '', True)
+            customFeatureInput.addCustomParameter(coneAngleInputDef.id, coneAngleInputDef.name, coneAngle, '', True)
 
             customFeatureInput.setStartAndEndFeatures(baseFeature, baseFeature)
             component.features.customFeatures.add(customFeatureInput)
@@ -433,10 +478,12 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             showMessage(f'CreateExecuteHandler: {traceback.format_exc()}\n', True)
 
 
-# This class handles the activation of the edit command for a custom cutter feature.
-# It rolls back the timeline to the state before the feature, sets up transaction markers to preserve changes,
-# and pre-selects the original gemstone dependencies for editing.
 class EditActivateHandler(adsk.core.CommandEventHandler):
+    """Event handler for the activation of the edit command for a custom cutter feature.
+    
+    This handler rolls back the timeline to the state before the feature, sets up transaction markers 
+    to preserve changes, and pre-selects the original gemstone dependencies for editing.
+    """
     def __init__(self):
         super().__init__()
     def notify(self, args):
@@ -447,20 +494,20 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
 
             if _isRolledForEdit: return
             
-            # Save the current timeline position to restore it after editing, ensuring the model state is preserved.
+            
             design: adsk.fusion.Design = _app.activeProduct
             timeline = design.timeline
             markerPosition = timeline.markerPosition
             _restoreTimelineObject = timeline.item(markerPosition - 1)
 
-            # Roll the timeline to just before the custom feature being edited to access the original geometry dependencies.
+            
             _editedCustomFeature.timelineObject.rollTo(True)
             _isRolledForEdit = True
 
             command = eventArgs.command
             command.beginStep()
 
-            # Iterate through all first face dependencies and add their bodies to the selection input for editing.
+            
             i = 0
             while True:
                 try:
@@ -479,11 +526,17 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
 
 
 class EditDestroyHandler(adsk.core.CommandEventHandler):
+    """Event handler for the destroy event of the edit command."""
     def __init__(self):
+        """Initialize the EditDestroyHandler."""
         super().__init__()
     def notify(self, args):
+        """Handle the destroy event of the edit command.
+
+        Args:
+            args: The command event arguments.
+        """
         try:
-            global _editedCustomFeature, _isRolledForEdit
             eventArgs = adsk.core.CommandEventArgs.cast(args)
             if eventArgs.terminationReason != adsk.core.CommandTerminationReason.CompletedTerminationReason:
                 rollBack()
@@ -491,8 +544,8 @@ class EditDestroyHandler(adsk.core.CommandEventHandler):
             showMessage(f'EditDeactivateHandler: {traceback.format_exc()}\n', True)
 
 
-# Event handler for the execute event of the edit command.
 class EditExecuteHandler(adsk.core.CommandEventHandler):
+    """Event handler for the execute event of the edit command."""
     def __init__(self):
         super().__init__()
     def notify(self, args):
@@ -502,32 +555,32 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             
             eventArgs = adsk.core.CommandEventArgs.cast(args)    
 
-            # Cache gemstone entities
+            
             gemstoneCount = _gemstonesSelectionInput.selectionCount
             gemstoneEntities = []
             for i in range(gemstoneCount):
                 gemstoneEntities.append(_gemstonesSelectionInput.selection(i).entity)
 
-            # Clear and rebuild dependencies to handle cases where the user selects different geometry during edit.
+            
             _editedCustomFeature.dependencies.deleteAll()
 
             for i in range(gemstoneCount):
                 gemstone = gemstoneEntities[i]
-                # Use the first face as dependency to support different gemstone cuts
+                
                 if gemstone.faces.count == 0:
                     eventArgs.executeFailed = True
                     return
                 firstGemstoneFace = gemstone.faces[0]
                 _editedCustomFeature.dependencies.add(f'firstGemstoneFace{i}', firstGemstoneFace)
 
-            # Update the parameters.
+            
             _editedCustomFeature.parameters.itemById('height').expression = _heightValueInput.expression
             _editedCustomFeature.parameters.itemById('depth').expression = _depthValueInput.expression
             _editedCustomFeature.parameters.itemById('sizeRatio').expression = _sizeRatioValueInput.expression
             _editedCustomFeature.parameters.itemById('holeRatio').expression = _holeRatioValueInput.expression
             _editedCustomFeature.parameters.itemById('coneAngle').expression = _coneAngleValueInput.expression
 
-            # Update the feature to recompute geometry and handle changes in gemstone count or parameter values.
+            
             updateFeature(_editedCustomFeature)
 
         except:
@@ -536,10 +589,12 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
         finally: rollBack()
 
 
-# This class handles the recomputation of the custom feature when dependencies or parameters change.
-# It updates the cutter bodies within the base feature to reflect new values or geometry,
-# ensuring the custom feature remains parametric and up-to-date.
 class ComputeCustomFeature(adsk.fusion.CustomFeatureEventHandler):
+    """Event handler for the recomputation of the custom feature.
+    
+    This handler updates the cutter bodies within the base feature to reflect new values or geometry,
+    ensuring the custom feature remains parametric and up-to-date.
+    """
     def __init__(self):
         super().__init__()
     def notify(self, args):
@@ -552,15 +607,21 @@ class ComputeCustomFeature(adsk.fusion.CustomFeatureEventHandler):
             showMessage(f'ComputeCustomFeature: {traceback.format_exc()}\n', True)
 
 
-# Helper function to read flip state from gemstone's CustomFeature
 def getFlipStatesForGemstones(gemstones: list[adsk.fusion.BRepBody]) -> list[bool]:
+    """Get the flip states for a list of gemstone bodies.
+
+    Args:
+        gemstones: List of gemstone bodies.
+
+    Returns:
+        List of boolean values indicating if each gemstone is flipped.
+    """
     flippedStates = []
-    component = gemstones[0].parentComponent
     for gemstone in gemstones:
         isFlipped = False
         try:
-            for feature in component.features.customFeatures:
-                if feature.name.startswith(strings.GEMSTONE_COMMAND_NAME):
+            for feature in gemstone.parentComponent.features.customFeatures:
+                if feature.name.startswith(strings.GEMSTONES_ON_FACE_AT_POINTS):
                     for subFeature in feature.features:
                         if subFeature.objectType == adsk.fusion.BaseFeature.classType():
                             baseFeature = adsk.fusion.BaseFeature.cast(subFeature)
@@ -576,8 +637,21 @@ def getFlipStatesForGemstones(gemstones: list[adsk.fusion.BRepBody]) -> list[boo
     return flippedStates
 
 
-# Utility function that creates the cutter body based on the gemstone body, height, and depth.
 def createBody(body: adsk.fusion.BRepBody, height: float, depth: float, sizeRatio: float = 1.0, holeRatio: float = 0.5, isFlipped: bool = False, coneAngle: float = 42.0) -> adsk.fusion.BRepBody | None:
+    """Create a cutter body based on a gemstone body.
+
+    Args:
+        body: The gemstone body to create a cutter for.
+        height: The height of the cutter above the gemstone.
+        depth: The depth of the cutter hole below the gemstone.
+        sizeRatio: The ratio of cutter size to gemstone size.
+        holeRatio: The ratio of hole diameter to cutter diameter.
+        isFlipped: Whether the gemstone is flipped.
+        coneAngle: The angle of the cutter cone.
+
+    Returns:
+        The created cutter body or None if creation failed.
+    """
     try:
         if body is None: return None
 
@@ -608,7 +682,7 @@ def createBody(body: adsk.fusion.BRepBody, height: float, depth: float, sizeRati
         girdleCentroid = cylindricalFace.centroid
 
 
-        # If gemstone is flipped, flip the cutter too so they point in opposite directions
+        
         if isFlipped:
             normal.scaleBy(-1)
 
@@ -617,21 +691,21 @@ def createBody(body: adsk.fusion.BRepBody, height: float, depth: float, sizeRati
 
         bodies = []
 
-        # Create the cutter cylinder
+        
         topPoint = adsk.core.Point3D.create(0, 0, height)
         bodies.append(temporaryBRep.createCylinderOrCone(constants.zeroPoint, radius, topPoint, radius))
 
-        # Create the cutter cone
+        
         theta = math.radians(coneAngle)
         h = radius * math.tan(theta)
         bottomPoint = adsk.core.Point3D.create(0, 0, -h)
         bodies.append(temporaryBRep.createCylinderOrCone(constants.zeroPoint, radius, bottomPoint, 0))
 
-        # Create the cutter bottom cylinder
+        
         bottomPoint = adsk.core.Point3D.create(0, 0, min(-radius, -depth))
         bodies.append(temporaryBRep.createCylinderOrCone(constants.zeroPoint, holeRadius, bottomPoint, holeRadius))
 
-        # Combine the bodies into a single cutter body.
+        
         cutter: adsk.fusion.BRepBody = None
         for body in bodies:
             if cutter is None:
@@ -653,9 +727,7 @@ def createBody(body: adsk.fusion.BRepBody, height: float, depth: float, sizeRati
         translate.scaleBy(girdleThickness / -2)
         girdleCentroid.translateBy(translate)
 
-        transformation.setToIdentity()
-        transformation.setWithCoordinateSystem(girdleCentroid, lengthDirection, widthDirection, normal)
-        temporaryBRep.transform(cutter, transformation)
+        placeBody(cutter, girdleCentroid, lengthDirection, widthDirection, normal)
 
         return cutter
     
@@ -664,10 +736,17 @@ def createBody(body: adsk.fusion.BRepBody, height: float, depth: float, sizeRati
         return None
     
 
-# Updates the bodies of an existing custom cutter feature.
 def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
+    """Update the bodies of an existing custom cutters feature.
+
+    Args:
+        customFeature: The custom feature to update.
+
+    Returns:
+        True if the update was successful, False otherwise.
+    """
     try:
-        # Locate the base feature that contains the cutter bodies within the custom feature's feature collection.
+        
         baseFeature: adsk.fusion.BaseFeature = None
 
         for feature in customFeature.features:
@@ -675,7 +754,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
                 baseFeature = feature
         if baseFeature is None: return False
 
-        # Collect all first face dependencies in order to regenerate cutters for each gemstone.
+        
         firstGemstoneFaces: list[adsk.fusion.BRepFace] = []
         i = 0
         while True:
@@ -687,7 +766,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
             i += 1
         if len(firstGemstoneFaces) == 0: return False
 
-        # Get gemstones from first faces
+        
         gemstones: list[adsk.fusion.BRepBody] = [face.body for face in firstGemstoneFaces]
 
         height = customFeature.parameters.itemById('height').value
@@ -701,7 +780,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
 
         baseFeature.startEdit()
         
-        # Update existing bodies or add new ones to handle parameter changes and gemstone count modifications.
+        
         for i in range(len(gemstones)):
             gemstone = gemstones[i]
             isFlipped = flippedStates[i]
@@ -719,7 +798,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
                 newBody = component.bRepBodies.add(cutter, baseFeature)
                 handleNewBody(newBody)
 
-        # Remove extra bodies if the gemstone count has decreased during editing.
+        
         while baseFeature.bodies.count > len(gemstones):
             baseFeature.bodies.item(baseFeature.bodies.count - 1).deleteMe()
 
@@ -732,18 +811,31 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         return False
     
 
-def handleNewBody(body: adsk.fusion.BRepBody) -> bool:
-    try:
-        body.name = strings.CUTTER
-        body.attributes.add(strings.PREFIX, strings.ENTITY, strings.CUTTER)
-        return True
-    except:
-        showMessage(f'handleNewBody: {traceback.format_exc()}\n', True)
-        return False
+def handleNewBody(body: adsk.fusion.BRepBody):
+    """Handle the creation of a new cutter body by setting its name and attributes.
+
+    Args:
+        body: The new cutter body to handle.
+    """
+    body.name = strings.CUTTER
+    body.attributes.add(strings.PREFIX, strings.ENTITY, strings.CUTTER)
+
+def updateAttributes():
+    """Update the attributes of all cutter bodies in the edited custom feature."""
+    for feature in _editedCustomFeature.features:
+        if feature.objectType == adsk.fusion.BaseFeature.classType():
+            baseFeature: adsk.fusion.BaseFeature = feature
+            for body in baseFeature.bodies:
+                handleNewBody(body)
 
 def rollBack():
+    """Roll back the timeline to the state before editing."""
     global _restoreTimelineObject, _isRolledForEdit, _editedCustomFeature
+    
     if _isRolledForEdit:
+        _editedCustomFeature.timelineObject.rollTo(False)
+        updateAttributes()
         _restoreTimelineObject.rollTo(False)
         _isRolledForEdit = False
+
     _editedCustomFeature = None

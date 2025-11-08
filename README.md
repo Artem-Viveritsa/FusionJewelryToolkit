@@ -1,6 +1,6 @@
 # Fusion 360 Jewelry Toolkit
 
-A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in installs three commands in the Solid → Create menu.
+A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in installs five commands in the Solid → Create menu.
 
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
@@ -21,9 +21,10 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 - **Description:** Creates round-cut gemstone bodies at selected sketch points on a chosen face.
 - **Selection:** 1 face and one or more sketch points. The face may have any curvature or complexity; the points do not need to lie directly on the face.
 - **Key parameters:**
-  - **Size** — Gemstone diameter. Default: `1.5 mm`. Minimum: `0.5 mm`.
-  - **Flip (orientation)** — Flip the stone orientation. Default: false.
-  - **Depth Offset (along face normal)** — Offset along the face normal. Default: `0 mm`.
+  - **Size** — Gemstone diameter. Default: `1.5 mm`. Determines the overall size of the gemstone.
+  - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: false.
+  - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
+  - **Relative Depth Offset** — Depth offset as a fraction of gemstone size. Controls how deep the gemstone sits (0.1 = 10% of diameter). Default: `0`.
 
 ---
 
@@ -39,9 +40,36 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 
 ---
 
-![Cutter icon](commands/Cutters/resources/32x32@2x.png)
+![ProngsBetweenGemstones icon](commands/ProngsBetweenGemstones/resources/32x32@2x.png)
 
-## Cutters — Create cutter bodies for gemstone seating
+## ProngsBetweenGemstones — Create prongs between gemstones
+
+- **Description:** Creates prongs at the midpoint between nearby gemstones based on distance constraint.
+- **Selection:** At least 2 gemstones.
+- **Key parameters:**
+  - **Prong Size Ratio** — Prong size relative to average gemstone diameter. Default: `0.3`. Range: `0.1–0.5`.
+  - **Prong Height Ratio** — Prong height relative to average gemstone diameter. Default: `0.3`. Range: `0.1–1.0`.
+  - **Width Between Prongs Ratio** — Spacing between prong pair. Default: `0.5`. Range: `0.1–1.0`.
+  - **Max Gap** — Maximum gap between gemstones for prong creation. Default: `0.5 mm`.
+  - **Weld Distance** — Distance for merging nearby prongs. Default: `0.3 mm`.
+
+---
+
+![ChannelsBetweenGemstones icon](commands/ChannelsBetweenGemstones/resources/32x32@2x.png)
+
+## ChannelsBetweenGemstones — Create channels between gemstones
+
+- **Description:** Creates a network of channels connecting nearby gemstones based on distance constraint.
+- **Selection:** At least 2 gemstones.
+- **Key parameters:**
+  - **Channel Ratio** — Channel width relative to gemstone size. Default: `0.5`. Range: `0.2–0.8`.
+  - **Max Gap** — Maximum gap between gemstones for channel creation. Default: `0.5 mm`.
+
+---
+
+![CuttersForGemstones icon](commands/CuttersForGemstones/resources/32x32@2x.png)
+
+## CuttersForGemstones — Create cutter bodies for gemstone seating
 
 - **Description:** Generates cutter bodies around gemstone bodies created or recognized by the add-in.
 - **Selection:** One or more gemstone bodies (the command filters for bodies marked as gemstones).
@@ -51,9 +79,7 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
   - **Size Ratio** — Scale factor relative to the gemstone diameter. Default: `1.0`. Range: `0.7–1.3`.
   - **Hole Ratio** — Central hole diameter as a fraction of cutter diameter. Default: `0.5`. Range: `0.2–0.8`.
   - **Cone Angle** — Cutter cone angle. Default: `41°`. Range: `30°–60°`.
-
-### Limitations and recommendations
-
-- When you edit an existing Cutters operation, the add-in currently creates a new body instead of modifying the original. This behavior preserves the ability to change parameters (height, depth, scale, etc.) after the initial creation.
-- Do not manually edit cutter bodies with other modeling tools. If you modify a generated body and later change Cutters parameters, the resulting geometry and dependency links can become unpredictable.
-- To update cutters, change parameters using the Cutters command (so the operation regenerates correctly), then use Boolean operations to subtract the cutters from target bodies.
+- **Limitations and recommendations:**
+  - When you edit an existing CuttersForGemstones operation, the add-in currently creates a new body instead of modifying the original. This behavior preserves the ability to change parameters (height, depth, scale, etc.) after the initial creation.
+  - Do not manually edit cutter bodies with other modeling tools. If you modify a generated body and later change CuttersForGemstones parameters, the resulting geometry and dependency links can become unpredictable.
+  - To update cutters, change parameters using the CuttersForGemstones command (so the operation regenerates correctly), then use Boolean operations to subtract the cutters from target bodies.
