@@ -4,9 +4,9 @@
 	"id":	"5e0d212a-608c-4329-bc29-1f33753b5450",
 	"author":	"Artem Viveritsa",
 	"description":	{
-		"": "Fusion Jewelry Toolkit"
+		"": "A small collection of utilities that speed up jewelry modeling."
 	},
-	"version":	"0.3.0",
+	"version":	"0.4.0",
 	"runOnStartup":	true,
 	"supportedOS":	"windows|mac",
 	"editEnabled":	true

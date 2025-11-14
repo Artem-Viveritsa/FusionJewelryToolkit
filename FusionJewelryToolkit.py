@@ -1,4 +1,5 @@
 from .commands.GemstonesOnFaceAtPoints import GemstonesOnFaceAtPoints
+from .commands.GemstonesOnFaceAtCircles import GemstonesOnFaceAtCircles
 from .commands.ProngsOnFaceAtPoints import ProngsOnFaceAtPoints
 from .commands.ProngsBetweenGemstones import ProngsBetweenGemstones
 from .commands.ChannelsBetweenGemstones import ChannelsBetweenGemstones
@@ -6,6 +7,7 @@ from .commands.CuttersForGemstones import CuttersForGemstones
 
 commands = [
     GemstonesOnFaceAtPoints,
+    GemstonesOnFaceAtCircles,
     ProngsOnFaceAtPoints,
     ProngsBetweenGemstones,
     ChannelsBetweenGemstones,

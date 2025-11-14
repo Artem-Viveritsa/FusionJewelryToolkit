@@ -6,6 +6,7 @@ PREFIX = COMPANY_NAME + ADDIN_NAME
 PANEL_ID = PREFIX + 'Panel'
 
 GEMSTONES_ON_FACE_AT_POINTS = 'GemstonesOnFaceAtPoints'
+GEMSTONES_ON_FACE_AT_CIRCLES = 'GemstonesOnFaceAtCircles'
 PRONGS_ON_FACE_AT_POINTS = 'ProngsOnFaceAtPoints'
 CUTTERS_FOR_GEMSTONES = 'CuttersForGemstones'
 CHANNELS_BETWEEN_GEMSTONES = 'ChannelsBetweenGemstones'

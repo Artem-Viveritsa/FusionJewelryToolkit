@@ -1,7 +1,11 @@
 import adsk.core, adsk.fusion
+import os
+import traceback
 
+from .. import constants
 from .. import strings
 from .showMessage import showMessage
+from .Utilities import getDataFromPointAndFace
 
 
 class GemstoneInfo:
@@ -24,7 +28,6 @@ class GemstoneInfo:
         self.relativeDepthOffset = 0.0
         
         self._extractGeometryFromBody()
-        # self._extractParametersFromFeature()
         self._extractParametersFromAttributes()
     
     def _extractGeometryFromBody(self) -> None:
@@ -143,24 +146,15 @@ def extractGemstonesInfo(gemstones: list[adsk.fusion.BRepBody]) -> list[Gemstone
         return None
     
     gemstoneInfos = []
-    
-    # flip_statuses = []
-    # design: adsk.fusion.Design = adsk.core.Application.get().activeProduct
-    for gemstone in gemstones:
-        
-        # designBody = design.findEntityByToken(gemstone.entityToken)[0]
-        # attr = designBody.attributes.itemByName(strings.PREFIX, strings.GEMSTONE_IS_FLIPPED)
-        # flip_statuses.append(attr.value)
 
+    for gemstone in gemstones:
         try:
             gemstoneInfo = GemstoneInfo(gemstone)
             gemstoneInfos.append(gemstoneInfo)
         except Exception as e:
             showMessage(f'extractGemstonesInfo failed for gemstone: {str(e)}\n', True)
             return None
-    
-    # showMessage(f'Gemstone flip statuses: {flip_statuses}\n', False)
-    
+        
     return gemstoneInfos
 
 
@@ -188,3 +182,147 @@ def findValidConnections(gemstoneInfos: list[GemstoneInfo], maxGap: float) -> li
                 connections.append((info1, info2))
     
     return connections
+
+
+def createGemstone(face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: float, resourcesFolder: str, flip: bool = False, absoluteDepthOffset: float = 0.0, relativeDepthOffset: float = 0.0):
+    """Create a gemstone body based on the face, point, size, and flip.
+
+    Args:
+        face: The face where the gemstone will be placed.
+        point: The point on the face where the gemstone will be created.
+        size: The size of the gemstone.
+        resourcesFolder: Path to the resources folder containing gemstone models.
+        flip: Whether to flip the gemstone orientation.
+        absoluteDepthOffset: The absolute depth offset.
+        relativeDepthOffset: The relative depth offset.
+
+    Returns:
+        The created gemstone body or None if creation failed.
+    """
+    try:
+        if face is None or point is None: return None
+
+        temporaryBRep: adsk.fusion.TemporaryBRepManager = adsk.fusion.TemporaryBRepManager.get()
+
+        
+        pointOnFace, normal, lengthDir, widthDir = getDataFromPointAndFace(face, point)
+        if pointOnFace is None:
+            return None
+
+        
+        filePath = os.path.join(resourcesFolder, strings.GEMSTONE_ROUND_CUT + '.sat')
+        gemstone = temporaryBRep.createFromFile(filePath).item(0)
+        
+        cylindricalFace = list(filter(lambda x: x.geometry.surfaceType == adsk.core.SurfaceTypes.CylinderSurfaceType, gemstone.faces))[0]
+        originPoint = cylindricalFace.centroid
+
+        girdleThickness = abs(cylindricalFace.boundingBox.minPoint.z - cylindricalFace.boundingBox.maxPoint.z)
+
+        lengthDir.scaleBy(size)
+        widthDir.scaleBy(size)
+        normal.scaleBy(size)
+
+        translate = normal.copy()
+        translate.scaleBy(girdleThickness / 2)
+        pointOnFace.translateBy(translate)
+
+        
+        
+        originalNormal = normal.copy()
+        originalNormal.normalize()
+        
+        totalDepthOffset = absoluteDepthOffset + (relativeDepthOffset * size)
+        offsetVector = originalNormal.copy()
+        offsetVector.scaleBy(totalDepthOffset)
+        pointOnFace.translateBy(offsetVector)
+
+        if flip: normal.scaleBy(-1)
+
+        transformation = adsk.core.Matrix3D.create()
+        transformation.setToAlignCoordinateSystems(
+            originPoint, constants.xVector, constants.yVector, constants.zVector,
+            pointOnFace, lengthDir, widthDir, normal
+            )
+        temporaryBRep.transform(gemstone, transformation)
+
+        return gemstone
+    
+    except:
+        showMessage(f'createGemstone: {traceback.format_exc()}\n', True)
+
+
+def updateGemstone(body: adsk.fusion.BRepBody, face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: float = 1.5, flip: bool = False, absoluteDepthOffset: float = 0.0, relativeDepthOffset: float = 0.0) -> adsk.fusion.BRepBody | None:
+    """Update an existing gemstone body with new parameters.
+
+    Args:
+        body: The existing gemstone body to update.
+        face: The face where the gemstone is placed.
+        point: The point on the face where the gemstone should be.
+        size: The new size of the gemstone.
+        flip: Whether to flip the gemstone orientation.
+        absoluteDepthOffset: The absolute depth offset.
+        relativeDepthOffset: The relative depth offset.
+
+    Returns:
+        The updated gemstone body or None if update failed.
+    """
+    try:
+        if body is None or face is None or point is None: return None
+
+        temporaryBRep = adsk.fusion.TemporaryBRepManager.get()
+        tempBody = temporaryBRep.copy(body)
+
+        topFace = sorted(tempBody.faces, key = lambda x: x.area, reverse = True)[0]
+        topPlane = adsk.core.Plane.cast(topFace.geometry)
+        cylindricalFace = list(filter(lambda x: x.geometry.surfaceType == adsk.core.SurfaceTypes.CylinderSurfaceType, tempBody.faces))[0]
+        cylinder = adsk.core.Cylinder.cast(cylindricalFace.geometry)
+        gridleCentroid = cylindricalFace.centroid
+
+        oldSize = cylinder.radius * 2
+        sizeScale = size / oldSize
+        
+
+        oldNormal = topPlane.normal
+        if flip: oldNormal.scaleBy(-1)
+
+        transformation = adsk.core.Matrix3D.create()
+        transformation.setToAlignCoordinateSystems(
+            gridleCentroid, topPlane.uDirection, topPlane.vDirection, oldNormal,
+            constants.zeroPoint, constants.xVector, constants.yVector, constants.zVector
+            )
+        temporaryBRep.transform(tempBody, transformation)
+
+        girdleThickness = abs(cylindricalFace.boundingBox.minPoint.z - cylindricalFace.boundingBox.maxPoint.z)
+
+        
+        newFacePoint, newFaceNormal, newLengthDirection, newWidthDirection = getDataFromPointAndFace(face, point)
+        if newFacePoint is None:
+            return None
+
+        newLengthDirection.scaleBy(sizeScale)
+        newWidthDirection.scaleBy(sizeScale)
+        newFaceNormal.scaleBy(sizeScale)
+
+        translate = newFaceNormal.copy()
+        translate.scaleBy(girdleThickness / 2)
+        newFacePoint.translateBy(translate)
+
+        originalNormal = newFaceNormal.copy()
+        originalNormal.normalize()
+        
+        totalDepthOffset = absoluteDepthOffset + (relativeDepthOffset * size)
+        offsetVector = originalNormal.copy()
+        offsetVector.scaleBy(totalDepthOffset)
+        newFacePoint.translateBy(offsetVector)
+        
+        transformation.setToIdentity()
+        transformation.setToAlignCoordinateSystems(
+            constants.zeroPoint, constants.xVector, constants.yVector, constants.zVector,
+            newFacePoint, newLengthDirection, newWidthDirection, newFaceNormal
+            )
+        temporaryBRep.transform(tempBody, transformation)
+
+        return tempBody
+    
+    except:
+        showMessage(f'updateGemstone: {traceback.format_exc()}\n', True)

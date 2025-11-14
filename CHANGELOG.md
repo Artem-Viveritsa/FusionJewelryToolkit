@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2025-11-14
+
+### Added
+- GemstonesOnFaceAtCircles: Create round gemstones on a face at sketch circles.
+
+### Changed
+- Refactored gemstone creation functions into shared helpers/Gemstones.py module.
+
 ## [0.3.0] - 2025-11-08
 
 ### Added

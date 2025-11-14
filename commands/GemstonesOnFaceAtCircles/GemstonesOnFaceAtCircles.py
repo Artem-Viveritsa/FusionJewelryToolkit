@@ -12,8 +12,7 @@ _panel: adsk.core.ToolbarPanel = None
 _customFeatureDefinition: adsk.fusion.CustomFeature = None
 
 _faceSelectionInput: adsk.core.SelectionCommandInput = None
-_pointSelectionInput: adsk.core.SelectionCommandInput = None
-_sizeValueInput: adsk.core.ValueCommandInput = None
+_circleSelectionInput: adsk.core.SelectionCommandInput = None
 _flipValueInput: adsk.core.BoolValueCommandInput = None
 _absoluteDepthOffsetValueInput: adsk.core.ValueCommandInput = None
 _relativeDepthOffsetValueInput: adsk.core.ValueCommandInput = None
@@ -26,29 +25,23 @@ _handlers = []
 
 _diamondMaterial: adsk.core.Material = None
 
-COMMAND_ID = strings.PREFIX + strings.GEMSTONES_ON_FACE_AT_POINTS
+COMMAND_ID = strings.PREFIX + strings.GEMSTONES_ON_FACE_AT_CIRCLES
 CREATE_COMMAND_ID = COMMAND_ID + 'Create'
 EDIT_COMMAND_ID = COMMAND_ID + 'Edit'
 
-createCommandInputDef = strings.InputDef(CREATE_COMMAND_ID, 'Gemstones at Points', 'Creates gemstones at selected points on a face.')
-editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Gemstones', 'Edits the parameters of existing gemstones.')
+createCommandInputDef = strings.InputDef(CREATE_COMMAND_ID, 'Gemstones at Circles', 'Creates gemstones at selected sketch circles on a face. The gemstone size matches the circle diameter.')
+editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Gemstones', 'Edits the parameters of existing gemstones created from circles.')
 
 selectFaceInputDef = strings.InputDef(
     'selectFace',
     'Select Face',
-    'Select the face where the gemstone will be placed.'
+    'Select the face where the gemstones will be placed.'
     )
 
-selectPointsInputDef = strings.InputDef(
-    'selectPoints',
-    'Select Points',
-    'Select points on the face for the gemstone centers.'
-    )
-
-sizeInputDef = strings.InputDef(
-    'size', 
-    'Size', 
-    "Gemstone diameter.\nDetermines the overall size of the gemstone."
+selectCirclesInputDef = strings.InputDef(
+    'selectCircles',
+    'Select Circles',
+    'Select sketch circles. The gemstone will be centered at each circle center with diameter matching the circle diameter.'
     )
 
 flipInputDef = strings.InputDef(
@@ -106,7 +99,7 @@ def run(context):
         _handlers.append(editCommandCreated)
 
         global _customFeatureDefinition
-        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(COMMAND_ID, strings.GEMSTONES_ON_FACE_AT_POINTS, RESOURCES_FOLDER)
+        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(COMMAND_ID, strings.GEMSTONES_ON_FACE_AT_CIRCLES, RESOURCES_FOLDER)
         _customFeatureDefinition.editCommandId = EDIT_COMMAND_ID
 
         computeCustomFeature = ComputeCustomFeature()
@@ -152,21 +145,17 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             inputs = command.commandInputs
             defaultLengthUnits = _app.activeProduct.unitsManager.defaultLengthUnits
 
-            global _faceSelectionInput, _pointSelectionInput, _sizeValueInput, _flipValueInput, _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
+            global _faceSelectionInput, _circleSelectionInput, _flipValueInput, _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
 
             _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
             _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
             _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
             _faceSelectionInput.setSelectionLimits(1, 1)
 
-            _pointSelectionInput = inputs.addSelectionInput(selectPointsInputDef.id, selectPointsInputDef.name, selectPointsInputDef.tooltip)
-            _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchPoints)
-            _pointSelectionInput.tooltip = selectPointsInputDef.tooltip
-            _pointSelectionInput.setSelectionLimits(1)  
-
-            size = adsk.core.ValueInput.createByReal(0.15)
-            _sizeValueInput = inputs.addValueInput(sizeInputDef.id, sizeInputDef.name, defaultLengthUnits, size)
-            _sizeValueInput.tooltip = sizeInputDef.tooltip
+            _circleSelectionInput = inputs.addSelectionInput(selectCirclesInputDef.id, selectCirclesInputDef.name, selectCirclesInputDef.tooltip)
+            _circleSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCircles)
+            _circleSelectionInput.tooltip = selectCirclesInputDef.tooltip
+            _circleSelectionInput.setSelectionLimits(1)
 
             
             flip = False
@@ -219,32 +208,24 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             inputs = command.commandInputs
             defaultLengthUnits = _app.activeProduct.unitsManager.defaultLengthUnits
 
-            global _editedCustomFeature, _faceSelectionInput, _pointSelectionInput
+            global _editedCustomFeature, _faceSelectionInput, _circleSelectionInput
             _editedCustomFeature = _ui.activeSelections.item(0).entity
             if _editedCustomFeature is None:
                 return
 
-            global _sizeValueInput, _flipValueInput, _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
+            global _flipValueInput, _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
 
             _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
             _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
             _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
             _faceSelectionInput.setSelectionLimits(1, 1)
 
-            _pointSelectionInput = inputs.addSelectionInput(selectPointsInputDef.id, selectPointsInputDef.name, selectPointsInputDef.tooltip)
-            _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchPoints)
-            _pointSelectionInput.tooltip = selectPointsInputDef.tooltip
-            _pointSelectionInput.setSelectionLimits(1)  
+            _circleSelectionInput = inputs.addSelectionInput(selectCirclesInputDef.id, selectCirclesInputDef.name, selectCirclesInputDef.tooltip)
+            _circleSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCircles)
+            _circleSelectionInput.tooltip = selectCirclesInputDef.tooltip
+            _circleSelectionInput.setSelectionLimits(1)  
 
             params = _editedCustomFeature.parameters
-
-            try:
-                sizeParam = params.itemById(sizeInputDef.id)
-                size = adsk.core.ValueInput.createByString(sizeParam.expression)
-            except:
-                size = adsk.core.ValueInput.createByReal(0.15)
-            _sizeValueInput = inputs.addValueInput(sizeInputDef.id, sizeInputDef.name, defaultLengthUnits, size)
-            _sizeValueInput.tooltip = sizeInputDef.tooltip
 
             try:
                 flipParam = params.itemById(flipInputDef.id)
@@ -301,8 +282,8 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 class PreSelectHandler(adsk.core.SelectionEventHandler):
     """Event handler for controlling user selection during command execution.
     
-    This handler checks to ensure the point is on a planar face and the body 
-    the point is on is not an external reference.
+    This handler checks to ensure the circle is on a planar face and the body 
+    the circle belongs to is not an external reference.
     """
     def __init__(self):
         super().__init__()
@@ -318,12 +299,12 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
                     eventArgs.isSelectable = False
                     return
 
-            if type == adsk.fusion.SketchPoint.classType():
-                preSelectPoint: adsk.fusion.SketchPoint = eventArgs.selection.entity
+            if type == adsk.fusion.SketchCircle.classType():
+                preSelectCircle: adsk.fusion.SketchCircle = eventArgs.selection.entity
 
                 
-                if preSelectPoint.assemblyContext:
-                    occ = preSelectPoint.assemblyContext
+                if preSelectCircle.assemblyContext:
+                    occ = preSelectCircle.assemblyContext
                     if occ.isReferencedComponent:
                         eventArgs.isSelectable = False
                         return
@@ -340,16 +321,19 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
         try:
             eventArgs = adsk.core.ValidateInputsEventArgs.cast(args)
 
-            if _faceSelectionInput.selectionCount != 1 or _pointSelectionInput.selectionCount < 1:
+            if _faceSelectionInput.selectionCount != 1 or _circleSelectionInput.selectionCount < 1:
                 eventArgs.areInputsValid = False
                 return
 
-            if not all( [_sizeValueInput.isValidExpression, _flipValueInput.isValid, _absoluteDepthOffsetValueInput.isValidExpression, _relativeDepthOffsetValueInput.isValidExpression] ):
-                eventArgs.areInputsValid = False
-                return
+            # Check minimum circle diameter (0.5 mm)
+            for i in range(_circleSelectionInput.selectionCount):
+                sketchCircle: adsk.fusion.SketchCircle = _circleSelectionInput.selection(i).entity
+                diameter = sketchCircle.radius * 2
+                if diameter < 0.05:
+                    eventArgs.areInputsValid = False
+                    return
 
-            size = _sizeValueInput.value
-            if size < 0.05:
+            if not all( [_flipValueInput.isValid, _absoluteDepthOffsetValueInput.isValidExpression, _relativeDepthOffsetValueInput.isValidExpression] ):
                 eventArgs.areInputsValid = False
                 return
             
@@ -365,7 +349,6 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
         try:
             face: adsk.fusion.BRepFace = _faceSelectionInput.selection(0).entity
             
-            size = _sizeValueInput.value
             flip = _flipValueInput.value
             absoluteDepthOffset = _absoluteDepthOffsetValueInput.value
             relativeDepthOffset = _relativeDepthOffsetValueInput.value
@@ -374,9 +357,10 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             baseFeat = component.features.baseFeatures.add()
             baseFeat.startEdit()
 
-            for i in range(_pointSelectionInput.selectionCount):
-                sketchPoint: adsk.fusion.SketchPoint = _pointSelectionInput.selection(i).entity
-                gemstone = createGemstone(face, sketchPoint.worldGeometry, size, RESOURCES_FOLDER, flip, absoluteDepthOffset, relativeDepthOffset)
+            for i in range(_circleSelectionInput.selectionCount):
+                sketchCircle: adsk.fusion.SketchCircle = _circleSelectionInput.selection(i).entity
+                size = sketchCircle.radius * 2
+                gemstone = createGemstone(face, sketchCircle.worldGeometry.center, size, RESOURCES_FOLDER, flip, absoluteDepthOffset, relativeDepthOffset)
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeat)
                     handleNewBody(body)
@@ -399,16 +383,17 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
 
             face: adsk.fusion.BRepFace = _faceSelectionInput.selection(0).entity
             comp = face.body.parentComponent
-            pointEntities: list[adsk.fusion.SketchPoint] = []
-            for i in range(_pointSelectionInput.selectionCount):
-                pointEntities.append(_pointSelectionInput.selection(i).entity)
+            circleEntities: list[adsk.fusion.SketchCircle] = []
+            for i in range(_circleSelectionInput.selectionCount):
+                circleEntities.append(_circleSelectionInput.selection(i).entity)
 
             baseFeat = comp.features.baseFeatures.add()
             baseFeat.startEdit()
 
-            for i in range(len(pointEntities)):
-                sketchPoint = pointEntities[i]    
-                gemstone = createGemstone(face, sketchPoint.worldGeometry, _sizeValueInput.value, RESOURCES_FOLDER, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value)
+            for i in range(len(circleEntities)):
+                sketchCircle = circleEntities[i]
+                size = sketchCircle.radius * 2
+                gemstone = createGemstone(face, sketchCircle.worldGeometry.center, size, RESOURCES_FOLDER, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value)
                 if gemstone is None:
                     eventArgs.executeFailed = True
                     return
@@ -423,10 +408,6 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             design: adsk.fusion.Design = _app.activeProduct
             defLengthUnits = design.unitsManager.defaultLengthUnits
             customFeatureInput = comp.features.customFeatures.createInput(_customFeatureDefinition)
-
-            sizeInput = adsk.core.ValueInput.createByString(_sizeValueInput.expression)
-            customFeatureInput.addCustomParameter(sizeInputDef.id, sizeInputDef.name, sizeInput,
-                                              defLengthUnits, True)
                          
             flipInput = adsk.core.ValueInput.createByString(str(_flipValueInput.value).lower())
             customFeatureInput.addCustomParameter(flipInputDef.id, flipInputDef.name, flipInput, '', True)
@@ -441,8 +422,8 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
 
             customFeatureInput.addDependency('face', face)
             
-            for i in range(len(pointEntities)):
-                customFeatureInput.addDependency(f'point{i}', pointEntities[i])
+            for i in range(len(circleEntities)):
+                customFeatureInput.addDependency(f'circle{i}', circleEntities[i])
 
             customFeatureInput.setStartAndEndFeatures(baseFeat, baseFeat)
             comp.features.customFeatures.add(customFeatureInput)
@@ -484,10 +465,10 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
             i = 0
             while True:
                 try:
-                    dependency = _editedCustomFeature.dependencies.itemById(f'point{i}')
+                    dependency = _editedCustomFeature.dependencies.itemById(f'circle{i}')
                     if dependency is None: break
-                    sketchPoint = dependency.entity
-                    if sketchPoint is not None: _pointSelectionInput.addSelection(sketchPoint)
+                    sketchCircle = dependency.entity
+                    if sketchCircle is not None: _circleSelectionInput.addSelection(sketchCircle)
                     i += 1
                 except:
                     break
@@ -520,18 +501,17 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             eventArgs = adsk.core.CommandEventArgs.cast(args)    
 
             faceEntity = _faceSelectionInput.selection(0).entity
-            pointCount = _pointSelectionInput.selectionCount
-            pointEntities = []
-            for i in range(pointCount):
-                pointEntities.append(_pointSelectionInput.selection(i).entity)
+            circleCount = _circleSelectionInput.selectionCount
+            circleEntities = []
+            for i in range(circleCount):
+                circleEntities.append(_circleSelectionInput.selection(i).entity)
 
             _editedCustomFeature.dependencies.deleteAll()
             _editedCustomFeature.dependencies.add('face', faceEntity)
 
-            for i in range(pointCount):
-                _editedCustomFeature.dependencies.add(f'point{i}', pointEntities[i])
+            for i in range(circleCount):
+                _editedCustomFeature.dependencies.add(f'circle{i}', circleEntities[i])
 
-            _editedCustomFeature.parameters.itemById(sizeInputDef.id).expression = _sizeValueInput.expression
             _editedCustomFeature.parameters.itemById(flipInputDef.id).expression = str(_flipValueInput.value).lower()
             _editedCustomFeature.parameters.itemById(absoluteDepthOffsetInputDef.id).expression = _absoluteDepthOffsetValueInput.expression
             _editedCustomFeature.parameters.itemById(relativeDepthOffsetInputDef.id).expression = _relativeDepthOffsetValueInput.expression
@@ -580,22 +560,17 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         if faceEntity is None: return False
 
         
-        points: list[adsk.fusion.SketchPoint] = []
+        circles: list[adsk.fusion.SketchCircle] = []
         i = 0
         while True:
-            dependency = customFeature.dependencies.itemById(f'point{i}')
+            dependency = customFeature.dependencies.itemById(f'circle{i}')
             if dependency is None: break
-            sketchPoint = dependency.entity
-            if sketchPoint is None: break
-            points.append(sketchPoint)
+            sketchCircle = dependency.entity
+            if sketchCircle is None: break
+            circles.append(sketchCircle)
             i += 1
-        if len(points) == 0: return False
+        if len(circles) == 0: return False
 
-        
-        try:
-            size = customFeature.parameters.itemById(sizeInputDef.id).value
-        except:
-            size = 0.15
         
         try:
             flip = customFeature.parameters.itemById(flipInputDef.id).expression.lower() == 'true'
@@ -618,18 +593,19 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         
         
         success = True
-        for i in range(len(points)):
-            point = points[i]
+        for i in range(len(circles)):
+            circle = circles[i]
+            size = circle.radius * 2
 
             if i < baseFeature.bodies.count:
                 currentBody = baseFeature.bodies.item(i)
-                newBody = updateGemstone(currentBody, faceEntity, point.worldGeometry, size, flip, absoluteDepthOffset, relativeDepthOffset)
+                newBody = updateGemstone(currentBody, faceEntity, circle.worldGeometry.center, size, flip, absoluteDepthOffset, relativeDepthOffset)
                 if newBody is not None:
                     baseFeature.updateBody(currentBody, newBody)
                 else:
                     success = False
             else:
-                gemstone = createGemstone(faceEntity, point.worldGeometry, size, RESOURCES_FOLDER, flip, absoluteDepthOffset, relativeDepthOffset)
+                gemstone = createGemstone(faceEntity, circle.worldGeometry.center, size, RESOURCES_FOLDER, flip, absoluteDepthOffset, relativeDepthOffset)
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeature)
                     body.material = _diamondMaterial
@@ -637,7 +613,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
                     success = False
 
         
-        while baseFeature.bodies.count > len(points):
+        while baseFeature.bodies.count > len(circles):
             baseFeature.bodies.item(baseFeature.bodies.count - 1).deleteMe()
 
         baseFeature.finishEdit()

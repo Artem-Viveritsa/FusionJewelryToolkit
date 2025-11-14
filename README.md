@@ -1,6 +1,6 @@
 # Fusion 360 Jewelry Toolkit
 
-A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in installs five commands in the Solid → Create menu.
+A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in installs six commands in the Solid → Create menu.
 
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
@@ -22,6 +22,19 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 - **Selection:** 1 face and one or more sketch points. The face may have any curvature or complexity; the points do not need to lie directly on the face.
 - **Key parameters:**
   - **Size** — Gemstone diameter. Default: `1.5 mm`. Determines the overall size of the gemstone.
+  - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: false.
+  - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
+  - **Relative Depth Offset** — Depth offset as a fraction of gemstone size. Controls how deep the gemstone sits (0.1 = 10% of diameter). Default: `0`.
+
+---
+
+![Gemstones icon](commands/GemstonesOnFaceAtCircles/resources/32x32@2x.png)
+
+## GemstonesOnFaceAtCircles — Place round gemstones on a face at sketch circles
+
+- **Description:** Creates round-cut gemstone bodies at selected sketch circles on a chosen face. The gemstone size matches the circle diameter.
+- **Selection:** 1 face and one or more sketch circles. The face may have any curvature or complexity; the circles do not need to lie directly on the face. Minimum circle diameter is `0.5 mm`.
+- **Key parameters:**
   - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: false.
   - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
   - **Relative Depth Offset** — Depth offset as a fraction of gemstone size. Controls how deep the gemstone sits (0.1 = 10% of diameter). Default: `0`.
