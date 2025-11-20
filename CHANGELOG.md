@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2025-11-20
+
+### Added
+- Added option for `CuttersForGemstones` to configure the cutter bottom type (Hole, Cone, Hemisphere).
+
 ## [0.4.0] - 2025-11-14
 
 ### Added
@@ -9,6 +14,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Refactored gemstone creation functions into shared helpers/Gemstones.py module.
+
 
 ## [0.3.0] - 2025-11-08
 

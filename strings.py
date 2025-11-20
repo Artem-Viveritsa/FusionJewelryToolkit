@@ -1,3 +1,6 @@
+from enum import Enum
+
+
 COMPANY_NAME = 'Viveritsa'
 ADDIN_NAME = 'FusionJewelryToolkit'
 
@@ -8,7 +11,6 @@ PANEL_ID = PREFIX + 'Panel'
 GEMSTONES_ON_FACE_AT_POINTS = 'GemstonesOnFaceAtPoints'
 GEMSTONES_ON_FACE_AT_CIRCLES = 'GemstonesOnFaceAtCircles'
 PRONGS_ON_FACE_AT_POINTS = 'ProngsOnFaceAtPoints'
-CUTTERS_FOR_GEMSTONES = 'CuttersForGemstones'
 CHANNELS_BETWEEN_GEMSTONES = 'ChannelsBetweenGemstones'
 PRONGS_BETWEEN_GEMSTONES = 'ProngsBetweenGemstones'
 
@@ -22,7 +24,26 @@ GEMSTONE_CUT = 'gemstoneCut'
 GEMSTONE_ROUND_CUT = 'round'
 
 PRONG = 'prong'
-CUTTER = 'cutter'
+
+class CutterBottomType(Enum):
+    Hole = 0
+    Cone = 1
+    Hemisphere = 2
+
+class CutterStrings:
+    name = 'cutter'
+    cutterForGemstonesCommandId = 'CuttersForGemstones'
+    selectGemstonesInputId = 'selectGemstones'
+    bottomTypeInputId = 'cutterBottomType'
+    bottomTypes = [member.name for member in CutterBottomType]
+    heightValueInputId = 'height'
+    depthValueInputId = 'depth'
+    sizeRatioValueInputId = 'sizeRatio'
+    holeRatioValueInputId = 'holeRatio'
+    coneAngleValueInputId = 'coneAngle'
+
+Cutter = CutterStrings()
+
 CHANNEL = 'channel'
 
 class InputDef:
