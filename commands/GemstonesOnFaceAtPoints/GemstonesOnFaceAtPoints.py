@@ -1,9 +1,9 @@
 import os
 import adsk.core, adsk.fusion, traceback
 
-from ... import strings
+from ... import strings, constants
 from ...helpers.showMessage import showMessage
-from ...helpers.Gemstones import createGemstone, updateGemstone
+from ...helpers.Gemstones import createGemstone, updateGemstone, diamondMaterial
 
 _app: adsk.core.Application = None
 _ui: adsk.core.UserInterface = None
@@ -23,8 +23,6 @@ _restoreTimelineObject: adsk.fusion.TimelineObject = None
 _isRolledForEdit: bool = False
 
 _handlers = []
-
-_diamondMaterial: adsk.core.Material = None
 
 COMMAND_ID = strings.PREFIX + strings.GEMSTONES_ON_FACE_AT_POINTS
 CREATE_COMMAND_ID = COMMAND_ID + 'Create'
@@ -74,13 +72,9 @@ RESOURCES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'res
 def run(context):
     """Initialize the gemstones command by setting up command definitions and UI elements."""
     try:
-        global _app, _ui, _panel, _diamondMaterial
+        global _app, _ui, _panel
         _app = adsk.core.Application.get()
         _ui  = _app.userInterface
-
-        
-        MaterialLib = _app.materialLibraries.itemByName('Fusion Material Library')
-        _diamondMaterial = MaterialLib.materials.itemByName('Mirror')
 
         createCommandDefinition = _ui.commandDefinitions.addButtonDefinition(createCommandInputDef.id, 
                                                                 createCommandInputDef.name, 
@@ -380,7 +374,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeat)
                     handleNewBody(body)
-                    body.material = _diamondMaterial
+                    body.material = diamondMaterial
 
             baseFeat.finishEdit()
             
@@ -415,7 +409,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                 
                 body = comp.bRepBodies.add(gemstone, baseFeat)
                 handleNewBody(body)
-                body.material = _diamondMaterial
+                body.material = diamondMaterial
 
             baseFeat.finishEdit()
 
@@ -632,7 +626,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
                 gemstone = createGemstone(faceEntity, point.worldGeometry, size, RESOURCES_FOLDER, flip, absoluteDepthOffset, relativeDepthOffset)
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeature)
-                    body.material = _diamondMaterial
+                    body.material = diamondMaterial
                 else:
                     success = False
 

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.1] - 2025-11-21
+
+### Added
+- Now uses custom `Jewelry Material Library.adsklib` instead of Fusion's standard material library.
+
 ## [0.5.0] - 2025-11-20
 
 ### Added

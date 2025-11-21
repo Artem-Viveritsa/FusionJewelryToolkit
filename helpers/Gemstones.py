@@ -326,3 +326,5 @@ def updateGemstone(body: adsk.fusion.BRepBody, face: adsk.fusion.BRepFace, point
     
     except:
         showMessage(f'updateGemstone: {traceback.format_exc()}\n', True)
+        
+diamondMaterial = constants.materialLibrary.materials.itemByName('Diamond')

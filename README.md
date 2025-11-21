@@ -11,8 +11,9 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 4. To make the add-in run automatically when Fusion starts, enable the "Run on Startup" checkbox.
 5. After installation, the commands appear under Solid → Create.
 
-## What's new in v0.5.0
+## What's new
 - Added option for `CuttersForGemstones` to configure the cutter bottom type (Hole, Cone, Hemisphere).
+- Now uses custom `Jewelry Material Library.adsklib` instead of Fusion's standard material library.
 
 ---
 
