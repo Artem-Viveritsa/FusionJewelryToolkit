@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2025-11-23
+
+### Added
+- GemstonesOnFaceAtCurve: Place gemstones along sketch curves with variable sizes and configurable spacing.
+
 ## [0.5.1] - 2025-11-21
 
 ### Added

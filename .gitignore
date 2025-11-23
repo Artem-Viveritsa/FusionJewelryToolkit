@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 # IDEs and editors
+.github/
 .vscode/
 .idea/
 *.sublime-workspace

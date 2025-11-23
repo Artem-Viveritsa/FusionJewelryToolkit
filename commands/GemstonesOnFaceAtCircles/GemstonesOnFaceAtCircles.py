@@ -3,7 +3,7 @@ import adsk.core, adsk.fusion, traceback
 
 from ... import strings, constants
 from ...helpers.showMessage import showMessage
-from ...helpers.Gemstones import createGemstone, updateGemstone, diamondMaterial
+from ...helpers.Gemstones import createGemstone, updateGemstone, setGemstoneAttributes, updateGemstoneFeature, diamondMaterial
 
 _app: adsk.core.Application = None
 _ui: adsk.core.UserInterface = None
@@ -357,7 +357,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
                 gemstone = createGemstone(face, sketchCircle.worldGeometry.center, size, RESOURCES_FOLDER, flip, absoluteDepthOffset, relativeDepthOffset)
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeat)
-                    handleNewBody(body)
+                    setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset)
                     body.material = diamondMaterial
 
             baseFeat.finishEdit()
@@ -393,7 +393,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                     return
                 
                 body = comp.bRepBodies.add(gemstone, baseFeat)
-                handleNewBody(body)
+                setGemstoneAttributes(body, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value)
                 body.material = diamondMaterial
 
             baseFeat.finishEdit()
@@ -603,6 +603,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeature)
                     body.material = diamondMaterial
+                    if not _isRolledForEdit: setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset)
                 else:
                     success = False
 
@@ -618,35 +619,13 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         showMessage(f'updateFeature: {traceback.format_exc()}\n', True)
         return False
     
-def handleNewBody(body: adsk.fusion.BRepBody):
-    """Handle the creation of a new gemstone body by setting its name and attributes.
-
-    Args:
-        body: The new gemstone body to handle.
-    """
-    body.name = strings.GEMSTONE_ROUND_CUT
-
-    body.attributes.add(strings.PREFIX, strings.ENTITY, strings.GEMSTONE)
-    body.attributes.add(strings.PREFIX, strings.GEMSTONE_CUT, strings.GEMSTONE_ROUND_CUT)
-    body.attributes.add(strings.PREFIX, strings.GEMSTONE_IS_FLIPPED, str(_flipValueInput.value).lower())
-    body.attributes.add(strings.PREFIX, strings.GEMSTONE_ABSOLUTE_DEPTH_OFFSET, str(_absoluteDepthOffsetValueInput.value))
-    body.attributes.add(strings.PREFIX, strings.GEMSTONE_RELATIVE_DEPTH_OFFSET, str(_relativeDepthOffsetValueInput.value))
-
-def updateAttributes():
-    """Update the attributes of all gemstone bodies in the edited custom feature."""
-    for feature in _editedCustomFeature.features:
-        if feature.objectType == adsk.fusion.BaseFeature.classType():
-            baseFeature: adsk.fusion.BaseFeature = feature
-            for body in baseFeature.bodies:
-                handleNewBody(body)
-
 def rollBack():
     """Roll back the timeline to the state before editing."""
     global _restoreTimelineObject, _isRolledForEdit, _editedCustomFeature
     
     if _isRolledForEdit:
         _editedCustomFeature.timelineObject.rollTo(False)
-        updateAttributes()
+        updateGemstoneFeature(_editedCustomFeature)
         _restoreTimelineObject.rollTo(False)
         _isRolledForEdit = False
 

@@ -327,4 +327,55 @@ def updateGemstone(body: adsk.fusion.BRepBody, face: adsk.fusion.BRepFace, point
     except:
         showMessage(f'updateGemstone: {traceback.format_exc()}\n', True)
         
+
+def setGemstoneAttributes(body: adsk.fusion.BRepBody, flip: bool = None, absoluteDepthOffset: float = None, relativeDepthOffset: float = None):
+    """Set the name and attributes for a gemstone body.
+
+    Args:
+        body: The gemstone body to set attributes on.
+        flip: Whether the gemstone is flipped. If None, attribute is not set.
+        absoluteDepthOffset: The absolute depth offset. If None, attribute is not set.
+        relativeDepthOffset: The relative depth offset. If None, attribute is not set.
+    """
+    body.name = strings.GEMSTONE_ROUND_CUT
+    body.attributes.add(strings.PREFIX, strings.ENTITY, strings.GEMSTONE)
+    body.attributes.add(strings.PREFIX, strings.GEMSTONE_CUT, strings.GEMSTONE_ROUND_CUT)
+    
+    if flip is not None:
+        body.attributes.add(strings.PREFIX, strings.GEMSTONE_IS_FLIPPED, str(flip).lower())
+    if absoluteDepthOffset is not None:
+        body.attributes.add(strings.PREFIX, strings.GEMSTONE_ABSOLUTE_DEPTH_OFFSET, str(absoluteDepthOffset))
+    if relativeDepthOffset is not None:
+        body.attributes.add(strings.PREFIX, strings.GEMSTONE_RELATIVE_DEPTH_OFFSET, str(relativeDepthOffset))
+
+
+
+def updateGemstoneFeature(customFeature: adsk.fusion.CustomFeature):
+    """Update the attributes of all gemstone bodies in the custom feature.
+
+    Args:
+        customFeature: The custom feature containing the gemstone bodies.
+    """
+    try:
+        flip = customFeature.parameters.itemById('flip').expression.lower() == 'true'
+    except:
+        flip = None
+    
+    try:
+        absoluteDepthOffset = customFeature.parameters.itemById('absoluteDepthOffset').value
+    except:
+        absoluteDepthOffset = None
+    
+    try:
+        relativeDepthOffset = customFeature.parameters.itemById('relativeDepthOffset').value
+    except:
+        relativeDepthOffset = None
+    
+    for feature in customFeature.features:
+        if feature.objectType == adsk.fusion.BaseFeature.classType():
+            baseFeature: adsk.fusion.BaseFeature = feature
+            for body in baseFeature.bodies:
+                setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset)
+
+
 diamondMaterial = constants.materialLibrary.materials.itemByName('Diamond')

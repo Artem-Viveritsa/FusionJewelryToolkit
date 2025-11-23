@@ -1,6 +1,6 @@
 # Fusion 360 Jewelry Toolkit
 
-A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in installs six commands in the Solid → Create menu.
+A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in installs seven commands in the Solid → Create menu.
 
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
@@ -12,6 +12,7 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 5. After installation, the commands appear under Solid → Create.
 
 ## What's new
+- Added new command `GemstonesOnFaceAtCurve` for placing gemstones along sketch curves with variable sizes.
 - Added option for `CuttersForGemstones` to configure the cutter bottom type (Hole, Cone, Hemisphere).
 - Now uses custom `Jewelry Material Library.adsklib` instead of Fusion's standard material library.
 
@@ -34,6 +35,23 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 - **Description:** Creates round-cut gemstone bodies at selected sketch circles on a chosen face. The gemstone size matches the circle diameter.
 - **Selection:** 1 face and one or more sketch circles. The face may have any curvature or complexity; the circles do not need to lie directly on the face. Minimum circle diameter is `0.5 mm`.
 - **Key parameters:**
+  - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: false.
+  - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
+  - **Relative Depth Offset** — Depth offset as a fraction of gemstone size. Controls how deep the gemstone sits (0.1 = 10% of diameter). Default: `0`.
+
+---
+
+![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)
+## GemstonesOnFaceAtCurve — Place gemstones along a curve with variable sizes
+- **Description:** Creates round-cut gemstone bodies along a selected sketch curve on a chosen face. Gemstone sizes can gradually change from start to end.
+- **Selection:** 1 face and 1 sketch curve (line, arc, circle, ellipse, or spline).
+- **Key parameters:**
+  - **Start Offset** — Distance from the curve start to the first gemstone. Default: `0 mm`.
+  - **End Offset** — Distance from the curve end to the last gemstone. Default: `0 mm`.
+  - **Start Size** — Gemstone diameter at the curve start. Default: `1.0 mm`. Minimum: `0.5 mm`.
+  - **End Size** — Gemstone diameter at the curve end. Default: `0.7 mm`. Minimum: `0.5 mm`.
+  - **Size Step** — Size discretization step. Gemstone sizes are rounded to multiples of this value. Default: `0.05 mm`. Range: `0–1.0 mm`.
+  - **Target Gap** — Target distance between adjacent gemstones along the curve. Default: `0.1 mm`.
   - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: false.
   - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
   - **Relative Depth Offset** — Depth offset as a fraction of gemstone size. Controls how deep the gemstone sits (0.1 = 10% of diameter). Default: `0`.
