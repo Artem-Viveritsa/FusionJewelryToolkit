@@ -161,12 +161,12 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _pointSelectionInput.tooltip = selectPointsInputDef.tooltip
             _pointSelectionInput.setSelectionLimits(1)
 
-            size = adsk.core.ValueInput.createByReal(0.1)
+            size = adsk.core.ValueInput.createByReal(0.04)
             _sizeValueInput = inputs.addValueInput(sizeInputDef.id, sizeInputDef.name, defaultLengthUnits, size)
             _sizeValueInput.tooltip = sizeInputDef.tooltip
 
             
-            height = adsk.core.ValueInput.createByReal(0.2)
+            height = adsk.core.ValueInput.createByReal(0.04)
             _heightValueInput = inputs.addValueInput(heightInputDef.id, heightInputDef.name, defaultLengthUnits, height)
             _heightValueInput.tooltip = heightInputDef.tooltip
 
