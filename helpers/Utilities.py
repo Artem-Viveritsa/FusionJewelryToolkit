@@ -190,15 +190,14 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffse
         
         curveGeometry: adsk.core.Curve3D = curve.geometry
         curveEvaluator = curveGeometry.evaluator
-        totalCurveLength = curve.length 
         
-        # success, startParameter, endParameter = curveEvaluator.getParameterExtents()
-        # if not success:
-        #     return result
+        success, startParameter, endParameter = curveEvaluator.getParameterExtents()
+        if not success:
+            return result
         
-        # success, totalCurveLength = curveEvaluator.getLengthAtParameter(startParameter, endParameter)
-        # if not success:
-        #     return result
+        success, totalCurveLength = curveEvaluator.getLengthAtParameter(startParameter, endParameter)
+        if not success:
+            return result
         
         effectiveStartPosition = startOffset
         effectiveEndPosition = totalCurveLength - endOffset
@@ -249,7 +248,7 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffse
             return result
         
         for i in range(len(centerPositions)):
-            success, curveParameter = curveEvaluator.getParameterAtLength(0, centerPositions[i])
+            success, curveParameter = curveEvaluator.getParameterAtLength(startParameter, centerPositions[i])
             if success:
                 success, pointOnCurve = curveEvaluator.getPointAtParameter(curveParameter)
                 if success:
