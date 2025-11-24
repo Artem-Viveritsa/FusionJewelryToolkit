@@ -132,7 +132,7 @@ def calculatePointsAlongCurve(curve: adsk.fusion.SketchCurve, size: float, gap: 
     try:
         points: list[adsk.core.Point3D] = []
         
-        geometry: adsk.core.Curve3D = curve.geometry
+        geometry: adsk.core.Curve3D = curve.worldGeometry
         evaluator = geometry.evaluator
         
         success, startParam, endParam = evaluator.getParameterExtents()
@@ -188,7 +188,7 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffse
     try:
         result: list[tuple[adsk.core.Point3D, float]] = []
         
-        curveGeometry: adsk.core.Curve3D = curve.geometry
+        curveGeometry: adsk.core.Curve3D = curve.worldGeometry
         curveEvaluator = curveGeometry.evaluator
         
         success, startParameter, endParameter = curveEvaluator.getParameterExtents()
