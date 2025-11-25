@@ -15,6 +15,7 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 - Added new command `GemstonesOnFaceAtCurve` for placing gemstones along sketch curves with variable sizes.
 - Added option for `CuttersForGemstones` to configure the cutter bottom type (Hole, Cone, Hemisphere).
 - Now uses custom `Jewelry Material Library.adsklib` instead of Fusion's standard material library.
+- See [full changelog](CHANGELOG.md) for complete version history.
 
 ---
 
@@ -24,7 +25,7 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 - **Selection:** 1 face and one or more sketch points. The face may have any curvature or complexity; the points do not need to lie directly on the face.
 - **Key parameters:**
   - **Size** — Gemstone diameter. Default: `1.5 mm`. Determines the overall size of the gemstone.
-  - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: false.
+  - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
   - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
   - **Relative Depth Offset** — Depth offset as a fraction of gemstone size. Controls how deep the gemstone sits (0.1 = 10% of diameter). Default: `0`.
 
@@ -35,7 +36,7 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 - **Description:** Creates round-cut gemstone bodies at selected sketch circles on a chosen face. The gemstone size matches the circle diameter.
 - **Selection:** 1 face and one or more sketch circles. The face may have any curvature or complexity; the circles do not need to lie directly on the face. Minimum circle diameter is `0.5 mm`.
 - **Key parameters:**
-  - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: false.
+  - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
   - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
   - **Relative Depth Offset** — Depth offset as a fraction of gemstone size. Controls how deep the gemstone sits (0.1 = 10% of diameter). Default: `0`.
 
@@ -48,11 +49,12 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 - **Key parameters:**
   - **Start Offset** — Distance from the curve start to the first gemstone. Default: `0 mm`.
   - **End Offset** — Distance from the curve end to the last gemstone. Default: `0 mm`.
+  - **Flip Curve** — Flip gemstone placement direction. Starts placing gemstones from the opposite end of the curve. Default: `false`.
   - **Start Size** — Gemstone diameter at the curve start. Default: `1.0 mm`. Minimum: `0.5 mm`.
   - **End Size** — Gemstone diameter at the curve end. Default: `0.7 mm`. Minimum: `0.5 mm`.
   - **Size Step** — Size discretization step. Gemstone sizes are rounded to multiples of this value. Default: `0.05 mm`. Range: `0–1.0 mm`.
   - **Target Gap** — Target distance between adjacent gemstones along the curve. Default: `0.1 mm`.
-  - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: false.
+  - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
   - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
   - **Relative Depth Offset** — Depth offset as a fraction of gemstone size. Controls how deep the gemstone sits (0.1 = 10% of diameter). Default: `0`.
 
@@ -73,9 +75,9 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 - **Description:** Creates prongs at the midpoint between nearby gemstones based on distance constraint.
 - **Selection:** At least 2 gemstones.
 - **Key parameters:**
-  - **Prong Size Ratio** — Prong size relative to average gemstone diameter. Default: `0.3`. Range: `0.1–0.5`.
+  - **Prong Size Ratio** — Prong size relative to average gemstone diameter. Default: `0.35`. Range: `0.1–0.5`.
   - **Prong Height Ratio** — Prong height relative to average gemstone diameter. Default: `0.3`. Range: `0.1–1.0`.
-  - **Width Between Prongs Ratio** — Spacing between prong pair. Default: `0.5`. Range: `0.1–1.0`.
+  - **Width Between Prongs Ratio** — Spacing between prong pair. Default: `0.65`. Range: `0.1–1.0`.
   - **Max Gap** — Maximum gap between gemstones for prong creation. Default: `0.5 mm`.
   - **Weld Distance** — Distance for merging nearby prongs. Default: `0.3 mm`.
 

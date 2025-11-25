@@ -21,6 +21,7 @@ _endSizeValueInput: adsk.core.ValueCommandInput = None
 _sizeStepValueInput: adsk.core.ValueCommandInput = None
 _targetGapValueInput: adsk.core.ValueCommandInput = None
 _flipValueInput: adsk.core.BoolValueCommandInput = None
+_flipDirectionValueInput: adsk.core.BoolValueCommandInput = None
 _absoluteDepthOffsetValueInput: adsk.core.ValueCommandInput = None
 _relativeDepthOffsetValueInput: adsk.core.ValueCommandInput = None
 
@@ -87,8 +88,14 @@ targetGapInputDef = strings.InputDef(
 
 flipInputDef = strings.InputDef(
     'flip', 
-    'Flip', 
+    'Flip Gemstone', 
     "Flip gemstone orientation.\nReverses the direction the gemstone faces relative to the surface."
+    )
+
+flipDirectionInputDef = strings.InputDef(
+    'flipDirection',
+    'Flip Curve',
+    "Flip gemstone placement direction.\nStarts placing gemstones from the opposite end of the curve."
     )
 
 absoluteDepthOffsetInputDef = strings.InputDef(
@@ -184,7 +191,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             global _faceSelectionInput, _curveSelectionInput, _startOffsetValueInput, _endOffsetValueInput
             global _startSizeValueInput, _endSizeValueInput, _sizeStepValueInput, _targetGapValueInput
-            global _flipValueInput, _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
+            global _flipValueInput, _flipDirectionValueInput, _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
 
             _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
             _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
@@ -194,7 +201,11 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _curveSelectionInput = inputs.addSelectionInput(selectCurveInputDef.id, selectCurveInputDef.name, selectCurveInputDef.tooltip)
             _curveSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
             _curveSelectionInput.tooltip = selectCurveInputDef.tooltip
-            _curveSelectionInput.setSelectionLimits(1, 1)  
+            _curveSelectionInput.setSelectionLimits(1, 1)
+
+            flipDirection = False
+            _flipDirectionValueInput = inputs.addBoolValueInput(flipDirectionInputDef.id, flipDirectionInputDef.name, True, '', flipDirection)
+            _flipDirectionValueInput.tooltip = flipDirectionInputDef.tooltip
 
             startOffset = adsk.core.ValueInput.createByReal(0.0)
             _startOffsetValueInput = inputs.addValueInput(startOffsetInputDef.id, startOffsetInputDef.name, defaultLengthUnits, startOffset)
@@ -277,7 +288,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 return
 
             global _startOffsetValueInput, _endOffsetValueInput, _startSizeValueInput, _endSizeValueInput
-            global _sizeStepValueInput, _targetGapValueInput, _flipValueInput
+            global _sizeStepValueInput, _targetGapValueInput, _flipValueInput, _flipDirectionValueInput
             global _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
 
             _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
@@ -288,9 +299,17 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _curveSelectionInput = inputs.addSelectionInput(selectCurveInputDef.id, selectCurveInputDef.name, selectCurveInputDef.tooltip)
             _curveSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
             _curveSelectionInput.tooltip = selectCurveInputDef.tooltip
-            _curveSelectionInput.setSelectionLimits(1, 1)  
+            _curveSelectionInput.setSelectionLimits(1, 1)
 
             params = _editedCustomFeature.parameters
+
+            try:
+                flipDirectionParam = params.itemById(flipDirectionInputDef.id)
+                flipDirection = flipDirectionParam.expression.lower() == 'true'
+            except:
+                flipDirection = False
+            _flipDirectionValueInput = inputs.addBoolValueInput(flipDirectionInputDef.id, flipDirectionInputDef.name, True, '', flipDirection)
+            _flipDirectionValueInput.tooltip = flipDirectionInputDef.tooltip
 
             try:
                 startOffsetParam = params.itemById(startOffsetInputDef.id)
@@ -443,7 +462,8 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
             if not all( [_startOffsetValueInput.isValidExpression, _endOffsetValueInput.isValidExpression,
                          _startSizeValueInput.isValidExpression, _endSizeValueInput.isValidExpression,
                          _sizeStepValueInput.isValidExpression, _targetGapValueInput.isValidExpression,
-                         _flipValueInput.isValid, _absoluteDepthOffsetValueInput.isValidExpression,
+                         _flipValueInput.isValid, _flipDirectionValueInput.isValid,
+                         _absoluteDepthOffsetValueInput.isValidExpression,
                          _relativeDepthOffsetValueInput.isValidExpression] ):
                 eventArgs.areInputsValid = False
                 return
@@ -498,10 +518,11 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             sizeStep = _sizeStepValueInput.value
             targetGap = _targetGapValueInput.value
             flip = _flipValueInput.value
+            flipDirection = _flipDirectionValueInput.value
             absoluteDepthOffset = _absoluteDepthOffsetValueInput.value
             relativeDepthOffset = _relativeDepthOffsetValueInput.value
 
-            pointsAndSizes = calculatePointsAndSizesAlongCurve(curve, startOffset, endOffset, startSize, endSize, sizeStep, targetGap)
+            pointsAndSizes = calculatePointsAndSizesAlongCurve(curve, startOffset, endOffset, startSize, endSize, sizeStep, targetGap, flipDirection)
             if len(pointsAndSizes) == 0:
                 return
 
@@ -537,7 +558,8 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
 
             pointsAndSizes = calculatePointsAndSizesAlongCurve(curve, _startOffsetValueInput.value, _endOffsetValueInput.value,
                                                                _startSizeValueInput.value, _endSizeValueInput.value,
-                                                               _sizeStepValueInput.value, _targetGapValueInput.value)
+                                                               _sizeStepValueInput.value, _targetGapValueInput.value,
+                                                               _flipDirectionValueInput.value)
             if len(pointsAndSizes) == 0:
                 eventArgs.executeFailed = True
                 return
@@ -588,6 +610,9 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                          
             flipInput = adsk.core.ValueInput.createByString(str(_flipValueInput.value).lower())
             customFeatureInput.addCustomParameter(flipInputDef.id, flipInputDef.name, flipInput, '', True)
+
+            flipDirectionInput = adsk.core.ValueInput.createByString(str(_flipDirectionValueInput.value).lower())
+            customFeatureInput.addCustomParameter(flipDirectionInputDef.id, flipDirectionInputDef.name, flipDirectionInput, '', True)
 
             absoluteDepthOffsetInput = adsk.core.ValueInput.createByString(_absoluteDepthOffsetValueInput.expression)
             customFeatureInput.addCustomParameter(absoluteDepthOffsetInputDef.id, absoluteDepthOffsetInputDef.name, absoluteDepthOffsetInput,
@@ -682,6 +707,7 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             _editedCustomFeature.parameters.itemById(sizeStepInputDef.id).expression = _sizeStepValueInput.expression
             _editedCustomFeature.parameters.itemById(targetGapInputDef.id).expression = _targetGapValueInput.expression
             _editedCustomFeature.parameters.itemById(flipInputDef.id).expression = str(_flipValueInput.value).lower()
+            _editedCustomFeature.parameters.itemById(flipDirectionInputDef.id).expression = str(_flipDirectionValueInput.value).lower()
             _editedCustomFeature.parameters.itemById(absoluteDepthOffsetInputDef.id).expression = _absoluteDepthOffsetValueInput.expression
             _editedCustomFeature.parameters.itemById(relativeDepthOffsetInputDef.id).expression = _relativeDepthOffsetValueInput.expression
 
@@ -742,10 +768,15 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         
         flip = customFeature.parameters.itemById(flipInputDef.id).expression.lower() == 'true'
         
+        try:
+            flipDirection = customFeature.parameters.itemById(flipDirectionInputDef.id).expression.lower() == 'true'
+        except:
+            flipDirection = False
+        
         absoluteDepthOffset = customFeature.parameters.itemById(absoluteDepthOffsetInputDef.id).value
         relativeDepthOffset = customFeature.parameters.itemById(relativeDepthOffsetInputDef.id).value
 
-        pointsAndSizes = calculatePointsAndSizesAlongCurve(curveEntity, startOffset, endOffset, startSize, endSize, sizeStep, targetGap)
+        pointsAndSizes = calculatePointsAndSizesAlongCurve(curveEntity, startOffset, endOffset, startSize, endSize, sizeStep, targetGap, flipDirection)
         if len(pointsAndSizes) == 0: return False
 
         component = faceEntity.body.parentComponent

@@ -170,7 +170,7 @@ def calculatePointsAlongCurve(curve: adsk.fusion.SketchCurve, size: float, gap: 
 
 
 def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffset: float, endOffset: float,
-                                      startSize: float, endSize: float, sizeStep: float, targetGap: float) -> list[tuple[adsk.core.Point3D, float]]:
+                                      startSize: float, endSize: float, sizeStep: float, targetGap: float, flipDirection: bool) -> list[tuple[adsk.core.Point3D, float]]:
     """Calculate points and sizes along a curve with variable gemstone sizes.
 
     Args:
@@ -181,6 +181,7 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffse
         endSize: Gemstone diameter at the end.
         sizeStep: Size discretization step (sizes rounded to multiples of this value).
         targetGap: Target gap between adjacent gemstones.
+        flipDirection: If True, reverses the direction (swaps start/end offsets and sizes).
 
     Returns:
         A list of tuples (Point3D, size) representing gemstone positions and sizes.
@@ -198,7 +199,7 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffse
         success, totalCurveLength = curveEvaluator.getLengthAtParameter(startParameter, endParameter)
         if not success:
             return result
-        
+         
         effectiveStartPosition = startOffset
         effectiveEndPosition = totalCurveLength - endOffset
         
@@ -206,7 +207,11 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffse
         if availableLength <= 0:
             return result
         
+        isConstantSize = abs(startSize - endSize) < 1e-5
+
         def getSizeAtLength(positionAlongCurve):
+            if isConstantSize: return startSize
+
             interpolationFactor = (positionAlongCurve - effectiveStartPosition) / availableLength if availableLength > 0 else 0.0
             interpolationFactor = max(0.0, min(1.0, interpolationFactor))
             
@@ -224,11 +229,15 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffse
         
         while currentCenterPosition <= effectiveEndPosition + 1e-5:
             currentGemstoneSize = getSizeAtLength(currentCenterPosition)
-            currentRadius = currentGemstoneSize / 2.0
             
             centerPositions.append(currentCenterPosition)
             gemstoneSizes.append(currentGemstoneSize)
             
+            if isConstantSize:
+                currentCenterPosition += currentGemstoneSize + targetGap
+                continue
+
+            currentRadius = currentGemstoneSize / 2.0
             nextCenterPosition = currentCenterPosition + currentGemstoneSize + targetGap
             
             for _ in range(2):
@@ -248,7 +257,9 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffse
             return result
         
         for i in range(len(centerPositions)):
-            success, curveParameter = curveEvaluator.getParameterAtLength(startParameter, centerPositions[i])
+            positionOnCurve = totalCurveLength - centerPositions[i] if flipDirection else centerPositions[i]
+            
+            success, curveParameter = curveEvaluator.getParameterAtLength(startParameter, positionOnCurve)
             if success:
                 success, pointOnCurve = curveEvaluator.getPointAtParameter(curveParameter)
                 if success:

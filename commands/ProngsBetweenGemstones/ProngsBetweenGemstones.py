@@ -157,7 +157,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _gemstonesSelectionInput.tooltip = selectGemstonesInputDef.tooltip
             _gemstonesSelectionInput.setSelectionLimits(2)
 
-            sizeRatio = adsk.core.ValueInput.createByReal(0.3)
+            sizeRatio = adsk.core.ValueInput.createByReal(0.35)
             _sizeRatioValueInput = inputs.addValueInput(sizeRatioInputDef.id, sizeRatioInputDef.name, '', sizeRatio)
             _sizeRatioValueInput.tooltip = sizeRatioInputDef.tooltip
 
@@ -165,7 +165,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _heightRatioValueInput = inputs.addValueInput(heightRatioInputDef.id, heightRatioInputDef.name, '', heightRatio)
             _heightRatioValueInput.tooltip = heightRatioInputDef.tooltip
 
-            widthBetweenProngsRatio = adsk.core.ValueInput.createByReal(0.5)
+            widthBetweenProngsRatio = adsk.core.ValueInput.createByReal(0.65)
             _widthBetweenProngsRatioValueInput = inputs.addValueInput(widthBetweenProngsRatioInputDef.id, widthBetweenProngsRatioInputDef.name, '', widthBetweenProngsRatio)
             _widthBetweenProngsRatioValueInput.tooltip = widthBetweenProngsRatioInputDef.tooltip
 

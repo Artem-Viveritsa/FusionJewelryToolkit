@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.4] - 2025-11-25
+
+### Added
+- Added `Flip Curve` parameter to `GemstonesOnFaceAtCurve` command for reversing gemstone placement direction along the curve.
+- Enhanced `calculatePointsAndSizesAlongCurve` function with optimization for constant-size gemstone placement.
+
+## [0.6.3] - 2025-11-25
+
+### Fixed
+- Fix access to curve geometry in `calculatePointsAndSizesAlongCurve`
+
+## [0.6.2] - 2025-11-25
+
+### Fixed
+- Fix for getting point on curve at correct parameter in `calculatePointsAndSizesAlongCurve`
+
+## [0.6.1] - 2025-11-25
+
+### Fixed
+- Fix ProngsOnFaceAtPoints default size and height values
+
 ## [0.6.0] - 2025-11-23
 
 ### Added
