@@ -378,4 +378,4 @@ def updateGemstoneFeature(customFeature: adsk.fusion.CustomFeature):
                 setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset)
 
 
-diamondMaterial = constants.materialLibrary.materials.itemByName('Diamond')
+diamondMaterial = constants.materialLibrary.materials.itemByName('Diamond') 

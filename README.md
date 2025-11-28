@@ -1,6 +1,6 @@
 # Fusion 360 Jewelry Toolkit
 
-A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in installs seven commands in the Solid → Create menu.
+A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in installs commands in the Solid → Create menu.
 
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
@@ -12,9 +12,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 5. After installation, the commands appear under Solid → Create.
 
 ## What's new
-- Added new command `GemstonesOnFaceAtCurve` for placing gemstones along sketch curves with variable sizes.
-- Added option for `CuttersForGemstones` to configure the cutter bottom type (Hole, Cone, Hemisphere).
-- Now uses custom `Jewelry Material Library.adsklib` instead of Fusion's standard material library.
+- Added new command [GemstonesOnFaceBetweenCurves](#gemstonesonfacebetweencurves--place-gemstones-between-two-curves) for placing gemstones between two sketch curves with automatic sizing based on distance.
+- Enhanced [GemstonesOnFaceAtCurve](#gemstonesonfaceatcurve--place-gemstones-along-a-curve-with-variable-sizes) with nonlinear interpolation for complex sizing patterns.
 - See [full changelog](CHANGELOG.md) for complete version history.
 
 ---
@@ -54,6 +53,23 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
   - **End Size** — Gemstone diameter at the curve end. Default: `0.7 mm`. Minimum: `0.5 mm`.
   - **Size Step** — Size discretization step. Gemstone sizes are rounded to multiples of this value. Default: `0.05 mm`. Range: `0–1.0 mm`.
   - **Target Gap** — Target distance between adjacent gemstones along the curve. Default: `0.1 mm`.
+  - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
+  - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
+  - **Relative Depth Offset** — Depth offset as a fraction of gemstone size. Controls how deep the gemstone sits (0.1 = 10% of diameter). Default: `0`.
+
+---
+
+![Gemstones icon](commands/GemstonesOnFaceBetweenCurves/resources/32x32@2x.png)
+## GemstonesOnFaceBetweenCurves — Place gemstones between two curves
+- **Description:** Creates round-cut gemstone bodies along a path between two selected sketch curves on a chosen face. Gemstone sizes are automatically determined by the distance between the two curves.
+- **Selection:** 1 face and 2 sketch curves (lines, arcs, circles, ellipses, or splines). The curves should be approximately the same length for best results.
+- **Key parameters:**
+  - **Start Offset** — Distance from the start of the curves to the first gemstone. Default: `0 mm`.
+  - **End Offset** — Distance from the end of the curves to the last gemstone. Default: `0 mm`.
+  - **Flip Direction** — Flip gemstone placement direction. Starts placing gemstones from the opposite end of the curves. Default: `false`.
+  - **Size Ratio** — Multiplier for gemstone size based on curve distance. Default: `1.0`. Range: `0.5–2.0`.
+  - **Size Step** — Size discretization step. Gemstone sizes are rounded to multiples of this value. Default: `0.05 mm`. Range: `0–1.0 mm`.
+  - **Target Gap** — Target distance between adjacent gemstones along the curve path. Default: `0.1 mm`.
   - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
   - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
   - **Relative Depth Offset** — Depth offset as a fraction of gemstone size. Controls how deep the gemstone sits (0.1 = 10% of diameter). Default: `0`.

@@ -11,9 +11,12 @@ PANEL_ID = PREFIX + 'Panel'
 GEMSTONES_ON_FACE_AT_POINTS = 'GemstonesOnFaceAtPoints'
 GEMSTONES_ON_FACE_AT_CIRCLES = 'GemstonesOnFaceAtCircles'
 GEMSTONES_ON_FACE_AT_CURVE = 'GemstonesOnFaceAtCurve'
+GEMSTONES_ON_FACE_BETWEEN_CURVES = 'GemstonesOnFaceBetweenCurves'
+
 PRONGS_ON_FACE_AT_POINTS = 'ProngsOnFaceAtPoints'
-CHANNELS_BETWEEN_GEMSTONES = 'ChannelsBetweenGemstones'
 PRONGS_BETWEEN_GEMSTONES = 'ProngsBetweenGemstones'
+
+CHANNELS_BETWEEN_GEMSTONES = 'ChannelsBetweenGemstones'
 
 ENTITY = 'entity'
 

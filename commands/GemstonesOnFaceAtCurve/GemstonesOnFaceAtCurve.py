@@ -2,6 +2,7 @@ import os
 import adsk.core, adsk.fusion, traceback
 
 from ... import strings
+from ...constants import minimumGemstoneSize
 from ...helpers.showMessage import showMessage
 from ...helpers.Gemstones import createGemstone, updateGemstone, setGemstoneAttributes, updateGemstoneFeature, diamondMaterial
 from ...helpers.Utilities import calculatePointsAndSizesAlongCurve
@@ -24,6 +25,9 @@ _flipValueInput: adsk.core.BoolValueCommandInput = None
 _flipDirectionValueInput: adsk.core.BoolValueCommandInput = None
 _absoluteDepthOffsetValueInput: adsk.core.ValueCommandInput = None
 _relativeDepthOffsetValueInput: adsk.core.ValueCommandInput = None
+_nonlinearValueInput: adsk.core.BoolValueCommandInput = None
+_nonlinearSizeValueInput: adsk.core.ValueCommandInput = None
+_nonlinearPositionValueInput: adsk.core.ValueCommandInput = None
 
 _editedCustomFeature: adsk.fusion.CustomFeature = None
 _restoreTimelineObject: adsk.fusion.TimelineObject = None
@@ -40,13 +44,13 @@ editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Gemstones', 'Edits
 
 selectFaceInputDef = strings.InputDef(
     'selectFace',
-    'Select Face',
+    'Face',
     'Select the face where the gemstone will be placed.'
     )
 
 selectCurveInputDef = strings.InputDef(
     'selectCurve',
-    'Select Curve',
+    'Curve',
     'Select a sketch curve along which gemstones will be placed.'
     )
 
@@ -94,7 +98,7 @@ flipInputDef = strings.InputDef(
 
 flipDirectionInputDef = strings.InputDef(
     'flipDirection',
-    'Flip Curve',
+    'Flip Direction',
     "Flip gemstone placement direction.\nStarts placing gemstones from the opposite end of the curve."
     )
 
@@ -108,6 +112,24 @@ relativeDepthOffsetInputDef = strings.InputDef(
     'relativeDepthOffset', 
     'Relative Depth Offset', 
     "Depth offset as a fraction of gemstone size.\nControls how deep the gemstone sits (0.1 = 10% of diameter)."
+    )
+
+nonlinearInputDef = strings.InputDef(
+    'nonlinear',
+    'Nonlinear',
+    "Use nonlinear size interpolation."
+    )
+
+nonlinearSizeInputDef = strings.InputDef(
+    'nonlinearSize',
+    'Nonlinear Size',
+    "Size of the gemstone at the nonlinear position."
+    )
+
+nonlinearPositionInputDef = strings.InputDef(
+    'nonlinearPosition',
+    'Nonlinear Position',
+    "Position of the nonlinearity peak (0.0 to 1.0)."
     )
 
 RESOURCES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', '')
@@ -192,6 +214,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             global _faceSelectionInput, _curveSelectionInput, _startOffsetValueInput, _endOffsetValueInput
             global _startSizeValueInput, _endSizeValueInput, _sizeStepValueInput, _targetGapValueInput
             global _flipValueInput, _flipDirectionValueInput, _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
+            global _nonlinearValueInput, _nonlinearSizeValueInput, _nonlinearPositionValueInput
 
             _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
             _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
@@ -203,10 +226,12 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _curveSelectionInput.tooltip = selectCurveInputDef.tooltip
             _curveSelectionInput.setSelectionLimits(1, 1)
 
+            inputs.addSeparatorCommandInput('separatorAfterCurve')
+
             flipDirection = False
             _flipDirectionValueInput = inputs.addBoolValueInput(flipDirectionInputDef.id, flipDirectionInputDef.name, True, '', flipDirection)
             _flipDirectionValueInput.tooltip = flipDirectionInputDef.tooltip
-
+            
             startOffset = adsk.core.ValueInput.createByReal(0.0)
             _startOffsetValueInput = inputs.addValueInput(startOffsetInputDef.id, startOffsetInputDef.name, defaultLengthUnits, startOffset)
             _startOffsetValueInput.tooltip = startOffsetInputDef.tooltip
@@ -214,6 +239,8 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             endOffset = adsk.core.ValueInput.createByReal(0.0)
             _endOffsetValueInput = inputs.addValueInput(endOffsetInputDef.id, endOffsetInputDef.name, defaultLengthUnits, endOffset)
             _endOffsetValueInput.tooltip = endOffsetInputDef.tooltip
+            
+            inputs.addSeparatorCommandInput('separatorAfterEndOffset')
 
             startSize = adsk.core.ValueInput.createByReal(0.1)
             _startSizeValueInput = inputs.addValueInput(startSizeInputDef.id, startSizeInputDef.name, defaultLengthUnits, startSize)
@@ -223,6 +250,22 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _endSizeValueInput = inputs.addValueInput(endSizeInputDef.id, endSizeInputDef.name, defaultLengthUnits, endSize)
             _endSizeValueInput.tooltip = endSizeInputDef.tooltip
 
+            inputs.addSeparatorCommandInput('separatorAfterEndSize')
+
+            nonlinear = False
+            _nonlinearValueInput = inputs.addBoolValueInput(nonlinearInputDef.id, nonlinearInputDef.name, True, '', nonlinear)
+            _nonlinearValueInput.tooltip = nonlinearInputDef.tooltip
+
+            nonlinearSize = adsk.core.ValueInput.createByReal(0.1)
+            _nonlinearSizeValueInput = inputs.addValueInput(nonlinearSizeInputDef.id, nonlinearSizeInputDef.name, defaultLengthUnits, nonlinearSize)
+            _nonlinearSizeValueInput.tooltip = nonlinearSizeInputDef.tooltip
+
+            nonlinearPosition = adsk.core.ValueInput.createByReal(0.5)
+            _nonlinearPositionValueInput = inputs.addValueInput(nonlinearPositionInputDef.id, nonlinearPositionInputDef.name, '', nonlinearPosition)
+            _nonlinearPositionValueInput.tooltip = nonlinearPositionInputDef.tooltip
+            
+            inputs.addSeparatorCommandInput('separatorAfterNonlinearPosition')
+
             sizeStep = adsk.core.ValueInput.createByReal(0.005)
             _sizeStepValueInput = inputs.addValueInput(sizeStepInputDef.id, sizeStepInputDef.name, defaultLengthUnits, sizeStep)
             _sizeStepValueInput.tooltip = sizeStepInputDef.tooltip
@@ -231,6 +274,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _targetGapValueInput = inputs.addValueInput(targetGapInputDef.id, targetGapInputDef.name, defaultLengthUnits, targetGap)
             _targetGapValueInput.tooltip = targetGapInputDef.tooltip
 
+            inputs.addSeparatorCommandInput('separatorAfterTargetGap')
             
             flip = False
             _flipValueInput = inputs.addBoolValueInput(flipInputDef.id, flipInputDef.name, True, '', flip)
@@ -290,6 +334,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             global _startOffsetValueInput, _endOffsetValueInput, _startSizeValueInput, _endSizeValueInput
             global _sizeStepValueInput, _targetGapValueInput, _flipValueInput, _flipDirectionValueInput
             global _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
+            global _nonlinearValueInput, _nonlinearSizeValueInput, _nonlinearPositionValueInput
 
             _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
             _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
@@ -300,6 +345,8 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _curveSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
             _curveSelectionInput.tooltip = selectCurveInputDef.tooltip
             _curveSelectionInput.setSelectionLimits(1, 1)
+            
+            inputs.addSeparatorCommandInput('separatorAfterCurve')
 
             params = _editedCustomFeature.parameters
 
@@ -326,6 +373,8 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 endOffset = adsk.core.ValueInput.createByReal(0.0)
             _endOffsetValueInput = inputs.addValueInput(endOffsetInputDef.id, endOffsetInputDef.name, defaultLengthUnits, endOffset)
             _endOffsetValueInput.tooltip = endOffsetInputDef.tooltip
+            
+            inputs.addSeparatorCommandInput('separatorAfterEndOffset')
 
             try:
                 startSizeParam = params.itemById(startSizeInputDef.id)
@@ -343,6 +392,34 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _endSizeValueInput = inputs.addValueInput(endSizeInputDef.id, endSizeInputDef.name, defaultLengthUnits, endSize)
             _endSizeValueInput.tooltip = endSizeInputDef.tooltip
 
+            inputs.addSeparatorCommandInput('separatorAfterEndSize')
+
+            try:
+                nonlinearParam = params.itemById(nonlinearInputDef.id)
+                nonlinear = nonlinearParam.expression.lower() == 'true'
+            except:
+                nonlinear = False
+            _nonlinearValueInput = inputs.addBoolValueInput(nonlinearInputDef.id, nonlinearInputDef.name, True, '', nonlinear)
+            _nonlinearValueInput.tooltip = nonlinearInputDef.tooltip
+
+            try:
+                nonlinearSizeParam = params.itemById(nonlinearSizeInputDef.id)
+                nonlinearSize = adsk.core.ValueInput.createByString(nonlinearSizeParam.expression)
+            except:
+                nonlinearSize = adsk.core.ValueInput.createByReal(0.1)
+            _nonlinearSizeValueInput = inputs.addValueInput(nonlinearSizeInputDef.id, nonlinearSizeInputDef.name, defaultLengthUnits, nonlinearSize)
+            _nonlinearSizeValueInput.tooltip = nonlinearSizeInputDef.tooltip
+
+            try:
+                nonlinearPositionParam = params.itemById(nonlinearPositionInputDef.id)
+                nonlinearPosition = adsk.core.ValueInput.createByString(nonlinearPositionParam.expression)
+            except:
+                nonlinearPosition = adsk.core.ValueInput.createByReal(0.5)
+            _nonlinearPositionValueInput = inputs.addValueInput(nonlinearPositionInputDef.id, nonlinearPositionInputDef.name, '', nonlinearPosition)
+            _nonlinearPositionValueInput.tooltip = nonlinearPositionInputDef.tooltip
+
+            inputs.addSeparatorCommandInput('separatorAfterNonlinearPosition')
+
             try:
                 sizeStepParam = params.itemById(sizeStepInputDef.id)
                 sizeStep = adsk.core.ValueInput.createByString(sizeStepParam.expression)
@@ -358,6 +435,8 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 targetGap = adsk.core.ValueInput.createByReal(0.01)
             _targetGapValueInput = inputs.addValueInput(targetGapInputDef.id, targetGapInputDef.name, defaultLengthUnits, targetGap)
             _targetGapValueInput.tooltip = targetGapInputDef.tooltip
+
+            inputs.addSeparatorCommandInput('separatorAfterTargetGap')
 
             try:
                 flipParam = params.itemById(flipInputDef.id)
@@ -464,7 +543,10 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                          _sizeStepValueInput.isValidExpression, _targetGapValueInput.isValidExpression,
                          _flipValueInput.isValid, _flipDirectionValueInput.isValid,
                          _absoluteDepthOffsetValueInput.isValidExpression,
-                         _relativeDepthOffsetValueInput.isValidExpression] ):
+                         _relativeDepthOffsetValueInput.isValidExpression,
+                         _nonlinearValueInput.isValid,
+                         _nonlinearSizeValueInput.isValidExpression,
+                         _nonlinearPositionValueInput.isValidExpression] ):
                 eventArgs.areInputsValid = False
                 return
 
@@ -479,12 +561,12 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                 return
 
             startSize = _startSizeValueInput.value
-            if startSize < 0.05:
+            if startSize < minimumGemstoneSize:
                 eventArgs.areInputsValid = False
                 return
 
             endSize = _endSizeValueInput.value
-            if endSize < 0.05:
+            if endSize < minimumGemstoneSize:
                 eventArgs.areInputsValid = False
                 return
 
@@ -495,6 +577,16 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
             
             targetGap = _targetGapValueInput.value
             if targetGap < 0:
+                eventArgs.areInputsValid = False
+                return
+            
+            nonlinearSize = _nonlinearSizeValueInput.value
+            if nonlinearSize < minimumGemstoneSize:
+                eventArgs.areInputsValid = False
+                return
+
+            nonlinearPosition = _nonlinearPositionValueInput.value
+            if nonlinearPosition < 0.0 or nonlinearPosition > 1.0:
                 eventArgs.areInputsValid = False
                 return
             
@@ -521,8 +613,11 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             flipDirection = _flipDirectionValueInput.value
             absoluteDepthOffset = _absoluteDepthOffsetValueInput.value
             relativeDepthOffset = _relativeDepthOffsetValueInput.value
+            nonlinear = _nonlinearValueInput.value
+            nonlinearSize = _nonlinearSizeValueInput.value
+            nonlinearPosition = _nonlinearPositionValueInput.value
 
-            pointsAndSizes = calculatePointsAndSizesAlongCurve(curve, startOffset, endOffset, startSize, endSize, sizeStep, targetGap, flipDirection)
+            pointsAndSizes = calculatePointsAndSizesAlongCurve(curve, startOffset, endOffset, startSize, endSize, sizeStep, targetGap, flipDirection, nonlinear, nonlinearSize, nonlinearPosition)
             if len(pointsAndSizes) == 0:
                 return
 
@@ -559,7 +654,8 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             pointsAndSizes = calculatePointsAndSizesAlongCurve(curve, _startOffsetValueInput.value, _endOffsetValueInput.value,
                                                                _startSizeValueInput.value, _endSizeValueInput.value,
                                                                _sizeStepValueInput.value, _targetGapValueInput.value,
-                                                               _flipDirectionValueInput.value)
+                                                               _flipDirectionValueInput.value,
+                                                               _nonlinearValueInput.value, _nonlinearSizeValueInput.value, _nonlinearPositionValueInput.value)
             if len(pointsAndSizes) == 0:
                 eventArgs.executeFailed = True
                 return
@@ -620,6 +716,17 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
 
             relativeDepthOffsetInput = adsk.core.ValueInput.createByString(_relativeDepthOffsetValueInput.expression)
             customFeatureInput.addCustomParameter(relativeDepthOffsetInputDef.id, relativeDepthOffsetInputDef.name, relativeDepthOffsetInput,
+                                              '', True)
+
+            nonlinearInput = adsk.core.ValueInput.createByString(str(_nonlinearValueInput.value).lower())
+            customFeatureInput.addCustomParameter(nonlinearInputDef.id, nonlinearInputDef.name, nonlinearInput, '', True)
+
+            nonlinearSizeInput = adsk.core.ValueInput.createByString(_nonlinearSizeValueInput.expression)
+            customFeatureInput.addCustomParameter(nonlinearSizeInputDef.id, nonlinearSizeInputDef.name, nonlinearSizeInput,
+                                              defLengthUnits, True)
+
+            nonlinearPositionInput = adsk.core.ValueInput.createByString(_nonlinearPositionValueInput.expression)
+            customFeatureInput.addCustomParameter(nonlinearPositionInputDef.id, nonlinearPositionInputDef.name, nonlinearPositionInput,
                                               '', True)
 
             customFeatureInput.addDependency('face', face)
@@ -711,6 +818,21 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             _editedCustomFeature.parameters.itemById(absoluteDepthOffsetInputDef.id).expression = _absoluteDepthOffsetValueInput.expression
             _editedCustomFeature.parameters.itemById(relativeDepthOffsetInputDef.id).expression = _relativeDepthOffsetValueInput.expression
 
+            try:
+                _editedCustomFeature.parameters.itemById(nonlinearInputDef.id).expression = str(_nonlinearValueInput.value).lower()
+            except:
+                _editedCustomFeature.parameters.add(nonlinearInputDef.id, nonlinearInputDef.name, adsk.core.ValueInput.createByString(str(_nonlinearValueInput.value).lower()), '', True)
+
+            try:
+                _editedCustomFeature.parameters.itemById(nonlinearSizeInputDef.id).expression = _nonlinearSizeValueInput.expression
+            except:
+                _editedCustomFeature.parameters.add(nonlinearSizeInputDef.id, nonlinearSizeInputDef.name, adsk.core.ValueInput.createByString(_nonlinearSizeValueInput.expression), _app.activeProduct.unitsManager.defaultLengthUnits, True)
+
+            try:
+                _editedCustomFeature.parameters.itemById(nonlinearPositionInputDef.id).expression = _nonlinearPositionValueInput.expression
+            except:
+                _editedCustomFeature.parameters.add(nonlinearPositionInputDef.id, nonlinearPositionInputDef.name, adsk.core.ValueInput.createByString(_nonlinearPositionValueInput.expression), '', True)
+
             updateFeature(_editedCustomFeature)
 
         except:
@@ -776,8 +898,23 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         absoluteDepthOffset = customFeature.parameters.itemById(absoluteDepthOffsetInputDef.id).value
         relativeDepthOffset = customFeature.parameters.itemById(relativeDepthOffsetInputDef.id).value
 
-        pointsAndSizes = calculatePointsAndSizesAlongCurve(curveEntity, startOffset, endOffset, startSize, endSize, sizeStep, targetGap, flipDirection)
-        if len(pointsAndSizes) == 0: return False
+        try:
+            nonlinear = customFeature.parameters.itemById(nonlinearInputDef.id).expression.lower() == 'true'
+        except:
+            nonlinear = False
+
+        try:
+            nonlinearSize = customFeature.parameters.itemById(nonlinearSizeInputDef.id).value
+        except:
+            nonlinearSize = 0.1
+
+        try:
+            nonlinearPosition = customFeature.parameters.itemById(nonlinearPositionInputDef.id).value
+        except:
+            nonlinearPosition = 0.5
+
+        pointsAndSizes = calculatePointsAndSizesAlongCurve(curveEntity, startOffset, endOffset, startSize, endSize, sizeStep, targetGap, flipDirection, nonlinear, nonlinearSize, nonlinearPosition)
+        if len(pointsAndSizes) == 0: return True
 
         component = faceEntity.body.parentComponent
 

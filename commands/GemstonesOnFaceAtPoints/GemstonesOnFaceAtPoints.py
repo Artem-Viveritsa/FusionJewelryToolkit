@@ -1,7 +1,8 @@
 import os
 import adsk.core, adsk.fusion, traceback
 
-from ... import strings, constants
+from ... import strings
+from ...constants import minimumGemstoneSize
 from ...helpers.showMessage import showMessage
 from ...helpers.Gemstones import createGemstone, updateGemstone, setGemstoneAttributes, updateGemstoneFeature, diamondMaterial
 
@@ -343,7 +344,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                 return
 
             size = _sizeValueInput.value
-            if size < 0.05:
+            if size < minimumGemstoneSize:
                 eventArgs.areInputsValid = False
                 return
             

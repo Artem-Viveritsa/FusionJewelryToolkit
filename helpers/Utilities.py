@@ -1,6 +1,7 @@
 import adsk.core, adsk.fusion, traceback
 
 from .showMessage import showMessage
+from ..constants import measureManager, minimumGemstoneSize
 
 
 def getDataFromPointAndFace(face: adsk.fusion.BRepFace, point: adsk.core.Point3D) -> tuple[adsk.core.Point3D, adsk.core.Vector3D, adsk.core.Vector3D, adsk.core.Vector3D]:
@@ -170,7 +171,8 @@ def calculatePointsAlongCurve(curve: adsk.fusion.SketchCurve, size: float, gap: 
 
 
 def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffset: float, endOffset: float,
-                                      startSize: float, endSize: float, sizeStep: float, targetGap: float, flipDirection: bool) -> list[tuple[adsk.core.Point3D, float]]:
+                                      startSize: float, endSize: float, sizeStep: float, targetGap: float, flipDirection: bool,
+                                      nonlinear: bool = False, nonlinearSize: float = 0.1, nonlinearPosition: float = 0.5) -> list[tuple[adsk.core.Point3D, float]]:
     """Calculate points and sizes along a curve with variable gemstone sizes.
 
     Args:
@@ -182,6 +184,9 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffse
         sizeStep: Size discretization step (sizes rounded to multiples of this value).
         targetGap: Target gap between adjacent gemstones.
         flipDirection: If True, reverses the direction (swaps start/end offsets and sizes).
+        nonlinear: If True, use nonlinear interpolation passing through nonlinearSize at nonlinearPosition.
+        nonlinearSize: The size of the gemstone at the nonlinearPosition (in internal units, cm).
+        nonlinearPosition: Absolute position of the nonlinearity peak along the curve (in cm, from 0 to total curve length).
 
     Returns:
         A list of tuples (Point3D, size) representing gemstone positions and sizes.
@@ -207,20 +212,50 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffse
         if availableLength <= 0:
             return result
         
-        isConstantSize = abs(startSize - endSize) < 1e-5
+        isConstantSize = abs(startSize - endSize) < 1e-5 and not nonlinear
 
         def getSizeAtLength(positionAlongCurve):
             if isConstantSize: return startSize
 
-            interpolationFactor = (positionAlongCurve - effectiveStartPosition) / availableLength if availableLength > 0 else 0.0
-            interpolationFactor = max(0.0, min(1.0, interpolationFactor))
+            normalizedPosition = (positionAlongCurve - effectiveStartPosition) / availableLength if availableLength > 0 else 0.0
+            normalizedPosition = max(0.0, min(1.0, normalizedPosition))
             
-            interpolatedSize = startSize + (endSize - startSize) * interpolationFactor
+            interpolatedSize = 0.0
             
+            if not nonlinear:
+                interpolatedSize = startSize + (endSize - startSize) * normalizedPosition
+                
+            else:
+                clampedNonlinearPosition = max(0.01, min(0.99, nonlinearPosition))
+                denominator = clampedNonlinearPosition * (clampedNonlinearPosition - 1)
+                
+                if abs(denominator) < 1e-5:
+                    interpolatedSize = startSize + (endSize - startSize) * normalizedPosition
+                else:
+                    numerator = (nonlinearSize - startSize) - (endSize - startSize) * clampedNonlinearPosition
+                    quadraticCoeffA = numerator / denominator
+                    linearCoeffB = (endSize - startSize) - quadraticCoeffA
+
+                    interpolatedSize = quadraticCoeffA * normalizedPosition * normalizedPosition + linearCoeffB * normalizedPosition + startSize
+            
+            interpolatedSize = max(0.001, interpolatedSize)
+
             if sizeStep > 0:
-                return round(interpolatedSize / sizeStep) * sizeStep
+                return max(minimumGemstoneSize, round(interpolatedSize / sizeStep) * sizeStep)
             else:
                 return interpolatedSize
+
+        def getPointAtCalculationPosition(calcPos):
+            positionOnCurve = totalCurveLength - calcPos if flipDirection else calcPos
+            if positionOnCurve < 0: positionOnCurve = 0
+            if positionOnCurve > totalCurveLength: positionOnCurve = totalCurveLength
+            
+            success, param = curveEvaluator.getParameterAtLength(startParameter, positionOnCurve)
+            if success:
+                success, point = curveEvaluator.getPointAtParameter(param)
+                if success:
+                    return point
+            return None
 
         centerPositions = []
         gemstoneSizes = []
@@ -233,23 +268,29 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffse
             centerPositions.append(currentCenterPosition)
             gemstoneSizes.append(currentGemstoneSize)
             
-            if isConstantSize:
-                currentCenterPosition += currentGemstoneSize + targetGap
-                continue
-
             currentRadius = currentGemstoneSize / 2.0
             nextCenterPosition = currentCenterPosition + currentGemstoneSize + targetGap
             
-            for _ in range(2):
+            currentPoint = getPointAtCalculationPosition(currentCenterPosition)
+
+            for _ in range(3):
                 nextGemstoneSize = getSizeAtLength(nextCenterPosition)
                 nextRadius = nextGemstoneSize / 2.0
                 targetDistance = currentRadius + nextRadius + targetGap
-                targetPosition = currentCenterPosition + targetDistance
                 
-                if abs(targetPosition - nextCenterPosition) < 1e-5:
-                    nextCenterPosition = targetPosition
+                nextPoint = getPointAtCalculationPosition(nextCenterPosition)
+                
+                if currentPoint is None or nextPoint is None:
                     break
-                nextCenterPosition = targetPosition
+                
+                actualDistance = currentPoint.distanceTo(nextPoint)
+                
+                if abs(actualDistance - targetDistance) < 1e-5:
+                    break
+                
+                scaleFactor = targetDistance / actualDistance if actualDistance > 1e-5 else 1.0
+                lengthDelta = nextCenterPosition - currentCenterPosition
+                nextCenterPosition = currentCenterPosition + lengthDelta * scaleFactor
             
             currentCenterPosition = nextCenterPosition
         
@@ -271,3 +312,207 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffse
         showMessage(f'calculatePointsAndSizesAlongCurve: {traceback.format_exc()}\n', True)
         return []
 
+
+def calculatePointsAndSizesBetweenCurves(
+    curve1: adsk.fusion.SketchCurve, 
+    curve2: adsk.fusion.SketchCurve, 
+    startOffset: float, 
+    endOffset: float,
+    sizeStep: float, 
+    targetGap: float, 
+    sizeRatio: float,
+    flipDirection: bool = False
+) -> list[tuple[adsk.core.Point3D, float]]:
+    """Calculate points and sizes between two curves based on the distance between them.
+
+    The gemstone positions are calculated along a polyline that is the average of the two curves.
+    The size is determined by the distance between the two curves at each position, multiplied by the sizeRatio.
+
+    Args:
+        curve1: The first sketch curve.
+        curve2: The second sketch curve.
+        startOffset: Offset from the start of the curve.
+        endOffset: Offset from the end of the curve.
+        sizeStep: Size discretization step (sizes rounded to multiples of this value).
+        targetGap: Target gap between adjacent gemstones.
+        sizeRatio: Ratio of gemstone size to the distance between curves (0.0-1.0).
+        flipDirection: If True, gemstones start from the opposite side.
+
+    Returns:
+        A list of tuples (Point3D, size) representing gemstone positions and sizes.
+    """
+    try:
+        result: list[tuple[adsk.core.Point3D, float]] = []
+        
+        curve1Geometry: adsk.core.Curve3D = curve1.worldGeometry
+        curve1Evaluator = curve1Geometry.evaluator
+        
+        curve2Geometry: adsk.core.Curve3D = curve2.worldGeometry
+        curve2Evaluator = curve2Geometry.evaluator
+        
+        success, startParam1, endParam1 = curve1Evaluator.getParameterExtents()
+        if not success: return result
+        
+        success, curve1Length = curve1Evaluator.getLengthAtParameter(startParam1, endParam1)
+        if not success: return result
+        
+        success, startParam2, endParam2 = curve2Evaluator.getParameterExtents()
+        if not success: return result
+        
+        success, curve2Length = curve2Evaluator.getLengthAtParameter(startParam2, endParam2)
+        if not success: return result
+        
+        _, p1Start = curve1Evaluator.getPointAtParameter(startParam1)
+        _, p1End = curve1Evaluator.getPointAtParameter(endParam1)
+        _, p2Start = curve2Evaluator.getPointAtParameter(startParam2)
+        _, p2End = curve2Evaluator.getPointAtParameter(endParam2)
+        
+        distParallel = p1Start.distanceTo(p2Start) + p1End.distanceTo(p2End)
+        distAntiParallel = p1Start.distanceTo(p2End) + p1End.distanceTo(p2Start)
+        
+        curvesOpposed = distAntiParallel < distParallel
+        
+        averageLength = (curve1Length + curve2Length) / 2.0
+        maxLength = max(curve1Length, curve2Length)
+        stepSize = minimumGemstoneSize
+        numPoints = max(2, int(maxLength / stepSize) + 1)
+        
+        averagePolyline: list[tuple[float, adsk.core.Point3D]] = []
+        
+        for i in range(numPoints):
+            ratio = i / (numPoints - 1) if numPoints > 1 else 0.0
+            
+            position = ratio * averageLength
+            
+            curveRatio1 = 1.0 - ratio if flipDirection else ratio
+            curveRatio2 = 1.0 - curveRatio1 if curvesOpposed else curveRatio1
+            
+            length1 = curveRatio1 * curve1Length
+            _, param1 = curve1Evaluator.getParameterAtLength(startParam1, length1)
+            _, point1 = curve1Evaluator.getPointAtParameter(param1)
+            
+            length2 = curveRatio2 * curve2Length
+            _, param2 = curve2Evaluator.getParameterAtLength(startParam2, length2)
+            _, point2 = curve2Evaluator.getPointAtParameter(param2)
+
+            midpoint = averagePosition([point1, point2])
+            if midpoint is None: continue
+            
+            if i != 0 and i != numPoints - 1:
+                firstClosest = measureManager.measureMinimumDistance(midpoint, curve1).positionOne
+                secondClosest = measureManager.measureMinimumDistance(midpoint, curve2).positionOne
+            
+                midpoint = averagePosition([firstClosest, secondClosest])
+                if midpoint is None: continue
+
+            averagePolyline.append((position, midpoint))
+                
+        def getPointAtLength(positionAlongPolyline: float) -> adsk.core.Point3D | None:
+            """Get interpolated point on the average polyline at a given position."""
+            if len(averagePolyline) == 0:
+                return None
+            
+            if positionAlongPolyline <= averagePolyline[0][0]:
+                return averagePolyline[0][1]
+            
+            if positionAlongPolyline >= averagePolyline[-1][0]:
+                return averagePolyline[-1][1]
+            
+            for i in range(len(averagePolyline) - 1):
+                pos1, point1 = averagePolyline[i]
+                pos2, point2 = averagePolyline[i + 1]
+                
+                if pos1 <= positionAlongPolyline <= pos2:
+                    segmentLength = pos2 - pos1
+                    if segmentLength < 1e-10:
+                        return point1
+                    
+                    t = (positionAlongPolyline - pos1) / segmentLength
+                    
+                    interpolatedPoint = adsk.core.Point3D.create(
+                        point1.x + t * (point2.x - point1.x),
+                        point1.y + t * (point2.y - point1.y),
+                        point1.z + t * (point2.z - point1.z)
+                    )
+                    return interpolatedPoint
+            
+            return None
+        
+            
+        def getMinDistanceToCurves(point: adsk.core.Point3D) -> float:
+            """Get the minimum distance from a point to either curve."""
+            if point is None:
+                return 0.0
+            
+            dist1 = measureManager.measureMinimumDistance(point, curve1).value
+            dist2 = measureManager.measureMinimumDistance(point, curve2).value
+            
+            return min(dist1, dist2)
+        
+        def getAverageDistanceToCurves(point: adsk.core.Point3D) -> float:
+            """Get the minimum distance from a point to either curve."""
+            if point is None:
+                return 0.0
+            
+            dist1 = measureManager.measureMinimumDistance(point, curve1).value
+            dist2 = measureManager.measureMinimumDistance(point, curve2).value
+            
+            return (dist1 + dist2) / 2.0
+        
+        def getSizeAtLength(positionAlongPolyline: float) -> float:
+            """Get gemstone size at a given position along the average polyline.
+            
+            The size is calculated as 2 * minDistance * sizeRatio, where minDistance
+            is the minimum distance from the polyline point to either curve.
+            """
+            point = getPointAtLength(positionAlongPolyline)
+            if point is None:
+                return minimumGemstoneSize
+            
+            avgDist = getAverageDistanceToCurves(point)
+            gemstoneSize = 2.0 * avgDist * sizeRatio
+            
+            if sizeStep > 0:
+                return max(minimumGemstoneSize, round(gemstoneSize / sizeStep) * sizeStep)
+            else:
+                return max(minimumGemstoneSize, gemstoneSize)
+        
+        effectiveStartPosition = startOffset
+        effectiveEndPosition = averageLength - endOffset
+        
+        if effectiveEndPosition < effectiveStartPosition:
+            return result
+
+        currentCenterPosition = effectiveStartPosition
+        
+        while currentCenterPosition <= effectiveEndPosition + 1e-5:
+            currentGemstoneSize = getSizeAtLength(currentCenterPosition)
+            
+            point = getPointAtLength(currentCenterPosition)
+            if point: result.append((point, currentGemstoneSize))
+            
+            currentRadius = currentGemstoneSize / 2.0
+            nextCenterPosition = currentCenterPosition + currentGemstoneSize + targetGap
+            
+            for _ in range(3):
+                nextGemstoneSize = getSizeAtLength(nextCenterPosition)
+                nextRadius = nextGemstoneSize / 2.0
+                targetDistance = currentRadius + nextRadius + targetGap
+                
+                nextPoint = getPointAtLength(nextCenterPosition)
+                if point is None or nextPoint is None: break
+                
+                actualDistance = point.distanceTo(nextPoint)
+                if abs(actualDistance - targetDistance) < 1e-5: break
+                
+                scaleFactor = targetDistance / actualDistance if actualDistance > 1e-5 else 1.0
+                lengthDelta = nextCenterPosition - currentCenterPosition
+                nextCenterPosition = currentCenterPosition + lengthDelta * scaleFactor
+            
+            currentCenterPosition = nextCenterPosition
+        
+        return result
+    
+    except:
+        showMessage(f'calculatePointsAndSizesBetweenCurves2: {traceback.format_exc()}\n', True)
+        return []

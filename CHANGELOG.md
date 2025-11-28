@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0] - 2025-11-29
+
+### Added
+- New command `GemstonesOnFaceBetweenCurves` for placing gemstones between two sketch curves with automatic sizing based on curve distance.
+- Enhanced `calculatePointsAndSizesAlongCurve` function with support for nonlinear interpolation for complex gemstone sizing patterns.
+- New helper function `calculatePointsAndSizesBetweenCurves` for computing gemstone positions and sizes between two curves.
+- Added `minimumGemstoneSize` constant to ensure minimum gemstone size constraints across all commands.
+
+### Changed
+- Updated constants module to include `measureManager` and `minimumGemstoneSize` for better size management.
+- Improved gemstone size calculation to respect minimum size constraints in `GemstonesOnFaceAtCurve` and other commands.
+- Enhanced numerical stability in distance calculations between curve positions.
+
 ## [0.6.4] - 2025-11-25
 
 ### Added
