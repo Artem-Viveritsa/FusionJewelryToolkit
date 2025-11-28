@@ -2,7 +2,8 @@
 
 A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in installs commands in the Solid → Create menu.
 
-Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
+[![Gemstones icon](commands/GemstonesOnFaceAtPoints/resources/32x32@2x.png)](#gemstonesonfaceatpoints--place-round-gemstones-on-a-face-at-specified-points) [![Gemstones icon](commands/GemstonesOnFaceAtCircles/resources/32x32@2x.png)](#gemstonesonfaceatcircles--place-round-gemstones-on-a-face-at-sketch-circles) [![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)](#gemstonesonfaceatcurve--place-gemstones-along-a-curve-with-variable-sizes) [![Gemstones icon](commands/GemstonesOnFaceBetweenCurves/resources/32x32@2x.png)](#gemstonesonfacebetweencurves--place-gemstones-between-two-curves) [![Prongs icon](commands/ProngsOnFaceAtPoints/resources/32x32@2x.png)](#prongsonfaceatpoints--generate-prongs-on-a-face-at-specified-points) [![ProngsBetweenGemstones icon](commands/ProngsBetweenGemstones/resources/32x32@2x.png)](#prongsbetweengemstones--create-prongs-between-gemstones) [![ChannelsBetweenGemstones icon](commands/ChannelsBetweenGemstones/resources/32x32@2x.png)](#channelsbetweengemstones--create-channels-between-gemstones) [![CuttersForGemstones icon](commands/CuttersForGemstones/resources/32x32@2x.png)](#cuttersforgemstones--create-cutter-bodies-for-gemstone-seating)
+
 
 ## Installation
 1. In Fusion 360, go to Utilities → Add-ins → Scripts and Add-ins.
@@ -10,6 +11,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 3. Select the `FusionJewelryToolkit` folder and click Open.
 4. To make the add-in run automatically when Fusion starts, enable the "Run on Startup" checkbox.
 5. After installation, the commands appear under Solid → Create.
+
+Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
 ## What's new
 - Added new command [GemstonesOnFaceBetweenCurves](#gemstonesonfacebetweencurves--place-gemstones-between-two-curves) for placing gemstones between two sketch curves with automatic sizing based on distance.
