@@ -5,7 +5,7 @@ from ... import strings
 from ...constants import minimumGemstoneSize
 from ...helpers.showMessage import showMessage
 from ...helpers.Gemstones import createGemstone, updateGemstone, setGemstoneAttributes, updateGemstoneFeature, diamondMaterial
-from ...helpers.Utilities import calculatePointsAndSizesAlongCurve
+from ...helpers.Utilities import calculatePointsAndSizesAlongCurve, getCurve3D
 
 _app: adsk.core.Application = None
 _ui: adsk.core.UserInterface = None
@@ -51,7 +51,7 @@ selectFaceInputDef = strings.InputDef(
 selectCurveInputDef = strings.InputDef(
     'selectCurve',
     'Curve',
-    'Select a sketch curve along which gemstones will be placed.'
+    'Select a sketch curve or edge along which gemstones will be placed.'
     )
 
 startOffsetInputDef = strings.InputDef(
@@ -223,6 +223,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             _curveSelectionInput = inputs.addSelectionInput(selectCurveInputDef.id, selectCurveInputDef.name, selectCurveInputDef.tooltip)
             _curveSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
+            _curveSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
             _curveSelectionInput.tooltip = selectCurveInputDef.tooltip
             _curveSelectionInput.setSelectionLimits(1, 1)
 
@@ -343,6 +344,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             _curveSelectionInput = inputs.addSelectionInput(selectCurveInputDef.id, selectCurveInputDef.name, selectCurveInputDef.tooltip)
             _curveSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
+            _curveSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
             _curveSelectionInput.tooltip = selectCurveInputDef.tooltip
             _curveSelectionInput.setSelectionLimits(1, 1)
             
@@ -501,26 +503,13 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
     def notify(self, args):
         try:
             eventArgs = adsk.core.SelectionEventArgs.cast(args)
-            type = eventArgs.selection.entity.objectType
-
-            
-
-            if type == adsk.fusion.BRepFace.classType():
-                if eventArgs.selection.entity is None:
+            entity = eventArgs.selection.entity
+            entityType = entity.objectType
+        
+            if entityType in [adsk.core.Plane.classType(), adsk.fusion.BRepFace.classType(), adsk.fusion.SketchCurve.classType(), adsk.fusion.BRepEdge.classType()]:
+                if entity.geometry is None:
                     eventArgs.isSelectable = False
                     return
-
-            if type in [adsk.fusion.SketchLine.classType(), adsk.fusion.SketchArc.classType(), 
-                        adsk.fusion.SketchCircle.classType(), adsk.fusion.SketchEllipse.classType(),
-                        adsk.fusion.SketchFittedSpline.classType(), adsk.fusion.SketchFixedSpline.classType()]:
-                preSelectCurve = eventArgs.selection.entity
-
-                
-                if preSelectCurve.assemblyContext:
-                    occ = preSelectCurve.assemblyContext
-                    if occ.isReferencedComponent:
-                        eventArgs.isSelectable = False
-                        return
             
         except:
             showMessage(f'PreSelectHandler: {traceback.format_exc()}\n', True)
@@ -601,7 +590,11 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
     def notify(self, args):
         try:
             face: adsk.fusion.BRepFace = _faceSelectionInput.selection(0).entity
-            curve: adsk.fusion.SketchCurve = _curveSelectionInput.selection(0).entity
+            curveEntity = _curveSelectionInput.selection(0).entity
+            
+            curve = getCurve3D(curveEntity)
+            if curve is None:
+                return
             
             startOffset = _startOffsetValueInput.value
             endOffset = _endOffsetValueInput.value
@@ -626,7 +619,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             baseFeat.startEdit()
 
             for point, size in pointsAndSizes:
-                gemstone = createGemstone(face, point, size, RESOURCES_FOLDER, flip, absoluteDepthOffset, relativeDepthOffset)
+                gemstone = createGemstone(face, point, size, flip, absoluteDepthOffset, relativeDepthOffset)
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeat)
                     setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset)
@@ -648,8 +641,13 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             eventArgs = adsk.core.CommandEventArgs.cast(args)        
 
             face: adsk.fusion.BRepFace = _faceSelectionInput.selection(0).entity
-            curve: adsk.fusion.SketchCurve = _curveSelectionInput.selection(0).entity
+            curveEntity = _curveSelectionInput.selection(0).entity
             comp = face.body.parentComponent
+
+            curve = getCurve3D(curveEntity)
+            if curve is None:
+                eventArgs.executeFailed = True
+                return
 
             pointsAndSizes = calculatePointsAndSizesAlongCurve(curve, _startOffsetValueInput.value, _endOffsetValueInput.value,
                                                                _startSizeValueInput.value, _endSizeValueInput.value,
@@ -664,7 +662,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             baseFeat.startEdit()
 
             for point, size in pointsAndSizes:
-                gemstone = createGemstone(face, point, size, RESOURCES_FOLDER, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value)
+                gemstone = createGemstone(face, point, size, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value)
                 if gemstone is None:
                     eventArgs.executeFailed = True
                     return
@@ -730,7 +728,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                                               '', True)
 
             customFeatureInput.addDependency('face', face)
-            customFeatureInput.addDependency('curve', curve)
+            customFeatureInput.addDependency('curve', curveEntity)
 
             customFeatureInput.setStartAndEndFeatures(baseFeat, baseFeat)
             comp.features.customFeatures.add(customFeatureInput)
@@ -913,7 +911,11 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         except:
             nonlinearPosition = 0.5
 
-        pointsAndSizes = calculatePointsAndSizesAlongCurve(curveEntity, startOffset, endOffset, startSize, endSize, sizeStep, targetGap, flipDirection, nonlinear, nonlinearSize, nonlinearPosition)
+        curveGeometry = getCurve3D(curveEntity)
+        if curveGeometry is None:
+            return True
+
+        pointsAndSizes = calculatePointsAndSizesAlongCurve(curveGeometry, startOffset, endOffset, startSize, endSize, sizeStep, targetGap, flipDirection, nonlinear, nonlinearSize, nonlinearPosition)
         if len(pointsAndSizes) == 0: return True
 
         component = faceEntity.body.parentComponent
@@ -933,7 +935,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
                 else:
                     success = False
             else:
-                gemstone = createGemstone(faceEntity, point, size, RESOURCES_FOLDER, flip, absoluteDepthOffset, relativeDepthOffset)
+                gemstone = createGemstone(faceEntity, point, size, flip, absoluteDepthOffset, relativeDepthOffset)
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeature)
                     body.material = diamondMaterial

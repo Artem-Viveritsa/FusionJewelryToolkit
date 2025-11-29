@@ -184,14 +184,13 @@ def findValidConnections(gemstoneInfos: list[GemstoneInfo], maxGap: float) -> li
     return connections
 
 
-def createGemstone(face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: float, resourcesFolder: str, flip: bool = False, absoluteDepthOffset: float = 0.0, relativeDepthOffset: float = 0.0):
+def createGemstone(face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: float, flip: bool = False, absoluteDepthOffset: float = 0.0, relativeDepthOffset: float = 0.0):
     """Create a gemstone body based on the face, point, size, and flip.
 
     Args:
         face: The face where the gemstone will be placed.
         point: The point on the face where the gemstone will be created.
         size: The size of the gemstone.
-        resourcesFolder: Path to the resources folder containing gemstone models.
         flip: Whether to flip the gemstone orientation.
         absoluteDepthOffset: The absolute depth offset.
         relativeDepthOffset: The relative depth offset.
@@ -210,7 +209,7 @@ def createGemstone(face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: f
             return None
 
         
-        filePath = os.path.join(resourcesFolder, strings.GEMSTONE_ROUND_CUT + '.sat')
+        filePath = os.path.join(constants.ASSETS_FOLDER, strings.GEMSTONE_ROUND_CUT + '.sat')
         gemstone = temporaryBRep.createFromFile(filePath).item(0)
         
         cylindricalFace = list(filter(lambda x: x.geometry.surfaceType == adsk.core.SurfaceTypes.CylinderSurfaceType, gemstone.faces))[0]

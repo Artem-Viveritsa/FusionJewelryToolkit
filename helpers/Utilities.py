@@ -170,7 +170,7 @@ def calculatePointsAlongCurve(curve: adsk.fusion.SketchCurve, size: float, gap: 
         return []
 
 
-def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffset: float, endOffset: float,
+def calculatePointsAndSizesAlongCurve(curve: adsk.core.Curve3D, startOffset: float, endOffset: float,
                                       startSize: float, endSize: float, sizeStep: float, targetGap: float, flipDirection: bool,
                                       nonlinear: bool = False, nonlinearSize: float = 0.1, nonlinearPosition: float = 0.5) -> list[tuple[adsk.core.Point3D, float]]:
     """Calculate points and sizes along a curve with variable gemstone sizes.
@@ -194,8 +194,7 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffse
     try:
         result: list[tuple[adsk.core.Point3D, float]] = []
         
-        curveGeometry: adsk.core.Curve3D = curve.worldGeometry
-        curveEvaluator = curveGeometry.evaluator
+        curveEvaluator = curve.evaluator
         
         success, startParameter, endParameter = curveEvaluator.getParameterExtents()
         if not success:
@@ -313,9 +312,27 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.fusion.SketchCurve, startOffse
         return []
 
 
+def getCurve3D(entity: adsk.core.Base) -> adsk.core.Curve3D | None:
+    """Extract Curve3D geometry from SketchCurve or BRepEdge.
+
+    Args:
+        entity: A SketchCurve or BRepEdge object.
+
+    Returns:
+        The Curve3D geometry, or None if extraction fails.
+    """
+    if entity is None:
+        return None
+
+    if hasattr(entity, 'geometry'):
+        return entity.geometry
+    
+    return None
+
+
 def calculatePointsAndSizesBetweenCurves(
-    curve1: adsk.fusion.SketchCurve, 
-    curve2: adsk.fusion.SketchCurve, 
+    curve1Geometry: adsk.core.Curve3D, 
+    curve2Geometry: adsk.core.Curve3D, 
     startOffset: float, 
     endOffset: float,
     sizeStep: float, 
@@ -329,13 +346,13 @@ def calculatePointsAndSizesBetweenCurves(
     The size is determined by the distance between the two curves at each position, multiplied by the sizeRatio.
 
     Args:
-        curve1: The first sketch curve.
-        curve2: The second sketch curve.
+        curve1Geometry: The first Curve3D geometry.
+        curve2Geometry: The second Curve3D geometry.
         startOffset: Offset from the start of the curve.
         endOffset: Offset from the end of the curve.
         sizeStep: Size discretization step (sizes rounded to multiples of this value).
         targetGap: Target gap between adjacent gemstones.
-        sizeRatio: Ratio of gemstone size to the distance between curves (0.0-1.0).
+        sizeRatio: Ratio of gemstone size to the distance between curves (0.5-2.0).
         flipDirection: If True, gemstones start from the opposite side.
 
     Returns:
@@ -344,10 +361,10 @@ def calculatePointsAndSizesBetweenCurves(
     try:
         result: list[tuple[adsk.core.Point3D, float]] = []
         
-        curve1Geometry: adsk.core.Curve3D = curve1.worldGeometry
-        curve1Evaluator = curve1Geometry.evaluator
+        if curve1Geometry is None or curve2Geometry is None:
+            return result
         
-        curve2Geometry: adsk.core.Curve3D = curve2.worldGeometry
+        curve1Evaluator = curve1Geometry.evaluator
         curve2Evaluator = curve2Geometry.evaluator
         
         success, startParam1, endParam1 = curve1Evaluator.getParameterExtents()
@@ -399,8 +416,8 @@ def calculatePointsAndSizesBetweenCurves(
             if midpoint is None: continue
             
             if i != 0 and i != numPoints - 1:
-                firstClosest = measureManager.measureMinimumDistance(midpoint, curve1).positionOne
-                secondClosest = measureManager.measureMinimumDistance(midpoint, curve2).positionOne
+                firstClosest = measureManager.measureMinimumDistance(midpoint, curve1Geometry).positionOne
+                secondClosest = measureManager.measureMinimumDistance(midpoint, curve2Geometry).positionOne
             
                 midpoint = averagePosition([firstClosest, secondClosest])
                 if midpoint is None: continue
@@ -444,8 +461,8 @@ def calculatePointsAndSizesBetweenCurves(
             if point is None:
                 return 0.0
             
-            dist1 = measureManager.measureMinimumDistance(point, curve1).value
-            dist2 = measureManager.measureMinimumDistance(point, curve2).value
+            dist1 = measureManager.measureMinimumDistance(point, curve1Geometry).value
+            dist2 = measureManager.measureMinimumDistance(point, curve2Geometry).value
             
             return min(dist1, dist2)
         
@@ -454,8 +471,8 @@ def calculatePointsAndSizesBetweenCurves(
             if point is None:
                 return 0.0
             
-            dist1 = measureManager.measureMinimumDistance(point, curve1).value
-            dist2 = measureManager.measureMinimumDistance(point, curve2).value
+            dist1 = measureManager.measureMinimumDistance(point, curve1Geometry).value
+            dist2 = measureManager.measureMinimumDistance(point, curve2Geometry).value
             
             return (dist1 + dist2) / 2.0
         
@@ -516,3 +533,21 @@ def calculatePointsAndSizesBetweenCurves(
     except:
         showMessage(f'calculatePointsAndSizesBetweenCurves2: {traceback.format_exc()}\n', True)
         return []
+
+
+def getPointGeometry(entity: adsk.core.Base) -> adsk.core.Point3D | None:
+    """Extract Point3D geometry from different point entity types.
+
+    Args:
+        entity: The entity (SketchPoint, BRepVertex, or ConstructionPoint)
+
+    Returns:
+        Point3D geometry or None if unsupported type
+    """
+    if entity.objectType == adsk.fusion.SketchPoint.classType():
+        return entity.worldGeometry
+    elif entity.objectType == adsk.fusion.BRepVertex.classType():
+        return entity.geometry
+    elif entity.objectType == adsk.fusion.ConstructionPoint.classType():
+        return entity.geometry
+    return None

@@ -14,17 +14,18 @@ A small collection of utilities that speed up jewelry modeling in Fusion 360. Th
 
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
-## What's new
-- Added new command [GemstonesOnFaceBetweenCurves](#gemstonesonfacebetweencurves--place-gemstones-between-two-curves) for placing gemstones between two sketch curves with automatic sizing based on distance.
-- Enhanced [GemstonesOnFaceAtCurve](#gemstonesonfaceatcurve--place-gemstones-along-a-curve-with-variable-sizes) with nonlinear interpolation for complex sizing patterns.
+## What's new in version 0.7.1
+- **GemstonesOnFaceAtPoints**: Now supports selecting vertices and construction points in addition to sketch points.
+- **GemstonesOnFaceAtCurve** & **GemstonesOnFaceBetweenCurves**: Now support selecting model edges (BRep edges) as rails, not just sketch curves.
+- **Internal Improvements**: Refactored geometry handling for better stability and flexibility.
 - See [full changelog](CHANGELOG.md) for complete version history.
 
 ---
 
 ![Gemstones icon](commands/GemstonesOnFaceAtPoints/resources/32x32@2x.png)
 ## GemstonesOnFaceAtPoints — Place round gemstones on a face at specified points
-- **Description:** Creates round-cut gemstone bodies at selected sketch points on a chosen face.
-- **Selection:** 1 face and one or more sketch points. The face may have any curvature or complexity; the points do not need to lie directly on the face.
+- **Description:** Creates round-cut gemstone bodies at selected points on a chosen face. Supports sketch points, vertices, and construction points.
+- **Selection:** 1 face and one or more points (sketch points, vertices, or construction points). The face may have any curvature or complexity; the points do not need to lie directly on the face.
 - **Key parameters:**
   - **Size** — Gemstone diameter. Default: `1.5 mm`. Determines the overall size of the gemstone.
   - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
@@ -46,8 +47,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 
 ![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)
 ## GemstonesOnFaceAtCurve — Place gemstones along a curve with variable sizes
-- **Description:** Creates round-cut gemstone bodies along a selected sketch curve on a chosen face. Gemstone sizes can gradually change from start to end.
-- **Selection:** 1 face and 1 sketch curve (line, arc, circle, ellipse, or spline).
+- **Description:** Creates round-cut gemstone bodies along a selected curve (sketch curve or model edge) on a chosen face. Gemstone sizes can gradually change from start to end.
+- **Selection:** 1 face and 1 curve (sketch curve or edge).
 - **Key parameters:**
   - **Start Offset** — Distance from the curve start to the first gemstone. Default: `0 mm`.
   - **End Offset** — Distance from the curve end to the last gemstone. Default: `0 mm`.
@@ -64,8 +65,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 
 ![Gemstones icon](commands/GemstonesOnFaceBetweenCurves/resources/32x32@2x.png)
 ## GemstonesOnFaceBetweenCurves — Place gemstones between two curves
-- **Description:** Creates round-cut gemstone bodies along a path between two selected sketch curves on a chosen face. Gemstone sizes are automatically determined by the distance between the two curves.
-- **Selection:** 1 face and 2 sketch curves (lines, arcs, circles, ellipses, or splines). The curves should be approximately the same length for best results.
+- **Description:** Creates round-cut gemstone bodies along a path between two selected curves (sketch curves or model edges) on a chosen face. Gemstone sizes are automatically determined by the distance between the two curves.
+- **Selection:** 1 face and 2 curves (sketch curves or edges). The curves should be approximately the same length for best results.
 - **Key parameters:**
   - **Start Offset** — Distance from the start of the curves to the first gemstone. Default: `0 mm`.
   - **End Offset** — Distance from the end of the curves to the last gemstone. Default: `0 mm`.

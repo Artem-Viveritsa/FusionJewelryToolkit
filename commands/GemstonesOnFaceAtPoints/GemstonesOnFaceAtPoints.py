@@ -5,6 +5,7 @@ from ... import strings
 from ...constants import minimumGemstoneSize
 from ...helpers.showMessage import showMessage
 from ...helpers.Gemstones import createGemstone, updateGemstone, setGemstoneAttributes, updateGemstoneFeature, diamondMaterial
+from ...helpers.Utilities import getPointGeometry
 
 _app: adsk.core.Application = None
 _ui: adsk.core.UserInterface = None
@@ -156,6 +157,8 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             _pointSelectionInput = inputs.addSelectionInput(selectPointsInputDef.id, selectPointsInputDef.name, selectPointsInputDef.tooltip)
             _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchPoints)
+            _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Vertices)
+            _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.ConstructionPoints)
             _pointSelectionInput.tooltip = selectPointsInputDef.tooltip
             _pointSelectionInput.setSelectionLimits(1)  
 
@@ -228,6 +231,8 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             _pointSelectionInput = inputs.addSelectionInput(selectPointsInputDef.id, selectPointsInputDef.name, selectPointsInputDef.tooltip)
             _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchPoints)
+            _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Vertices)
+            _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.ConstructionPoints)
             _pointSelectionInput.tooltip = selectPointsInputDef.tooltip
             _pointSelectionInput.setSelectionLimits(1)  
 
@@ -313,12 +318,12 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
                     eventArgs.isSelectable = False
                     return
 
-            if type == adsk.fusion.SketchPoint.classType():
-                preSelectPoint: adsk.fusion.SketchPoint = eventArgs.selection.entity
+            if type == adsk.fusion.SketchPoint.classType() or type == adsk.fusion.BRepVertex.classType() or type == adsk.fusion.ConstructionPoint.classType():
+                preSelectEntity = eventArgs.selection.entity
 
                 
-                if preSelectPoint.assemblyContext:
-                    occ = preSelectPoint.assemblyContext
+                if preSelectEntity.assemblyContext:
+                    occ = preSelectEntity.assemblyContext
                     if occ.isReferencedComponent:
                         eventArgs.isSelectable = False
                         return
@@ -370,8 +375,10 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             baseFeat.startEdit()
 
             for i in range(_pointSelectionInput.selectionCount):
-                sketchPoint: adsk.fusion.SketchPoint = _pointSelectionInput.selection(i).entity
-                gemstone = createGemstone(face, sketchPoint.worldGeometry, size, RESOURCES_FOLDER, flip, absoluteDepthOffset, relativeDepthOffset)
+                pointEntity = _pointSelectionInput.selection(i).entity
+                pointGeometry = getPointGeometry(pointEntity)
+                if pointGeometry is None: continue
+                gemstone = createGemstone(face, pointGeometry, size, flip, absoluteDepthOffset, relativeDepthOffset)
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeat)
                     setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset)
@@ -394,7 +401,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
 
             face: adsk.fusion.BRepFace = _faceSelectionInput.selection(0).entity
             comp = face.body.parentComponent
-            pointEntities: list[adsk.fusion.SketchPoint] = []
+            pointEntities = []
             for i in range(_pointSelectionInput.selectionCount):
                 pointEntities.append(_pointSelectionInput.selection(i).entity)
 
@@ -402,8 +409,10 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             baseFeat.startEdit()
 
             for i in range(len(pointEntities)):
-                sketchPoint = pointEntities[i]    
-                gemstone = createGemstone(face, sketchPoint.worldGeometry, _sizeValueInput.value, RESOURCES_FOLDER, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value)
+                pointEntity = pointEntities[i]
+                pointGeometry = getPointGeometry(pointEntity)
+                if pointGeometry is None: continue
+                gemstone = createGemstone(face, pointGeometry, _sizeValueInput.value, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value)
                 if gemstone is None:
                     eventArgs.executeFailed = True
                     return
@@ -481,8 +490,8 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
                 try:
                     dependency = _editedCustomFeature.dependencies.itemById(f'point{i}')
                     if dependency is None: break
-                    sketchPoint = dependency.entity
-                    if sketchPoint is not None: _pointSelectionInput.addSelection(sketchPoint)
+                    pointEntity = dependency.entity
+                    if pointEntity is not None: _pointSelectionInput.addSelection(pointEntity)
                     i += 1
                 except:
                     break
@@ -575,14 +584,14 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         if faceEntity is None: return False
 
         
-        points: list[adsk.fusion.SketchPoint] = []
+        points = []
         i = 0
         while True:
             dependency = customFeature.dependencies.itemById(f'point{i}')
             if dependency is None: break
-            sketchPoint = dependency.entity
-            if sketchPoint is None: break
-            points.append(sketchPoint)
+            pointEntity = dependency.entity
+            if pointEntity is None: break
+            points.append(pointEntity)
             i += 1
         if len(points) == 0: return False
 
@@ -614,17 +623,19 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         
         success = True
         for i in range(len(points)):
-            point = points[i]
+            pointEntity = points[i]
+            pointGeometry = getPointGeometry(pointEntity)
+            if pointGeometry is None: continue
 
             if i < baseFeature.bodies.count:
                 currentBody = baseFeature.bodies.item(i)
-                newBody = updateGemstone(currentBody, faceEntity, point.worldGeometry, size, flip, absoluteDepthOffset, relativeDepthOffset)
+                newBody = updateGemstone(currentBody, faceEntity, pointGeometry, size, flip, absoluteDepthOffset, relativeDepthOffset)
                 if newBody is not None:
                     baseFeature.updateBody(currentBody, newBody)
                 else:
                     success = False
             else:
-                gemstone = createGemstone(faceEntity, point.worldGeometry, size, RESOURCES_FOLDER, flip, absoluteDepthOffset, relativeDepthOffset)
+                gemstone = createGemstone(faceEntity, pointGeometry, size, flip, absoluteDepthOffset, relativeDepthOffset)
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeature)
                     body.material = diamondMaterial

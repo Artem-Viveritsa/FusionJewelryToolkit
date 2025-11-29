@@ -355,7 +355,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             for i in range(_circleSelectionInput.selectionCount):
                 sketchCircle: adsk.fusion.SketchCircle = _circleSelectionInput.selection(i).entity
                 size = sketchCircle.radius * 2
-                gemstone = createGemstone(face, sketchCircle.worldGeometry.center, size, RESOURCES_FOLDER, flip, absoluteDepthOffset, relativeDepthOffset)
+                gemstone = createGemstone(face, sketchCircle.worldGeometry.center, size, flip, absoluteDepthOffset, relativeDepthOffset)
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeat)
                     setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset)
@@ -388,7 +388,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             for i in range(len(circleEntities)):
                 sketchCircle = circleEntities[i]
                 size = sketchCircle.radius * 2
-                gemstone = createGemstone(face, sketchCircle.worldGeometry.center, size, RESOURCES_FOLDER, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value)
+                gemstone = createGemstone(face, sketchCircle.worldGeometry.center, size, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value)
                 if gemstone is None:
                     eventArgs.executeFailed = True
                     return
@@ -600,7 +600,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
                 else:
                     success = False
             else:
-                gemstone = createGemstone(faceEntity, circle.worldGeometry.center, size, RESOURCES_FOLDER, flip, absoluteDepthOffset, relativeDepthOffset)
+                gemstone = createGemstone(faceEntity, circle.worldGeometry.center, size, flip, absoluteDepthOffset, relativeDepthOffset)
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeature)
                     body.material = diamondMaterial

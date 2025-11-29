@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.1] - 2025-11-29
+
+### Added
+- `GemstonesOnFaceAtPoints` now supports selecting vertices and construction points in addition to sketch points.
+- `GemstonesOnFaceAtCurve` and `GemstonesOnFaceBetweenCurves` now support selecting BRep edges (e.g., model edges) in addition to sketch curves.
+
+### Changed
+- Refactored `createGemstone()` to remove `resourcesFolder` parameter; now uses `constants.ASSETS_FOLDER` for gemstone model path.
+- Updated `calculatePointsAndSizesAlongCurve()` to accept `Curve3D` directly instead of SketchCurve for better flexibility.
+- Updated `calculatePointsAndSizesBetweenCurves()` to work with `Curve3D` geometry instead of SketchCurve for improved API consistency.
+
+### Fixed
+- Improved robustness of point geometry extraction across different selection types.
+
 ## [0.7.0] - 2025-11-29
 
 ### Added

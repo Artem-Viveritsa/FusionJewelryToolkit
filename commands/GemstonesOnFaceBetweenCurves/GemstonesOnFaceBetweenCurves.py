@@ -4,7 +4,7 @@ import adsk.core, adsk.fusion, traceback
 from ... import strings
 from ...helpers.showMessage import showMessage
 from ...helpers.Gemstones import createGemstone, updateGemstone, setGemstoneAttributes, updateGemstoneFeature, diamondMaterial
-from ...helpers.Utilities import calculatePointsAndSizesBetweenCurves
+from ...helpers.Utilities import calculatePointsAndSizesBetweenCurves, getCurve3D
 
 _app: adsk.core.Application = None
 _ui: adsk.core.UserInterface = None
@@ -47,13 +47,13 @@ selectFaceInputDef = strings.InputDef(
 selectCurve1InputDef = strings.InputDef(
     'selectCurve1',
     'First Rail',
-    'Select the first sketch curve.'
+    'Select the first sketch curve or edge.'
     )
 
 selectCurve2InputDef = strings.InputDef(
     'selectCurve2',
     'Second Rail',
-    'Select the second sketch curve.'
+    'Select the second sketch curve or edge.'
     )
 
 flipDirectionInputDef = strings.InputDef(
@@ -89,7 +89,7 @@ targetGapInputDef = strings.InputDef(
 sizeRatioInputDef = strings.InputDef(
     'sizeRatio',
     'Size Ratio',
-    "Ratio of gemstone size to the distance between curves.\nValue from 0 to 1, where 1 means gemstone diameter equals the distance between curves."
+    "Ratio of gemstone size to the distance between curves.\nValue from 0.5 to 2.0, where 1 means gemstone diameter equals the distance between curves."
     )
 
 flipInputDef = strings.InputDef(
@@ -200,11 +200,13 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             _curve1SelectionInput = inputs.addSelectionInput(selectCurve1InputDef.id, selectCurve1InputDef.name, selectCurve1InputDef.tooltip)
             _curve1SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
+            _curve1SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
             _curve1SelectionInput.tooltip = selectCurve1InputDef.tooltip
             _curve1SelectionInput.setSelectionLimits(1, 1)
 
             _curve2SelectionInput = inputs.addSelectionInput(selectCurve2InputDef.id, selectCurve2InputDef.name, selectCurve2InputDef.tooltip)
             _curve2SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
+            _curve2SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
             _curve2SelectionInput.tooltip = selectCurve2InputDef.tooltip
             _curve2SelectionInput.setSelectionLimits(1, 1)
 
@@ -302,11 +304,13 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             _curve1SelectionInput = inputs.addSelectionInput(selectCurve1InputDef.id, selectCurve1InputDef.name, selectCurve1InputDef.tooltip)
             _curve1SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
+            _curve1SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
             _curve1SelectionInput.tooltip = selectCurve1InputDef.tooltip
             _curve1SelectionInput.setSelectionLimits(1, 1)
 
             _curve2SelectionInput = inputs.addSelectionInput(selectCurve2InputDef.id, selectCurve2InputDef.name, selectCurve2InputDef.tooltip)
             _curve2SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
+            _curve2SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
             _curve2SelectionInput.tooltip = selectCurve2InputDef.tooltip
             _curve2SelectionInput.setSelectionLimits(1, 1)
 
@@ -344,7 +348,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 sizeRatioParam = params.itemById(sizeRatioInputDef.id)
                 sizeRatio = adsk.core.ValueInput.createByString(sizeRatioParam.expression)
             except:
-                sizeRatio = adsk.core.ValueInput.createByReal(0.9)
+                sizeRatio = adsk.core.ValueInput.createByReal(1.0)
             _sizeRatioValueInput = inputs.addValueInput(sizeRatioInputDef.id, sizeRatioInputDef.name, '', sizeRatio)
             _sizeRatioValueInput.tooltip = sizeRatioInputDef.tooltip
 
@@ -429,27 +433,14 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
     def notify(self, args):
         try:
             eventArgs = adsk.core.SelectionEventArgs.cast(args)
-            type = eventArgs.selection.entity.objectType
-
-            
-
-            if type == adsk.fusion.BRepFace.classType():
-                if eventArgs.selection.entity is None:
+            entity = eventArgs.selection.entity
+            entityType = entity.objectType
+        
+            if entityType in [adsk.core.Plane.classType(), adsk.fusion.BRepFace.classType(), adsk.fusion.SketchCurve.classType(), adsk.fusion.BRepEdge.classType()]:
+                if entity.geometry is None:
                     eventArgs.isSelectable = False
                     return
-
-            if type in [adsk.fusion.SketchLine.classType(), adsk.fusion.SketchArc.classType(), 
-                        adsk.fusion.SketchCircle.classType(), adsk.fusion.SketchEllipse.classType(),
-                        adsk.fusion.SketchFittedSpline.classType(), adsk.fusion.SketchFixedSpline.classType()]:
-                preSelectCurve = eventArgs.selection.entity
-
                 
-                if preSelectCurve.assemblyContext:
-                    occ = preSelectCurve.assemblyContext
-                    if occ.isReferencedComponent:
-                        eventArgs.isSelectable = False
-                        return
-            
         except:
             showMessage(f'PreSelectHandler: {traceback.format_exc()}\n', True)
 
@@ -497,7 +488,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                 return
 
             sizeRatio = _sizeRatioValueInput.value
-            if sizeRatio <= 0 or sizeRatio > 1:
+            if sizeRatio < 0.5 or sizeRatio > 2.0:
                 eventArgs.areInputsValid = False
                 return
             
@@ -512,8 +503,14 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
     def notify(self, args):
         try:
             face: adsk.fusion.BRepFace = _faceSelectionInput.selection(0).entity
-            curve1: adsk.fusion.SketchCurve = _curve1SelectionInput.selection(0).entity
-            curve2: adsk.fusion.SketchCurve = _curve2SelectionInput.selection(0).entity
+            curve1Entity = _curve1SelectionInput.selection(0).entity
+            curve2Entity = _curve2SelectionInput.selection(0).entity
+            
+            curve1Geometry = getCurve3D(curve1Entity)
+            curve2Geometry = getCurve3D(curve2Entity)
+            
+            if curve1Geometry is None or curve2Geometry is None:
+                return
             
             startOffset = _startOffsetValueInput.value
             endOffset = _endOffsetValueInput.value
@@ -525,7 +522,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             absoluteDepthOffset = _absoluteDepthOffsetValueInput.value
             relativeDepthOffset = _relativeDepthOffsetValueInput.value
 
-            pointsAndSizes = calculatePointsAndSizesBetweenCurves(curve1, curve2, startOffset, endOffset, sizeStep, targetGap, sizeRatio, flipDirection)
+            pointsAndSizes = calculatePointsAndSizesBetweenCurves(curve1Geometry, curve2Geometry, startOffset, endOffset, sizeStep, targetGap, sizeRatio, flipDirection)
             if len(pointsAndSizes) == 0:
                 return
 
@@ -534,7 +531,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             baseFeat.startEdit()
 
             for point, size in pointsAndSizes:
-                gemstone = createGemstone(face, point, size, RESOURCES_FOLDER, flip, absoluteDepthOffset, relativeDepthOffset)
+                gemstone = createGemstone(face, point, size, flip, absoluteDepthOffset, relativeDepthOffset)
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeat)
                     setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset)
@@ -556,11 +553,18 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             eventArgs = adsk.core.CommandEventArgs.cast(args)        
 
             face: adsk.fusion.BRepFace = _faceSelectionInput.selection(0).entity
-            curve1: adsk.fusion.SketchCurve = _curve1SelectionInput.selection(0).entity
-            curve2: adsk.fusion.SketchCurve = _curve2SelectionInput.selection(0).entity
+            curve1Entity = _curve1SelectionInput.selection(0).entity
+            curve2Entity = _curve2SelectionInput.selection(0).entity
             comp = face.body.parentComponent
+            
+            curve1Geometry = getCurve3D(curve1Entity)
+            curve2Geometry = getCurve3D(curve2Entity)
+            
+            if curve1Geometry is None or curve2Geometry is None:
+                eventArgs.executeFailed = True
+                return
 
-            pointsAndSizes = calculatePointsAndSizesBetweenCurves(curve1, curve2, _startOffsetValueInput.value, _endOffsetValueInput.value,
+            pointsAndSizes = calculatePointsAndSizesBetweenCurves(curve1Geometry, curve2Geometry, _startOffsetValueInput.value, _endOffsetValueInput.value,
                                                                    _sizeStepValueInput.value, _targetGapValueInput.value,
                                                                    _sizeRatioValueInput.value, _flipDirectionValueInput.value)
             if len(pointsAndSizes) == 0:
@@ -571,7 +575,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             baseFeat.startEdit()
 
             for point, size in pointsAndSizes:
-                gemstone = createGemstone(face, point, size, RESOURCES_FOLDER, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value)
+                gemstone = createGemstone(face, point, size, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value)
                 if gemstone is None:
                     eventArgs.executeFailed = True
                     return
@@ -622,8 +626,8 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                                               '', True)
 
             customFeatureInput.addDependency('face', face)
-            customFeatureInput.addDependency('curve1', curve1)
-            customFeatureInput.addDependency('curve2', curve2)
+            customFeatureInput.addDependency('curve1', curve1Entity)
+            customFeatureInput.addDependency('curve2', curve2Entity)
 
             customFeatureInput.setStartAndEndFeatures(baseFeat, baseFeat)
             comp.features.customFeatures.add(customFeatureInput)
@@ -758,11 +762,18 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         faceEntity: adsk.fusion.BRepFace = customFeature.dependencies.itemById('face').entity
         if faceEntity is None: return False
 
-        curve1Entity: adsk.fusion.SketchCurve = customFeature.dependencies.itemById('curve1').entity
+        curve1Entity = customFeature.dependencies.itemById('curve1').entity
         if curve1Entity is None: return False
 
-        curve2Entity: adsk.fusion.SketchCurve = customFeature.dependencies.itemById('curve2').entity
+        curve2Entity = customFeature.dependencies.itemById('curve2').entity
         if curve2Entity is None: return False
+        
+        curve1Geometry = getCurve3D(curve1Entity)
+        curve2Geometry = getCurve3D(curve2Entity)
+        
+        if curve1Geometry is None or curve2Geometry is None: return False
+
+        component = faceEntity.body.parentComponent
 
         try:
             flipDirection = customFeature.parameters.itemById(flipDirectionInputDef.id).expression.lower() == 'true'
@@ -778,17 +789,15 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         try:
             sizeRatio = customFeature.parameters.itemById(sizeRatioInputDef.id).value
         except:
-            sizeRatio = 0.9
+            sizeRatio = 1.0
         
         flip = customFeature.parameters.itemById(flipInputDef.id).expression.lower() == 'true'
         
         absoluteDepthOffset = customFeature.parameters.itemById(absoluteDepthOffsetInputDef.id).value
         relativeDepthOffset = customFeature.parameters.itemById(relativeDepthOffsetInputDef.id).value
 
-        pointsAndSizes = calculatePointsAndSizesBetweenCurves(curve1Entity, curve2Entity, startOffset, endOffset, sizeStep, targetGap, sizeRatio, flipDirection)
+        pointsAndSizes = calculatePointsAndSizesBetweenCurves(curve1Geometry, curve2Geometry, startOffset, endOffset, sizeStep, targetGap, sizeRatio, flipDirection)
         if len(pointsAndSizes) == 0: return False
-
-        component = faceEntity.body.parentComponent
 
         baseFeature.startEdit()
         
@@ -805,7 +814,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
                 else:
                     success = False
             else:
-                gemstone = createGemstone(faceEntity, point, size, RESOURCES_FOLDER, flip, absoluteDepthOffset, relativeDepthOffset)
+                gemstone = createGemstone(faceEntity, point, size, flip, absoluteDepthOffset, relativeDepthOffset)
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeature)
                     body.material = diamondMaterial
