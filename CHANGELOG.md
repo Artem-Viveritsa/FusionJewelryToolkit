@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.3] - 2025-12-01
+
+### Changed
+- Numerous UI improvements including field reordering and separators in various commands for better user experience.
+
 ## [0.7.2] - 2025-12-01
 
 ### Fixed

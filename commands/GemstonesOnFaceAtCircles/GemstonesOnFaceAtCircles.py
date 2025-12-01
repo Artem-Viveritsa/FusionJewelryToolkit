@@ -152,11 +152,13 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _circleSelectionInput.tooltip = selectCirclesInputDef.tooltip
             _circleSelectionInput.setSelectionLimits(1)
 
+            inputs.addSeparatorCommandInput('separatorAfterCircles')
             
             flip = False
             _flipValueInput = inputs.addBoolValueInput(flipInputDef.id, flipInputDef.name, True, '', flip)
             _flipValueInput.tooltip = flipInputDef.tooltip
 
+            inputs.addSeparatorCommandInput('separatorAfterFlip')
             
             absoluteDepthOffset = adsk.core.ValueInput.createByReal(0.0)
             _absoluteDepthOffsetValueInput = inputs.addValueInput(absoluteDepthOffsetInputDef.id, absoluteDepthOffsetInputDef.name, defaultLengthUnits, absoluteDepthOffset)
@@ -220,6 +222,8 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _circleSelectionInput.tooltip = selectCirclesInputDef.tooltip
             _circleSelectionInput.setSelectionLimits(1)  
 
+            inputs.addSeparatorCommandInput('separatorAfterCircles')
+
             params = _editedCustomFeature.parameters
 
             try:
@@ -229,6 +233,8 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 flip = False
             _flipValueInput = inputs.addBoolValueInput(flipInputDef.id, flipInputDef.name, True, '', flip)
             _flipValueInput.tooltip = flipInputDef.tooltip
+
+            inputs.addSeparatorCommandInput('separatorAfterFlip')
 
             try:
                 absoluteDepthOffsetParam = params.itemById(absoluteDepthOffsetInputDef.id)

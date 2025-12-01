@@ -162,14 +162,20 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _pointSelectionInput.tooltip = selectPointsInputDef.tooltip
             _pointSelectionInput.setSelectionLimits(1)  
 
+            inputs.addSeparatorCommandInput('separatorAfterPoints')
+
             size = adsk.core.ValueInput.createByReal(0.15)
             _sizeValueInput = inputs.addValueInput(sizeInputDef.id, sizeInputDef.name, defaultLengthUnits, size)
             _sizeValueInput.tooltip = sizeInputDef.tooltip
+
+            inputs.addSeparatorCommandInput('separatorAfterSize')
 
             
             flip = False
             _flipValueInput = inputs.addBoolValueInput(flipInputDef.id, flipInputDef.name, True, '', flip)
             _flipValueInput.tooltip = flipInputDef.tooltip
+
+            inputs.addSeparatorCommandInput('separatorAfterFlip')
 
             
             absoluteDepthOffset = adsk.core.ValueInput.createByReal(0.0)
@@ -236,6 +242,8 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _pointSelectionInput.tooltip = selectPointsInputDef.tooltip
             _pointSelectionInput.setSelectionLimits(1)  
 
+            inputs.addSeparatorCommandInput('separatorAfterPoints')
+
             params = _editedCustomFeature.parameters
 
             try:
@@ -246,6 +254,8 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _sizeValueInput = inputs.addValueInput(sizeInputDef.id, sizeInputDef.name, defaultLengthUnits, size)
             _sizeValueInput.tooltip = sizeInputDef.tooltip
 
+            inputs.addSeparatorCommandInput('separatorAfterSize')
+
             try:
                 flipParam = params.itemById(flipInputDef.id)
                 flip = flipParam.expression.lower() == 'true'
@@ -253,6 +263,8 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 flip = False
             _flipValueInput = inputs.addBoolValueInput(flipInputDef.id, flipInputDef.name, True, '', flip)
             _flipValueInput.tooltip = flipInputDef.tooltip
+
+            inputs.addSeparatorCommandInput('separatorAfterFlip')
 
             try:
                 absoluteDepthOffsetParam = params.itemById(absoluteDepthOffsetInputDef.id)
@@ -371,8 +383,8 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             relativeDepthOffset = _relativeDepthOffsetValueInput.value
 
             component = face.body.parentComponent
-            baseFeat = component.features.baseFeatures.add()
-            baseFeat.startEdit()
+            baseFeature = component.features.baseFeatures.add()
+            baseFeature.startEdit()
 
             for i in range(_pointSelectionInput.selectionCount):
                 pointEntity = _pointSelectionInput.selection(i).entity
@@ -380,12 +392,11 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
                 if pointGeometry is None: continue
                 gemstone = createGemstone(face, pointGeometry, size, flip, absoluteDepthOffset, relativeDepthOffset)
                 if gemstone is not None:
-                    body = component.bRepBodies.add(gemstone, baseFeat)
+                    body = component.bRepBodies.add(gemstone, baseFeature)
                     setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset)
                     body.material = diamondMaterial
 
-            baseFeat.finishEdit()
-            
+            baseFeature.finishEdit()
 
         except:
             showMessage(f'ExecutePreviewHandler: {traceback.format_exc()}\n', True)
@@ -467,20 +478,16 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
 
             eventArgs = adsk.core.CommandEventArgs.cast(args)
             
-            
             design: adsk.fusion.Design = _app.activeProduct
             timeline = design.timeline
             markerPosition = timeline.markerPosition
             _restoreTimelineObject = timeline.item(markerPosition - 1)
-
             
             _editedCustomFeature.timelineObject.rollTo(True)
             _isRolledForEdit = True
-
             
             command = eventArgs.command
             command.beginStep()
-
 
             face = _editedCustomFeature.dependencies.itemById('face').entity
             _faceSelectionInput.addSelection(face)
@@ -518,10 +525,11 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
     def __init__(self):
         super().__init__()
     def notify(self, args):
-        global _editedCustomFeature, _isRolledForEdit
 
         try:
             eventArgs = adsk.core.CommandEventArgs.cast(args)    
+
+            global _editedCustomFeature, _isRolledForEdit
 
             faceEntity = _faceSelectionInput.selection(0).entity
             pointCount = _pointSelectionInput.selectionCount
@@ -572,17 +580,16 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         True if the update was successful, False otherwise.
     """
     try:
-        
         baseFeature: adsk.fusion.BaseFeature = None
 
         for feature in customFeature.features:
             if feature.objectType == adsk.fusion.BaseFeature.classType():
                 baseFeature = feature
+                break
         if baseFeature is None: return False
 
         faceEntity: adsk.fusion.BRepFace = customFeature.dependencies.itemById('face').entity
         if faceEntity is None: return False
-
         
         points = []
         i = 0
@@ -620,7 +627,6 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
 
         baseFeature.startEdit()
         
-        
         success = True
         for i in range(len(points)):
             pointEntity = points[i]
@@ -642,7 +648,6 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
                     if not _isRolledForEdit: setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset)
                 else:
                     success = False
-
         
         while baseFeature.bodies.count > len(points):
             baseFeature.bodies.item(baseFeature.bodies.count - 1).deleteMe()

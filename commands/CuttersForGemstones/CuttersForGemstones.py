@@ -142,6 +142,14 @@ def stop(context):
         showMessage(f'Stop Failed:\n{traceback.format_exc()}', True)
 
 
+def updateVisibility(selectedIndex):
+    """Update the visibility of input fields based on the selected bottom type index."""
+    global _depthValueInput, _holeRatioValueInput, _coneAngleValueInput
+    _depthValueInput.isVisible = (selectedIndex == 0)
+    _holeRatioValueInput.isVisible = (selectedIndex == 0)
+    _coneAngleValueInput.isVisible = (selectedIndex == 0 or selectedIndex == 1)
+
+
 class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
     """Event handler for creating the command dialog for new cutters for gemstones.
     
@@ -165,22 +173,26 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _gemstonesSelectionInput.tooltip = selectGemstonesInputDef.tooltip
             _gemstonesSelectionInput.setSelectionLimits(1)
 
-            _cutterBottomTypeInput = inputs.addDropDownCommandInput(cutterBottomTypeInputDef.id, cutterBottomTypeInputDef.name, adsk.core.DropDownStyles.LabeledIconDropDownStyle)
-            for i, typename in enumerate(strings.Cutter.bottomTypes):
-                _cutterBottomTypeInput.listItems.add(typename, i == 0)
-            _cutterBottomTypeInput.tooltip = cutterBottomTypeInputDef.tooltip
+            inputs.addSeparatorCommandInput('separatorAfterSelection')
 
             height = adsk.core.ValueInput.createByReal(0.04)
             _heightValueInput = inputs.addValueInput(heightInputDef.id, heightInputDef.name, defaultLengthUnits, height)
             _heightValueInput.tooltip = heightInputDef.tooltip
 
-            depth = adsk.core.ValueInput.createByReal(0.15)
-            _depthValueInput = inputs.addValueInput(depthInputDef.id, depthInputDef.name, defaultLengthUnits, depth)
-            _depthValueInput.tooltip = depthInputDef.tooltip
-
             sizeRatio = adsk.core.ValueInput.createByReal(1.0)
             _sizeRatioValueInput = inputs.addValueInput(sizeRatioInputDef.id, sizeRatioInputDef.name, '', sizeRatio)
             _sizeRatioValueInput.tooltip = sizeRatioInputDef.tooltip
+
+            inputs.addSeparatorCommandInput('separatorAfterHeight')
+
+            _cutterBottomTypeInput = inputs.addDropDownCommandInput(cutterBottomTypeInputDef.id, cutterBottomTypeInputDef.name, adsk.core.DropDownStyles.LabeledIconDropDownStyle)
+            for i, typename in enumerate(strings.Cutter.bottomTypes):
+                _cutterBottomTypeInput.listItems.add(typename, i == 0)
+            _cutterBottomTypeInput.tooltip = cutterBottomTypeInputDef.tooltip
+
+            depth = adsk.core.ValueInput.createByReal(0.15)
+            _depthValueInput = inputs.addValueInput(depthInputDef.id, depthInputDef.name, defaultLengthUnits, depth)
+            _depthValueInput.tooltip = depthInputDef.tooltip
 
             holeRatio = adsk.core.ValueInput.createByReal(0.5)
             _holeRatioValueInput = inputs.addValueInput(holeRatioInputDef.id, holeRatioInputDef.name, '', holeRatio)
@@ -197,6 +209,10 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             onValidate = ValidateInputsHandler()
             command.validateInputs.add(onValidate)
             _handlers.append(onValidate)
+
+            onInputChanged = InputChangedHandler()
+            command.inputChanged.add(onInputChanged)
+            _handlers.append(onInputChanged)
 
             onExecutePreview = ExecutePreviewHandler()
             command.executePreview.add(onExecutePreview)
@@ -239,6 +255,18 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             parameters = _editedCustomFeature.parameters
 
+            inputs.addSeparatorCommandInput('separatorAfterSelection')
+
+            height = adsk.core.ValueInput.createByString(parameters.itemById(heightInputDef.id).expression)
+            _heightValueInput = inputs.addValueInput(heightInputDef.id, heightInputDef.name, defaultLengthUnits, height)
+            _heightValueInput.tooltip = heightInputDef.tooltip
+
+            sizeRatio = adsk.core.ValueInput.createByString(parameters.itemById(sizeRatioInputDef.id).expression)
+            _sizeRatioValueInput = inputs.addValueInput(sizeRatioInputDef.id, sizeRatioInputDef.name, '', sizeRatio)
+            _sizeRatioValueInput.tooltip = sizeRatioInputDef.tooltip
+
+            inputs.addSeparatorCommandInput('separatorAfterHeight')
+
             _cutterBottomTypeInput = inputs.addDropDownCommandInput(cutterBottomTypeInputDef.id, cutterBottomTypeInputDef.name, adsk.core.DropDownStyles.LabeledIconDropDownStyle)
             for typename in strings.Cutter.bottomTypes: _cutterBottomTypeInput.listItems.add(typename, False)
             _cutterBottomTypeInput.tooltip = cutterBottomTypeInputDef.tooltip
@@ -248,19 +276,10 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 _cutterBottomTypeInput.listItems.item(selectedIndex).isSelected = True
             else:
                 _cutterBottomTypeInput.listItems.item(0).isSelected = True
-                
-
-            height = adsk.core.ValueInput.createByString(parameters.itemById(heightInputDef.id).expression)
-            _heightValueInput = inputs.addValueInput(heightInputDef.id, heightInputDef.name, defaultLengthUnits, height)
-            _heightValueInput.tooltip = heightInputDef.tooltip
 
             depth = adsk.core.ValueInput.createByString(parameters.itemById(depthInputDef.id).expression)
             _depthValueInput = inputs.addValueInput(depthInputDef.id, depthInputDef.name, defaultLengthUnits, depth)
             _depthValueInput.tooltip = depthInputDef.tooltip
-
-            sizeRatio = adsk.core.ValueInput.createByString(parameters.itemById(sizeRatioInputDef.id).expression)
-            _sizeRatioValueInput = inputs.addValueInput(sizeRatioInputDef.id, sizeRatioInputDef.name, '', sizeRatio)
-            _sizeRatioValueInput.tooltip = sizeRatioInputDef.tooltip
 
             holeRatio = adsk.core.ValueInput.createByString(parameters.itemById(holeRatioInputDef.id).expression)
             _holeRatioValueInput = inputs.addValueInput(holeRatioInputDef.id, holeRatioInputDef.name, '', holeRatio)
@@ -270,6 +289,9 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _coneAngleValueInput = inputs.addValueInput(coneAngleInputDef.id, coneAngleInputDef.name, '', coneAngle)
             _coneAngleValueInput.tooltip = coneAngleInputDef.tooltip
 
+            currentSelectedIndex = _cutterBottomTypeInput.selectedItem.index
+            updateVisibility(currentSelectedIndex)
+
             onPreSelect = PreSelectHandler()
             command.preSelect.add(onPreSelect)
             _handlers.append(onPreSelect)
@@ -277,6 +299,10 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             onValidate = ValidateInputsHandler()
             command.validateInputs.add(onValidate)
             _handlers.append(onValidate)
+
+            onInputChanged = InputChangedHandler()
+            command.inputChanged.add(onInputChanged)
+            _handlers.append(onInputChanged)
 
             onExecutePreview = ExecutePreviewHandler()
             command.executePreview.add(onExecutePreview)
@@ -360,12 +386,24 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                     return
 
             
-            if not all([_depthValueInput.isValidExpression, _heightValueInput.isValidExpression, _sizeRatioValueInput.isValidExpression, _holeRatioValueInput.isValidExpression, _coneAngleValueInput.isValidExpression]):
+            if not all([_heightValueInput.isValidExpression, _sizeRatioValueInput.isValidExpression]):
+                eventArgs.areInputsValid = False
+                return
+
+            if _depthValueInput.isVisible and not _depthValueInput.isValidExpression:
+                eventArgs.areInputsValid = False
+                return
+
+            if _holeRatioValueInput.isVisible and not _holeRatioValueInput.isValidExpression:
+                eventArgs.areInputsValid = False
+                return
+
+            if _coneAngleValueInput.isVisible and not _coneAngleValueInput.isValidExpression:
                 eventArgs.areInputsValid = False
                 return
 
             
-            if _depthValueInput.value < 0:
+            if _depthValueInput.isVisible and _depthValueInput.value < 0:
                 eventArgs.areInputsValid = False
                 return
             
@@ -377,16 +415,32 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                 eventArgs.areInputsValid = False
                 return
 
-            if not (_holeRatioValueInput.value >= 0.2 and _holeRatioValueInput.value <= 0.8):
+            if _holeRatioValueInput.isVisible and not (_holeRatioValueInput.value >= 0.2 and _holeRatioValueInput.value <= 0.8):
                 eventArgs.areInputsValid = False
                 return
 
-            if not (_coneAngleValueInput.value >= 30 and _coneAngleValueInput.value <= 60):
+            if _coneAngleValueInput.isVisible and not (_coneAngleValueInput.value >= 30 and _coneAngleValueInput.value <= 60):
                 eventArgs.areInputsValid = False
                 return
             
         except:
             showMessage(f'ValidateInputsHandler: {traceback.format_exc()}\n', True)
+
+
+class InputChangedHandler(adsk.core.InputChangedEventHandler):
+    """Event handler for the inputChanged event."""
+    def __init__(self):
+        super().__init__()
+    def notify(self, args):
+        try:
+            eventArgs = adsk.core.InputChangedEventArgs.cast(args)
+            changedInput = eventArgs.input
+
+            if changedInput == _cutterBottomTypeInput:
+                updateVisibility(_cutterBottomTypeInput.selectedItem.index)
+
+        except:
+            showMessage(f'InputChangedHandler: {traceback.format_exc()}\n', True)
 
 
 class ExecutePreviewHandler(adsk.core.CommandEventHandler):
@@ -470,7 +524,6 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             defaultLengthUnits = design.unitsManager.defaultLengthUnits
             
             customFeatureInput = component.features.customFeatures.createInput(_customFeatureDefinition)
-
             
             for i in range(len(gemstones)):
                 gemstone = gemstones[i]
@@ -524,20 +577,17 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
 
             if _isRolledForEdit: return
             
-            
             design: adsk.fusion.Design = _app.activeProduct
             timeline = design.timeline
             markerPosition = timeline.markerPosition
             _restoreTimelineObject = timeline.item(markerPosition - 1)
 
-            
             _editedCustomFeature.timelineObject.rollTo(True)
             _isRolledForEdit = True
 
             command = eventArgs.command
             command.beginStep()
 
-            
             i = 0
             while True:
                 try:

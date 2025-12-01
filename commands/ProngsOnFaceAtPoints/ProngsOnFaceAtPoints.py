@@ -161,11 +161,12 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _pointSelectionInput.tooltip = selectPointsInputDef.tooltip
             _pointSelectionInput.setSelectionLimits(1)
 
+            inputs.addSeparatorCommandInput('separatorAfterPoints')
+
             size = adsk.core.ValueInput.createByReal(0.04)
             _sizeValueInput = inputs.addValueInput(sizeInputDef.id, sizeInputDef.name, defaultLengthUnits, size)
             _sizeValueInput.tooltip = sizeInputDef.tooltip
 
-            
             height = adsk.core.ValueInput.createByReal(0.04)
             _heightValueInput = inputs.addValueInput(heightInputDef.id, heightInputDef.name, defaultLengthUnits, height)
             _heightValueInput.tooltip = heightInputDef.tooltip
@@ -220,6 +221,8 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchPoints)
             _pointSelectionInput.tooltip = selectPointsInputDef.tooltip
             _pointSelectionInput.setSelectionLimits(1)
+
+            inputs.addSeparatorCommandInput('separatorAfterPoints')
 
             parameters = _editedCustomFeature.parameters
 

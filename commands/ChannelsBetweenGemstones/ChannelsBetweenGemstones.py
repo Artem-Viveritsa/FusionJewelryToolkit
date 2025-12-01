@@ -135,6 +135,8 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _gemstonesSelectionInput.tooltip = selectGemstonesInputDef.tooltip
             _gemstonesSelectionInput.setSelectionLimits(2)
 
+            inputs.addSeparatorCommandInput('separatorAfterGemstones')
+
             ratio = adsk.core.ValueInput.createByReal(0.35)
             _ratioValueInput = inputs.addValueInput(ratioInputDef.id, ratioInputDef.name, '', ratio)
             _ratioValueInput.tooltip = ratioInputDef.tooltip
@@ -189,6 +191,8 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _gemstonesSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Bodies)
             _gemstonesSelectionInput.tooltip = selectGemstonesInputDef.tooltip
             _gemstonesSelectionInput.setSelectionLimits(2)
+
+            inputs.addSeparatorCommandInput('separatorAfterGemstones')
 
             parameters = _editedCustomFeature.parameters
 

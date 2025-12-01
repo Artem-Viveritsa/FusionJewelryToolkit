@@ -157,6 +157,8 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _gemstonesSelectionInput.tooltip = selectGemstonesInputDef.tooltip
             _gemstonesSelectionInput.setSelectionLimits(2)
 
+            inputs.addSeparatorCommandInput('separatorAfterGemstones')
+
             sizeRatio = adsk.core.ValueInput.createByReal(0.35)
             _sizeRatioValueInput = inputs.addValueInput(sizeRatioInputDef.id, sizeRatioInputDef.name, '', sizeRatio)
             _sizeRatioValueInput.tooltip = sizeRatioInputDef.tooltip
@@ -168,6 +170,8 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             widthBetweenProngsRatio = adsk.core.ValueInput.createByReal(0.65)
             _widthBetweenProngsRatioValueInput = inputs.addValueInput(widthBetweenProngsRatioInputDef.id, widthBetweenProngsRatioInputDef.name, '', widthBetweenProngsRatio)
             _widthBetweenProngsRatioValueInput.tooltip = widthBetweenProngsRatioInputDef.tooltip
+
+            inputs.addSeparatorCommandInput('separatorAfterWidthBetweenProngsRatio')
 
             maxGap = adsk.core.ValueInput.createByReal(0.05)
             _maxGapValueInput = inputs.addValueInput(maxGapInputDef.id, maxGapInputDef.name, defaultLengthUnits, maxGap)
@@ -224,6 +228,8 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _gemstonesSelectionInput.tooltip = selectGemstonesInputDef.tooltip
             _gemstonesSelectionInput.setSelectionLimits(2)
 
+            inputs.addSeparatorCommandInput('separatorAfterGemstones')
+
             parameters = _editedCustomFeature.parameters
 
             sizeRatio = adsk.core.ValueInput.createByString(parameters.itemById(sizeRatioInputDef.id).expression)
@@ -237,6 +243,8 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             widthBetweenProngsRatio = adsk.core.ValueInput.createByString(parameters.itemById(widthBetweenProngsRatioInputDef.id).expression)
             _widthBetweenProngsRatioValueInput = inputs.addValueInput(widthBetweenProngsRatioInputDef.id, widthBetweenProngsRatioInputDef.name, '', widthBetweenProngsRatio)
             _widthBetweenProngsRatioValueInput.tooltip = widthBetweenProngsRatioInputDef.tooltip
+
+            inputs.addSeparatorCommandInput('separatorAfterWidthBetweenProngsRatio')
 
             maxGap = adsk.core.ValueInput.createByString(parameters.itemById(maxGapInputDef.id).expression)
             _maxGapValueInput = inputs.addValueInput(maxGapInputDef.id, maxGapInputDef.name, defaultLengthUnits, maxGap)
