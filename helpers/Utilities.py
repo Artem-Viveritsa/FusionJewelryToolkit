@@ -119,55 +119,55 @@ def averagePosition(points: list[adsk.core.Point3D]) -> adsk.core.Point3D | None
     return adsk.core.Point3D.create(avgX, avgY, avgZ)
 
 
-def calculatePointsAlongCurve(curve: adsk.fusion.SketchCurve, size: float, gap: float) -> list[adsk.core.Point3D]:
-    """Calculate points along a curve based on gemstone size and gap.
+# def calculatePointsAlongCurve(curve: adsk.fusion.SketchCurve, size: float, gap: float) -> list[adsk.core.Point3D]:
+#     """Calculate points along a curve based on gemstone size and gap.
 
-    Args:
-        curve: The sketch curve along which to place gemstones.
-        size: The diameter of each gemstone.
-        gap: The gap between adjacent gemstones.
+#     Args:
+#         curve: The sketch curve along which to place gemstones.
+#         size: The diameter of each gemstone.
+#         gap: The gap between adjacent gemstones.
 
-    Returns:
-        A list of Point3D objects representing gemstone positions.
-    """
-    try:
-        points: list[adsk.core.Point3D] = []
+#     Returns:
+#         A list of Point3D objects representing gemstone positions.
+#     """
+#     try:
+#         points: list[adsk.core.Point3D] = []
         
-        geometry: adsk.core.Curve3D = curve.worldGeometry
-        evaluator = geometry.evaluator
+#         geometry: adsk.core.Curve3D = curve.worldGeometry
+#         evaluator = geometry.evaluator
         
-        success, startParam, endParam = evaluator.getParameterExtents()
-        if not success:
-            return points
+#         success, startParam, endParam = evaluator.getParameterExtents()
+#         if not success:
+#             return points
         
-        success, curveLength = evaluator.getLengthAtParameter(startParam, endParam)
-        if not success:
-            return points
+#         success, curveLength = evaluator.getLengthAtParameter(startParam, endParam)
+#         if not success:
+#             return points
         
-        spacing = size + gap
-        if spacing <= 0:
-            return points
+#         spacing = size + gap
+#         if spacing <= 0:
+#             return points
         
-        numGemstones = int(curveLength / spacing)
-        if numGemstones == 0:
-            return points
+#         numGemstones = int(curveLength / spacing)
+#         if numGemstones == 0:
+#             return points
         
-        actualSpacing = curveLength / numGemstones
+#         actualSpacing = curveLength / numGemstones
         
-        for i in range(numGemstones):
-            length = (i + 0.5) * actualSpacing
+#         for i in range(numGemstones):
+#             length = (i + 0.5) * actualSpacing
             
-            success, param = evaluator.getParameterAtLength(startParam, length)
-            if success:
-                success, point = evaluator.getPointAtParameter(param)
-                if success:
-                    points.append(point)
+#             success, param = evaluator.getParameterAtLength(startParam, length)
+#             if success:
+#                 success, point = evaluator.getPointAtParameter(param)
+#                 if success:
+#                     points.append(point)
         
-        return points
+#         return points
     
-    except:
-        showMessage(f'calculatePointsAlongCurve: {traceback.format_exc()}\n', True)
-        return []
+#     except:
+#         showMessage(f'calculatePointsAlongCurve: {traceback.format_exc()}\n', True)
+#         return []
 
 
 def calculatePointsAndSizesAlongCurve(curve: adsk.core.Curve3D, startOffset: float, endOffset: float,
@@ -324,6 +324,9 @@ def getCurve3D(entity: adsk.core.Base) -> adsk.core.Curve3D | None:
     if entity is None:
         return None
 
+    if hasattr(entity, 'worldGeometry'):
+        return entity.worldGeometry
+    
     if hasattr(entity, 'geometry'):
         return entity.geometry
     
@@ -551,3 +554,43 @@ def getPointGeometry(entity: adsk.core.Base) -> adsk.core.Point3D | None:
     elif entity.objectType == adsk.fusion.ConstructionPoint.classType():
         return entity.geometry
     return None
+
+
+def point3dToStr(point: adsk.core.Point3D) -> str:
+    """Convert a Point3D to a string representation.
+    
+    Args:
+        point: The Point3D to convert
+        
+    Returns:
+        String representation in format "x,y,z"
+    """
+    if point is None:
+        return ""
+    return f"{point.x},{point.y},{point.z}"
+
+
+def strToPoint3d(pointStr: str) -> adsk.core.Point3D | None:
+    """Convert a string representation back to a Point3D.
+    
+    Args:
+        pointStr: String in format "x,y,z"
+        
+    Returns:
+        Point3D object or None if parsing fails
+    """
+    if not pointStr or not isinstance(pointStr, str):
+        return None
+    
+    try:
+        parts = pointStr.split(',')
+        if len(parts) != 3:
+            return None
+        
+        x = float(parts[0])
+        y = float(parts[1])
+        z = float(parts[2])
+        
+        return adsk.core.Point3D.create(x, y, z)
+    except (ValueError, IndexError):
+        return None

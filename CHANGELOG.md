@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.2] - 2025-12-01
+
+### Fixed
+- Resolved issue with `getCurve3D` function not correctly retrieving curve geometry from certain selection types.
+
 ## [0.7.1] - 2025-11-29
 
 ### Added
