@@ -2,11 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.2] - 2025-12-08
+
+### Changed
+- Updated icon for ObjectsRefold command.
+
 ## [0.8.1] - 2025-12-08
 
 ### Changed
 - Refactored attributes system: Consolidated individual attributes into a single JSON-based properties attribute for better organization and performance.
 - Updated all command modules to use the new properties-based attribute system.
+
 
 ## [0.8.0] - 2025-12-07
 
