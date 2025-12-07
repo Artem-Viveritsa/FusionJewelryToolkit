@@ -9,6 +9,8 @@ PREFIX = COMPANY_NAME + ADDIN_NAME
 TAB_ID = PREFIX + 'Tab'
 PANEL_ID = PREFIX + 'Panel'
 
+PROPERTIES = 'properties'
+
 GEMSTONES_ON_FACE_AT_POINTS = 'GemstonesOnFaceAtPoints'
 GEMSTONES_ON_FACE_AT_CIRCLES = 'GemstonesOnFaceAtCircles'
 GEMSTONES_ON_FACE_AT_CURVE = 'GemstonesOnFaceAtCurve'
@@ -30,6 +32,8 @@ GEMSTONE_CUT = 'gemstoneCut'
 GEMSTONE_ROUND_CUT = 'round'
 
 PRONG = 'prong'
+PRONG_SIZE = 'prongSize'
+PRONG_HEIGHT = 'prongHeight'
 
 class CutterBottomType(Enum):
     Hole = 0

@@ -1,5 +1,6 @@
 import os
 import adsk.core, adsk.fusion, traceback
+import json
 
 from ... import strings
 from ...helpers.showMessage import showMessage
@@ -252,13 +253,17 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
                         eventArgs.isSelectable = False
                         return
 
-                attribute = preSelectBody.attributes.itemByName(strings.PREFIX, strings.ENTITY)
+                attribute = preSelectBody.attributes.itemByName(strings.PREFIX, strings.PROPERTIES)
                 if attribute is None:
                     eventArgs.isSelectable = False
                     return
                 
-                value = attribute.value
-                if not value == strings.GEMSTONE:
+                try:
+                    properties = json.loads(attribute.value)
+                    if properties.get(strings.ENTITY) != strings.GEMSTONE:
+                        eventArgs.isSelectable = False
+                        return
+                except:
                     eventArgs.isSelectable = False
                     return
                                 

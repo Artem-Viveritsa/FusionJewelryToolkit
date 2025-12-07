@@ -540,8 +540,8 @@ class ComputeCustomFeature(adsk.fusion.CustomFeatureEventHandler):
     def notify(self, args):
         try:
             eventArgs: adsk.fusion.CustomFeatureEventArgs = args
-            custFeature = eventArgs.customFeature
-            updateFeature(custFeature)
+            customFeature = eventArgs.customFeature
+            updateFeature(customFeature)
 
         except:
             showMessage(f'ComputeCustomFeature: {traceback.format_exc()}\n', True)

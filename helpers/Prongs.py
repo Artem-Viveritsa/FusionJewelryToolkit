@@ -1,7 +1,9 @@
 import adsk.core, adsk.fusion, traceback
+import json
 from collections import defaultdict
 
 from .. import constants
+from .. import strings
 from .showMessage import showMessage
 from .Gemstones import GemstoneInfo
 from .Bodies import placeBody
@@ -395,3 +397,37 @@ def calculateProngsPlacement(info1: GemstoneInfo, info2: GemstoneInfo, widthBetw
     except:
         showMessage(f'calculateProngsPlacement: {traceback.format_exc()}\n', True)
         return None, None, None, None
+
+
+def setProngAttributes(body: adsk.fusion.BRepBody, size: float = None, height: float = None):
+    """Set the name and attributes for a prong body.
+
+    Args:
+        body: The prong body to set attributes on.
+        size: The size of the prong. If None, attribute is not set.
+        height: The height of the prong. If None, attribute is not set.
+    """
+    body.name = strings.PRONG
+    
+    properties = {
+        strings.ENTITY: strings.PRONG
+    }
+    if size is not None:
+        properties[strings.PRONG_SIZE] = size
+    if height is not None:
+        properties[strings.PRONG_HEIGHT] = height
+    
+    body.attributes.add(strings.PREFIX, strings.PROPERTIES, json.dumps(properties))
+
+
+def updateProngFeature(customFeature: adsk.fusion.CustomFeature):
+    """Update the attributes of all prong bodies in the custom feature.
+
+    Args:
+        customFeature: The custom feature containing the prong bodies.
+    """
+    for feature in customFeature.features:
+        if feature.objectType == adsk.fusion.BaseFeature.classType():
+            baseFeature: adsk.fusion.BaseFeature = feature
+            for body in baseFeature.bodies:
+                setProngAttributes(body)

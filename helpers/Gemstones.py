@@ -1,6 +1,7 @@
 import adsk.core, adsk.fusion
 import os
 import traceback
+import json
 
 from .. import constants
 from .. import strings
@@ -105,15 +106,12 @@ class GemstoneInfo:
     def _extractParametersFromAttributes(self) -> None:
         """Extract flip, absoluteDepthOffset, and relativeDepthOffset from the body attributes."""
         try:
-            attr = self.body.attributes.itemByName(strings.PREFIX, strings.GEMSTONE_IS_FLIPPED)
-            if attr: self.flip = attr.value.lower() == 'true'
-            
-            attr = self.body.attributes.itemByName(strings.PREFIX, strings.GEMSTONE_ABSOLUTE_DEPTH_OFFSET)
-            if attr: self.absoluteDepthOffset = float(attr.value)
-            
-            attr = self.body.attributes.itemByName(strings.PREFIX, strings.GEMSTONE_RELATIVE_DEPTH_OFFSET)
-            if attr: self.relativeDepthOffset = float(attr.value)
-
+            attr = self.body.attributes.itemByName(strings.PREFIX, strings.PROPERTIES)
+            if attr:
+                props = json.loads(attr.value)
+                self.flip = props.get(strings.GEMSTONE_IS_FLIPPED, False)
+                self.absoluteDepthOffset = props.get(strings.GEMSTONE_ABSOLUTE_DEPTH_OFFSET, 0.0)
+                self.relativeDepthOffset = props.get(strings.GEMSTONE_RELATIVE_DEPTH_OFFSET, 0.0)
         except Exception as e:
             showMessage(f'_extractParametersFromAttributes error: {str(e)}\n', False)
     
@@ -337,15 +335,19 @@ def setGemstoneAttributes(body: adsk.fusion.BRepBody, flip: bool = None, absolut
         relativeDepthOffset: The relative depth offset. If None, attribute is not set.
     """
     body.name = strings.GEMSTONE_ROUND_CUT
-    body.attributes.add(strings.PREFIX, strings.ENTITY, strings.GEMSTONE)
-    body.attributes.add(strings.PREFIX, strings.GEMSTONE_CUT, strings.GEMSTONE_ROUND_CUT)
     
+    properties = {
+        strings.ENTITY: strings.GEMSTONE,
+        strings.GEMSTONE_CUT: strings.GEMSTONE_ROUND_CUT
+    }
     if flip is not None:
-        body.attributes.add(strings.PREFIX, strings.GEMSTONE_IS_FLIPPED, str(flip).lower())
+        properties[strings.GEMSTONE_IS_FLIPPED] = flip
     if absoluteDepthOffset is not None:
-        body.attributes.add(strings.PREFIX, strings.GEMSTONE_ABSOLUTE_DEPTH_OFFSET, str(absoluteDepthOffset))
+        properties[strings.GEMSTONE_ABSOLUTE_DEPTH_OFFSET] = absoluteDepthOffset
     if relativeDepthOffset is not None:
-        body.attributes.add(strings.PREFIX, strings.GEMSTONE_RELATIVE_DEPTH_OFFSET, str(relativeDepthOffset))
+        properties[strings.GEMSTONE_RELATIVE_DEPTH_OFFSET] = relativeDepthOffset
+    
+    body.attributes.add(strings.PREFIX, strings.PROPERTIES, json.dumps(properties))
 
 
 

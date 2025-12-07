@@ -3,7 +3,7 @@ import adsk.core, adsk.fusion, traceback
 
 from ... import strings, constants
 from ...helpers.showMessage import showMessage
-from ...helpers.Prongs import createProng, updateProngAndNormalize
+from ...helpers.Prongs import createProng, updateProngAndNormalize, setProngAttributes, updateProngFeature
 from ...helpers.Bodies import placeBody
 from ...helpers.Surface import getDataFromPointAndFace
 
@@ -381,7 +381,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             baseFeature.startEdit()
             for i in range(len(prongs)):
                 body = component.bRepBodies.add(prongs[i], baseFeature)
-                handleNewBody(body)
+                setProngAttributes(body)
             baseFeature.finishEdit()
 
         except:
@@ -417,8 +417,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                     eventArgs.executeFailed = True
                     return
                 body = component.bRepBodies.add(prong, baseFeature)
-                handleNewBody(body)
-                body.attributes.add(strings.PREFIX, 'PointEntityToken', pointEntities[i].entityToken)
+                setProngAttributes(body)
             baseFeature.finishEdit()
 
             design: adsk.fusion.Design = _app.activeProduct
@@ -664,7 +663,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         if len(points) == 0: return False
 
         size = customFeature.parameters.itemById(sizeInputDef.id).value
-        depth = customFeature.parameters.itemById(heightInputDef.id).value
+        height = customFeature.parameters.itemById(heightInputDef.id).value
 
         if faceEntity.objectType == adsk.fusion.ConstructionPlane.classType():
             component = faceEntity.component
@@ -679,21 +678,20 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
 
             if i < baseFeature.bodies.count:
                 currentBody = baseFeature.bodies.item(i)
-                newBody = updateBody(currentBody, faceEntity, point.worldGeometry, size, depth)
+                newBody = updateBody(currentBody, faceEntity, point.worldGeometry, size, height)
                 if newBody is not None:
                     baseFeature.updateBody(currentBody, newBody)
                 else:
                     baseFeature.finishEdit()
                     return False
             else:
-                prong = createBody(faceEntity, point.worldGeometry, size, depth)
+                prong = createBody(faceEntity, point.worldGeometry, size, height)
                 if prong is None:
                     baseFeature.finishEdit()
                     return False
                 body = component.bRepBodies.add(prong, baseFeature)
-                handleNewBody(body)
-                body.attributes.add(strings.PREFIX, 'PointEntityToken', point.entityToken)
-
+                if not _isRolledForEdit:
+                    setProngAttributes(body, size, height)
         
         while baseFeature.bodies.count > len(points):
             baseFeature.bodies.item(baseFeature.bodies.count - 1).deleteMe()
@@ -707,30 +705,13 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         return False
     
 
-def handleNewBody(body: adsk.fusion.BRepBody):
-    """Handle the creation of a new prong body by setting its name and attributes.
-
-    Args:
-        body: The new prong body to handle.
-    """
-    body.name = strings.PRONG
-    body.attributes.add(strings.PREFIX, strings.ENTITY, strings.PRONG)
-
-def updateAttributes():
-    """Update the attributes of all prong bodies in the edited custom feature."""
-    for feature in _editedCustomFeature.features:
-        if feature.objectType == adsk.fusion.BaseFeature.classType():
-            baseFeature: adsk.fusion.BaseFeature = feature
-            for body in baseFeature.bodies:
-                handleNewBody(body)
-
 def rollBack():
     """Roll back the timeline to the state before editing."""
     global _restoreTimelineObject, _isRolledForEdit, _editedCustomFeature
     
     if _isRolledForEdit:
         _editedCustomFeature.timelineObject.rollTo(False)
-        updateAttributes()
+        updateProngFeature(_editedCustomFeature)
         _restoreTimelineObject.rollTo(False)
         _isRolledForEdit = False
 

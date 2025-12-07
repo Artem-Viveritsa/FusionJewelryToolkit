@@ -1,11 +1,13 @@
 import os
 import adsk.core, adsk.fusion, traceback
+import json
+import math
 
 from ... import strings
 from ... import constants
 from ...helpers.showMessage import showMessage
 from ...helpers.Bodies import placeBody
-import math
+from ...helpers.Gemstones import extractGemstonesInfo, GemstoneInfo
 
 
 _handlers = []
@@ -359,13 +361,17 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
                         eventArgs.isSelectable = False
                         return
 
-                attribute = preSelectBody.attributes.itemByName(strings.PREFIX, strings.ENTITY)
+                attribute = preSelectBody.attributes.itemByName(strings.PREFIX, strings.PROPERTIES)
                 if attribute is None:
                     eventArgs.isSelectable = False
                     return
                 
-                value = attribute.value
-                if not value == strings.GEMSTONE:
+                try:
+                    properties = json.loads(attribute.value)
+                    if properties.get(strings.ENTITY) != strings.GEMSTONE:
+                        eventArgs.isSelectable = False
+                        return
+                except:
                     eventArgs.isSelectable = False
                     return
                                 
@@ -466,6 +472,9 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
 
             if not gemstones: return
 
+            gemstoneInfos = extractGemstonesInfo(gemstones)
+            if gemstoneInfos is None: return
+
             height = _heightValueInput.value
             depth = _depthValueInput.value
             sizeRatio = _sizeRatioValueInput.value
@@ -473,18 +482,15 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             coneAngle = _coneAngleValueInput.value
             cutterBottomTypeIndex = _cutterBottomTypeInput.selectedItem.index
             cutterBottomType = strings.CutterBottomType(cutterBottomTypeIndex)
-            
-            flippedStates = getFlipStatesForGemstones(gemstones)
 
             cutters = []
-            for i, gemstone in enumerate(gemstones):
-                cutter = createBody(gemstone, height, depth, sizeRatio, holeRatio, flippedStates[i], coneAngle, cutterBottomType)
+            for gemstoneInfo in gemstoneInfos:
+                cutter = createBody(gemstoneInfo, height, depth, sizeRatio, holeRatio, coneAngle, cutterBottomType)
                 if cutter is None: continue
                 cutters.append(cutter)
 
             if not cutters: return
 
-            
             component = gemstones[0].parentComponent
 
             baseFeature = component.features.baseFeatures.add()
@@ -510,16 +516,19 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             for i in range(_gemstonesSelectionInput.selectionCount):
                 gemstones.append(_gemstonesSelectionInput.selection(i).entity)
 
-            flippedStates = getFlipStatesForGemstones(gemstones)
+            gemstoneInfos = extractGemstonesInfo(gemstones)
+            if gemstoneInfos is None:
+                eventArgs.executeFailed = True
+                return
 
             cutterBottomTypeIndex = _cutterBottomTypeInput.selectedItem.index
             cutterBottomType = strings.CutterBottomType(cutterBottomTypeIndex)
-            
+
             component = gemstones[0].parentComponent
             baseFeature = component.features.baseFeatures.add()
             baseFeature.startEdit()
-            for i, gemstone in enumerate(gemstones):
-                cutter = createBody(gemstone, _heightValueInput.value, _depthValueInput.value, _sizeRatioValueInput.value, _holeRatioValueInput.value, flippedStates[i], _coneAngleValueInput.value, cutterBottomType)
+            for gemstoneInfo in gemstoneInfos:
+                cutter = createBody(gemstoneInfo, _heightValueInput.value, _depthValueInput.value, _sizeRatioValueInput.value, _holeRatioValueInput.value, _coneAngleValueInput.value, cutterBottomType)
                 if cutter is None:
                     eventArgs.executeFailed = True
                     return
@@ -695,46 +704,15 @@ class ComputeCustomFeature(adsk.fusion.CustomFeatureEventHandler):
             showMessage(f'ComputeCustomFeature: {traceback.format_exc()}\n', True)
 
 
-def getFlipStatesForGemstones(gemstones: list[adsk.fusion.BRepBody]) -> list[bool]:
-    """Get the flip states for a list of gemstone bodies.
+def createBody(gemstoneInfo: GemstoneInfo, height: float, depth: float, sizeRatio: float = 1.0, holeRatio: float = 0.5, coneAngle: float = 42.0, cutterBottomType: strings.CutterBottomType = strings.CutterBottomType.Hole) -> adsk.fusion.BRepBody | None:
+    """Create a cutter body based on a gemstone info.
 
     Args:
-        gemstones: List of gemstone bodies.
-
-    Returns:
-        List of boolean values indicating if each gemstone is flipped.
-    """
-    flippedStates = []
-    for gemstone in gemstones:
-        isFlipped = False
-        try:
-            for feature in gemstone.parentComponent.features.customFeatures:
-                if feature.name.startswith(strings.GEMSTONES_ON_FACE_AT_POINTS):
-                    for subFeature in feature.features:
-                        if subFeature.objectType == adsk.fusion.BaseFeature.classType():
-                            baseFeature = adsk.fusion.BaseFeature.cast(subFeature)
-                            for body in baseFeature.bodies:
-                                if body.entityToken == gemstone.entityToken:
-                                    flipParam = feature.parameters.itemById('flip')
-                                    if flipParam:
-                                        isFlipped = flipParam.expression.lower() == 'true'
-                                    break
-        except:
-            pass
-        flippedStates.append(isFlipped)
-    return flippedStates
-
-
-def createBody(body: adsk.fusion.BRepBody, height: float, depth: float, sizeRatio: float = 1.0, holeRatio: float = 0.5, isFlipped: bool = False, coneAngle: float = 42.0, cutterBottomType: strings.CutterBottomType = strings.CutterBottomType.Hole) -> adsk.fusion.BRepBody | None:
-    """Create a cutter body based on a gemstone body.
-
-    Args:
-        body: The gemstone body to create a cutter for.
+        gemstoneInfo: The GemstoneInfo object containing gemstone geometry.
         height: The height of the cutter above the gemstone.
         depth: The depth of the cutter hole below the gemstone.
         sizeRatio: The ratio of cutter size to gemstone size.
         holeRatio: The ratio of hole diameter to cutter diameter.
-        isFlipped: Whether the gemstone is flipped.
         coneAngle: The angle of the cutter cone.
         cutterBottomType: The type of cutter bottom (Hole, Cone, or Hemisphere).
 
@@ -742,38 +720,17 @@ def createBody(body: adsk.fusion.BRepBody, height: float, depth: float, sizeRati
         The created cutter body or None if creation failed.
     """
     try:
-        if body is None: return None
+        if gemstoneInfo is None or gemstoneInfo.body is None: return None
 
         temporaryBRep: adsk.fusion.TemporaryBRepManager = adsk.fusion.TemporaryBRepManager.get()
-        tempBody = temporaryBRep.copy(body)
+        tempBody = temporaryBRep.copy(gemstoneInfo.body)
 
-        topFace = sorted(tempBody.faces, key = lambda x: x.area, reverse = True)[0]
-        topPlane = adsk.core.Plane.cast(topFace.geometry)
+        lengthDirection = gemstoneInfo.topPlane.uDirection
+        widthDirection = gemstoneInfo.topPlane.vDirection
+        normal = gemstoneInfo.getNormalizedNormal()
 
-        lengthDirection = topPlane.uDirection
-        widthDirection = topPlane.vDirection
-        normal = topPlane.normal
-
-        cylindricalFace = None
-        cylinder = None
-
-        for face in tempBody.faces:
-            if face.geometry.surfaceType == adsk.core.SurfaceTypes.CylinderSurfaceType:
-                tempCylinder = adsk.core.Cylinder.cast(face.geometry)
-                cylinderAxis = tempCylinder.axis
-                if cylinderAxis.isParallelTo(normal):
-                    cylindricalFace = face
-                    cylinder = tempCylinder
-                    break
-        
-        if cylindricalFace is None or cylinder is None: return None
-
-        girdleCentroid = cylindricalFace.centroid
-        
-        if isFlipped:
-            normal.scaleBy(-1)
-
-        radius = cylinder.radius * sizeRatio
+        girdleCentroid = gemstoneInfo.centroid
+        radius = gemstoneInfo.radius * sizeRatio
         holeRadius = radius * holeRatio
 
         bodies = []
@@ -812,7 +769,7 @@ def createBody(body: adsk.fusion.BRepBody, height: float, depth: float, sizeRati
             )
         temporaryBRep.transform(tempBody, transformation)
 
-        girdleThickness = abs(cylindricalFace.boundingBox.minPoint.z - cylindricalFace.boundingBox.maxPoint.z)
+        girdleThickness = abs(gemstoneInfo.cylindricalFace.boundingBox.minPoint.z - gemstoneInfo.cylindricalFace.boundingBox.maxPoint.z)
 
         translate = normal.copy()
         translate.scaleBy(girdleThickness / -2)
@@ -860,6 +817,9 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         
         gemstones: list[adsk.fusion.BRepBody] = [face.body for face in firstGemstoneFaces]
 
+        gemstoneInfos = extractGemstonesInfo(gemstones)
+        if gemstoneInfos is None: return False
+
         height = customFeature.parameters.itemById('height').value
         depth = customFeature.parameters.itemById('depth').value
         sizeRatio = customFeature.parameters.itemById('sizeRatio').value
@@ -878,16 +838,14 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         cutterBottomType = strings.CutterBottomType(cutterBottomTypeIndex)
 
         component = gemstones[0].parentComponent
-        flippedStates = getFlipStatesForGemstones(gemstones)
 
         baseFeature.startEdit()
         
         
-        for i in range(len(gemstones)):
-            gemstone = gemstones[i]
-            isFlipped = flippedStates[i]
+        for i in range(len(gemstoneInfos)):
+            gemstoneInfo = gemstoneInfos[i]
             
-            cutter = createBody(gemstone, height, depth, sizeRatio, holeRatio, isFlipped, coneAngle, cutterBottomType)
+            cutter = createBody(gemstoneInfo, height, depth, sizeRatio, holeRatio, coneAngle, cutterBottomType)
             if cutter is None:
                 baseFeature.finishEdit()
                 return False
@@ -901,7 +859,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
                 handleNewBody(newBody)
 
         
-        while baseFeature.bodies.count > len(gemstones):
+        while baseFeature.bodies.count > len(gemstoneInfos):
             baseFeature.bodies.item(baseFeature.bodies.count - 1).deleteMe()
 
         baseFeature.finishEdit()

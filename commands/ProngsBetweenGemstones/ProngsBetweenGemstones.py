@@ -1,10 +1,11 @@
 import os
 import adsk.core, adsk.fusion, traceback
+import json
 
 from ... import strings
 from ...helpers.showMessage import showMessage
 from ...helpers.Gemstones import extractGemstonesInfo, findValidConnections
-from ...helpers.Prongs import createProngInfosFromConnections, createProngFromInfo, updateProngFromInfo, createProngInfosFromConnections
+from ...helpers.Prongs import createProngInfosFromConnections, createProngFromInfo, updateProngFromInfo, createProngInfosFromConnections, setProngAttributes, updateProngFeature
 
 
 _handlers = []
@@ -298,13 +299,17 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
                         eventArgs.isSelectable = False
                         return
 
-                attribute = preSelectBody.attributes.itemByName(strings.PREFIX, strings.ENTITY)
+                attribute = preSelectBody.attributes.itemByName(strings.PREFIX, strings.PROPERTIES)
                 if attribute is None:
                     eventArgs.isSelectable = False
                     return
                 
-                value = attribute.value
-                if not value == strings.GEMSTONE:
+                try:
+                    properties = json.loads(attribute.value)
+                    if properties.get(strings.ENTITY) != strings.GEMSTONE:
+                        eventArgs.isSelectable = False
+                        return
+                except:
                     eventArgs.isSelectable = False
                     return
                                 
@@ -402,7 +407,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             baseFeature.startEdit()
             for prong in prongs:
                 body = component.bRepBodies.add(prong, baseFeature)
-                handleNewBody(body)
+                setProngAttributes(body)
             baseFeature.finishEdit()
 
         except:
@@ -436,7 +441,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             baseFeature.startEdit()
             for prong in prongs:
                 body = component.bRepBodies.add(prong, baseFeature)
-                handleNewBody(body)
+                setProngAttributes(body)
             baseFeature.finishEdit()
 
             design: adsk.fusion.Design = _app.activeProduct
@@ -740,8 +745,9 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
                 newProng = createProngFromInfo(prongInfo)
                 if newProng is not None:
                     newBody = component.bRepBodies.add(newProng, baseFeature)
+                    if not _isRolledForEdit:
+                        setProngAttributes(newBody)
 
-        
         while baseFeature.bodies.count > len(prongInfos):
             baseFeature.bodies.item(baseFeature.bodies.count - 1).deleteMe()
 
@@ -754,30 +760,13 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         return False
     
 
-def handleNewBody(body: adsk.fusion.BRepBody):
-    """Handle the creation of a new prong body by setting its name and attributes.
-
-    Args:
-        body: The new prong body to handle.
-    """
-    body.name = strings.PRONG
-    body.attributes.add(strings.PREFIX, strings.ENTITY, strings.PRONG)
-
-def updateAttributes():
-    """Update the attributes of all prong bodies in the edited custom feature."""
-    for feature in _editedCustomFeature.features:
-        if feature.objectType == adsk.fusion.BaseFeature.classType():
-            baseFeature: adsk.fusion.BaseFeature = feature
-            for body in baseFeature.bodies:
-                handleNewBody(body)
-
 def rollBack():
     """Roll back the timeline to the state before editing."""
     global _restoreTimelineObject, _isRolledForEdit, _editedCustomFeature
     
     if _isRolledForEdit:
         _editedCustomFeature.timelineObject.rollTo(False)
-        updateAttributes()
+        updateProngFeature(_editedCustomFeature)
         _restoreTimelineObject.rollTo(False)
         _isRolledForEdit = False
 
