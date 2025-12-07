@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0] - 2025-12-07
+
+### Added
+- **SurfaceUnfold** (Early Preview): Unfold curved surfaces or meshes to flat 2D sketches for pattern creation and manufacturing.
+- **ObjectsRefold** (Early Preview): Refold any BRep bodies back onto curved surfaces with automatic body wrapping.
+
+### Changed
+- Major UI restructure: Moved all commands from Solid → Create panel to a dedicated \"Jewelry Toolkit\" custom toolbar panel for better organization.
+- Updated all command modules to support the new custom panel architecture.
+- All gemstone and prong commands now support selecting construction planes in addition to BRep faces.
+
+### Note
+- SurfaceUnfold and ObjectsRefold are currently in **Early Preview** status. These features are experimental and may have limitations or bugs. User feedback is welcome!
+
 ## [0.7.3] - 2025-12-01
 
 ### Changed

@@ -11,7 +11,6 @@ _handlers = []
 
 _app: adsk.core.Application = None
 _ui: adsk.core.UserInterface = None
-_panel: adsk.core.ToolbarPanel = None
 
 _customFeatureDefinition: adsk.fusion.CustomFeature = None
 
@@ -74,21 +73,18 @@ weldDistanceInputDef = strings.InputDef(
     )
 
 
-def run(context):
+def run(panel: adsk.core.ToolbarPanel):
     """Initialize the prongs between gemstones command by setting up command definitions and UI elements."""
     try:
-        global _app, _ui, _panel, _customFeatureDefinition
+        global _app, _ui, _customFeatureDefinition
         _app = adsk.core.Application.get()
         _ui  = _app.userInterface
 
         createCommandDefinition = _ui.commandDefinitions.addButtonDefinition(createCommandInputDef.id, 
                                                                 createCommandInputDef.name, 
                                                                 createCommandInputDef.tooltip, 
-                                                                RESOURCES_FOLDER)        
-
-        solidWorkspace = _ui.workspaces.itemById('FusionSolidEnvironment')
-        _panel = solidWorkspace.toolbarPanels.itemById('SolidCreatePanel')
-        control = _panel.controls.addCommand(createCommandDefinition, '', False)     
+                                                                RESOURCES_FOLDER)
+        control = panel.controls.addCommand(createCommandDefinition, '', False)     
         control.isPromoted = True
 
         editCommandDefinition = _ui.commandDefinitions.addButtonDefinition(editCommandInputDef.id, 
@@ -114,12 +110,10 @@ def run(context):
         showMessage(f'Run failed:\n{traceback.format_exc()}', True)
 
 
-def stop(context):
+def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the prongs between gemstones command by removing UI elements and handlers."""
     try:
-        global _panel
-
-        control = _panel.controls.itemById(CREATE_COMMAND_ID)
+        control = panel.controls.itemById(CREATE_COMMAND_ID)
         if control:
             control.deleteMe()
             

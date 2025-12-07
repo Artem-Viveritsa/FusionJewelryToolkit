@@ -1,8 +1,8 @@
 # Fusion 360 Jewelry Toolkit
 
-A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in installs commands in the Solid → Create menu.
+A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in creates a dedicated "Jewelry Toolkit" toolbar panel with specialized commands for gemstone placement, prong creation, channels, cutters, and surface manipulation.
 
-[![Gemstones icon](commands/GemstonesOnFaceAtPoints/resources/32x32@2x.png)](#gemstonesonfaceatpoints--place-round-gemstones-on-a-face-at-specified-points) [![Gemstones icon](commands/GemstonesOnFaceAtCircles/resources/32x32@2x.png)](#gemstonesonfaceatcircles--place-round-gemstones-on-a-face-at-sketch-circles) [![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)](#gemstonesonfaceatcurve--place-gemstones-along-a-curve-with-variable-sizes) [![Gemstones icon](commands/GemstonesOnFaceBetweenCurves/resources/32x32@2x.png)](#gemstonesonfacebetweencurves--place-gemstones-between-two-curves) [![Prongs icon](commands/ProngsOnFaceAtPoints/resources/32x32@2x.png)](#prongsonfaceatpoints--generate-prongs-on-a-face-at-specified-points) [![ProngsBetweenGemstones icon](commands/ProngsBetweenGemstones/resources/32x32@2x.png)](#prongsbetweengemstones--create-prongs-between-gemstones) [![ChannelsBetweenGemstones icon](commands/ChannelsBetweenGemstones/resources/32x32@2x.png)](#channelsbetweengemstones--create-channels-between-gemstones) [![CuttersForGemstones icon](commands/CuttersForGemstones/resources/32x32@2x.png)](#cuttersforgemstones--create-cutter-bodies-for-gemstone-seating)
+[![Gemstones icon](commands/GemstonesOnFaceAtPoints/resources/32x32@2x.png)](#gemstonesonfaceatpoints--place-round-gemstones-on-a-face-at-specified-points) [![Gemstones icon](commands/GemstonesOnFaceAtCircles/resources/32x32@2x.png)](#gemstonesonfaceatcircles--place-round-gemstones-on-a-face-at-sketch-circles) [![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)](#gemstonesonfaceatcurve--place-gemstones-along-a-curve-with-variable-sizes) [![Gemstones icon](commands/GemstonesOnFaceBetweenCurves/resources/32x32@2x.png)](#gemstonesonfacebetweencurves--place-gemstones-between-two-curves) [![Prongs icon](commands/ProngsOnFaceAtPoints/resources/32x32@2x.png)](#prongsonfaceatpoints--generate-prongs-on-a-face-at-specified-points) [![ProngsBetweenGemstones icon](commands/ProngsBetweenGemstones/resources/32x32@2x.png)](#prongsbetweengemstones--create-prongs-between-gemstones) [![ChannelsBetweenGemstones icon](commands/ChannelsBetweenGemstones/resources/32x32@2x.png)](#channelsbetweengemstones--create-channels-between-gemstones) [![CuttersForGemstones icon](commands/CuttersForGemstones/resources/32x32@2x.png)](#cuttersforgemstones--create-cutter-bodies-for-gemstone-seating) [![SurfaceUnfold icon](commands/SurfaceUnfold/resources/32x32@2x.png)](#surfaceunfold--unfold-curved-surfaces-to-flat-2d-sketches-early-preview) [![ObjectsRefold icon](commands/ObjectsRefold/resources/32x32@2x.png)](#objectsrefold--refold-flat-patterns-onto-curved-surfaces-early-preview)
 
 
 ## Installation
@@ -10,22 +10,24 @@ A small collection of utilities that speed up jewelry modeling in Fusion 360. Th
 2. Click the `+` button and choose "Script or Add-in from my computer".
 3. Select the `FusionJewelryToolkit` folder and click Open.
 4. To make the add-in run automatically when Fusion starts, enable the "Run on Startup" checkbox.
-5. After installation, the commands appear under Solid → Create.
+5. After installation, a new "Jewelry Toolkit" panel will appear in the Utilities section of the toolbar with all commands organized in one place.
 
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
-## What's new in version 0.7.1
-- **GemstonesOnFaceAtPoints**: Now supports selecting vertices and construction points in addition to sketch points.
-- **GemstonesOnFaceAtCurve** & **GemstonesOnFaceBetweenCurves**: Now support selecting model edges (BRep edges) as rails, not just sketch curves.
-- **Internal Improvements**: Refactored geometry handling for better stability and flexibility.
+## What's new in version 0.8.0
+- **New Commands (Early Preview):**
+  - **SurfaceUnfold**: Unfold curved surfaces or meshes to flat 2D sketches for pattern creation
+  - **ObjectsRefold**: Refold flat patterns back onto curved surfaces with automatic body wrapping
+  - ⚠️ **Note**: These features are experimental and in early preview stage. Feedback welcome!
+- **UI Improvements**: All commands now organized in a dedicated "Jewelry Toolkit" custom panel for easier access.
 - See [full changelog](CHANGELOG.md) for complete version history.
 
 ---
 
 ![Gemstones icon](commands/GemstonesOnFaceAtPoints/resources/32x32@2x.png)
 ## GemstonesOnFaceAtPoints — Place round gemstones on a face at specified points
-- **Description:** Creates round-cut gemstone bodies at selected points on a chosen face. Supports sketch points, vertices, and construction points.
-- **Selection:** 1 face and one or more points (sketch points, vertices, or construction points). The face may have any curvature or complexity; the points do not need to lie directly on the face.
+- **Description:** Creates round-cut gemstone bodies at selected points on a chosen face or construction plane. Supports sketch points, vertices, and construction points.
+- **Selection:** 1 face or construction plane and one or more points (sketch points, vertices, or construction points). The face/plane may have any curvature or complexity; the points do not need to lie directly on the face/plane.
 - **Key parameters:**
   - **Size** — Gemstone diameter. Default: `1.5 mm`. Determines the overall size of the gemstone.
   - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
@@ -36,8 +38,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 
 ![Gemstones icon](commands/GemstonesOnFaceAtCircles/resources/32x32@2x.png)
 ## GemstonesOnFaceAtCircles — Place round gemstones on a face at sketch circles
-- **Description:** Creates round-cut gemstone bodies at selected sketch circles on a chosen face. The gemstone size matches the circle diameter.
-- **Selection:** 1 face and one or more sketch circles. The face may have any curvature or complexity; the circles do not need to lie directly on the face. Minimum circle diameter is `0.5 mm`.
+- **Description:** Creates round-cut gemstone bodies at selected sketch circles on a chosen face or construction plane. The gemstone size matches the circle diameter.
+- **Selection:** 1 face or construction plane and one or more sketch circles. The face/plane may have any curvature or complexity; the circles do not need to lie directly on the face/plane. Minimum circle diameter is `0.5 mm`.
 - **Key parameters:**
   - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
   - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
@@ -47,8 +49,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 
 ![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)
 ## GemstonesOnFaceAtCurve — Place gemstones along a curve with variable sizes
-- **Description:** Creates round-cut gemstone bodies along a selected curve (sketch curve or model edge) on a chosen face. Gemstone sizes can gradually change from start to end.
-- **Selection:** 1 face and 1 curve (sketch curve or edge).
+- **Description:** Creates round-cut gemstone bodies along a selected curve (sketch curve or model edge) on a chosen face or construction plane. Gemstone sizes can gradually change from start to end.
+- **Selection:** 1 face or construction plane and 1 curve (sketch curve or edge).
 - **Key parameters:**
   - **Start Offset** — Distance from the curve start to the first gemstone. Default: `0 mm`.
   - **End Offset** — Distance from the curve end to the last gemstone. Default: `0 mm`.
@@ -65,8 +67,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 
 ![Gemstones icon](commands/GemstonesOnFaceBetweenCurves/resources/32x32@2x.png)
 ## GemstonesOnFaceBetweenCurves — Place gemstones between two curves
-- **Description:** Creates round-cut gemstone bodies along a path between two selected curves (sketch curves or model edges) on a chosen face. Gemstone sizes are automatically determined by the distance between the two curves.
-- **Selection:** 1 face and 2 curves (sketch curves or edges). The curves should be approximately the same length for best results.
+- **Description:** Creates round-cut gemstone bodies along a path between two selected curves (sketch curves or model edges) on a chosen face or construction plane. Gemstone sizes are automatically determined by the distance between the two curves.
+- **Selection:** 1 face or construction plane and 2 curves (sketch curves or edges). The curves should be approximately the same length for best results.
 - **Key parameters:**
   - **Start Offset** — Distance from the start of the curves to the first gemstone. Default: `0 mm`.
   - **End Offset** — Distance from the end of the curves to the last gemstone. Default: `0 mm`.
@@ -82,8 +84,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 
 ![Prongs icon](commands/ProngsOnFaceAtPoints/resources/32x32@2x.png)
 ## ProngsOnFaceAtPoints — Generate prongs on a face at specified points
-- **Description:** Generates prong bodies at selected sketch points on a chosen face.
-- **Selection:** 1 face and one or more sketch points. The face may have any curvature or complexity; the points do not need to lie directly on the face.
+- **Description:** Generates prong bodies at selected sketch points on a chosen face or construction plane.
+- **Selection:** 1 face or construction plane and one or more sketch points. The face/plane may have any curvature or complexity; the points do not need to lie directly on the face/plane.
 - **Key parameters:**
   - **Size (prong base diameter)** — Default: `0.4 mm`. Minimum: `0.1 mm`.
   - **Height (prong height)** — Height above the face. Default: `0.4 mm`. Minimum: `0.1 mm`.
@@ -128,3 +130,23 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
   - When you edit an existing CuttersForGemstones operation, the add-in currently creates a new body instead of modifying the original. This behavior preserves the ability to change parameters (height, depth, scale, etc.) after the initial creation.
   - Do not manually edit cutter bodies with other modeling tools. If you modify a generated body and later change CuttersForGemstones parameters, the resulting geometry and dependency links can become unpredictable.
   - To update cutters, change parameters using the CuttersForGemstones command (so the operation regenerates correctly), then use Boolean operations to subtract the cutters from target bodies.
+
+---
+
+![SurfaceUnfold icon](commands/SurfaceUnfold/resources/32x32@2x.png)
+## SurfaceUnfold — Unfold curved surfaces to flat 2D sketches (Early Preview)
+- **Description:** Unfolds curved BRep faces or mesh bodies to flat 2D sketch patterns. Useful for creating manufacturing templates, patterns for flat materials, or analyzing surface distortion.
+- **Selection:** 1 BRep face or 1 mesh body, plus 3 vertices for orientation (origin, X-direction, Y-direction).
+- **Key parameters:**
+  - **Algorithm** — Unfold algorithm. Options: `Mesh` (triangulation-based), `NURBS` (surface-based). Default: `Mesh`.
+  - **Accuracy** — Controls mesh density for unfolding precision. Higher values = more detail. Default: `0.5 mm`. Range: `0.1–10.0 mm`.
+- **Limitations:** This feature is in early preview and may have limitations with highly complex or distorted surfaces.
+
+---
+
+![ObjectsRefold icon](commands/ObjectsRefold/resources/32x32@2x.png)
+## ObjectsRefold — Refold flat patterns onto curved surfaces (Early Preview)
+- **Description:** Takes any BRep bodies and wraps them onto a curved surface created by SurfaceUnfold. This is the inverse operation of SurfaceUnfold.
+- **Selection:** 1 sketch (created by SurfaceUnfold) and one or more BRep bodies to refold onto the original curved surface.
+- **Key parameters:** None — the command uses metadata from the SurfaceUnfold sketch to reverse the unfolding transformation.
+- **Limitations:** Currently, the command creates copies of the selected bodies instead of moving the existing ones. 

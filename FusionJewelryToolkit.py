@@ -1,3 +1,4 @@
+import adsk.core, adsk.fusion
 from .commands.GemstonesOnFaceAtPoints import GemstonesOnFaceAtPoints
 from .commands.GemstonesOnFaceAtCircles import GemstonesOnFaceAtCircles
 from .commands.GemstonesOnFaceAtCurve import GemstonesOnFaceAtCurve
@@ -8,6 +9,9 @@ from .commands.ProngsBetweenGemstones import ProngsBetweenGemstones
 
 from .commands.ChannelsBetweenGemstones import ChannelsBetweenGemstones
 from .commands.CuttersForGemstones import CuttersForGemstones
+
+from .commands.SurfaceUnfold import SurfaceUnfold
+from .commands.ObjectsRefold import ObjectsRefold
 
 commands = [
     GemstonesOnFaceAtPoints,
@@ -20,13 +24,35 @@ commands = [
     
     ChannelsBetweenGemstones,
     CuttersForGemstones,
+    SurfaceUnfold,
+    ObjectsRefold,
     ]
 
+
+from . import strings
+
+_app: adsk.core.Application = None
+_ui: adsk.core.UserInterface = None
+_tab: adsk.core.ToolbarTab = None
+_panel: adsk.core.ToolbarPanel = None
+
+
 def run(context):
+    global _app, _ui, _tab, _panel
+    _app = adsk.core.Application.get()
+    _ui  = _app.userInterface
+
+    solidWorkspace = _ui.workspaces.itemById('FusionSolidEnvironment')
+    _panel = solidWorkspace.toolbarPanels.add(strings.PANEL_ID, 'Jewelry Toolkit')
+
     for command in commands:
-        command.run(context)
+        command.run(_panel)
 
 
 def stop(context):
+    global _app, _ui, _tab, _panel
+
     for command in commands:
-        command.stop(context)
+        command.stop(_panel)
+        
+    _panel.deleteMe()

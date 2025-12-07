@@ -5,11 +5,10 @@ from ... import strings
 from ...constants import minimumGemstoneSize
 from ...helpers.showMessage import showMessage
 from ...helpers.Gemstones import createGemstone, updateGemstone, setGemstoneAttributes, updateGemstoneFeature, diamondMaterial
-from ...helpers.Utilities import getPointGeometry
+from ...helpers.Points import getPointGeometry
 
 _app: adsk.core.Application = None
 _ui: adsk.core.UserInterface = None
-_panel: adsk.core.ToolbarPanel = None
 
 _customFeatureDefinition: adsk.fusion.CustomFeature = None
 
@@ -35,8 +34,8 @@ editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Gemstones', 'Edits
 
 selectFaceInputDef = strings.InputDef(
     'selectFace',
-    'Select Face',
-    'Select the face where the gemstone will be placed.'
+    'Select Face or Plane',
+    'Select the face or construction plane where the gemstones will be placed.'
     )
 
 selectPointsInputDef = strings.InputDef(
@@ -71,10 +70,10 @@ relativeDepthOffsetInputDef = strings.InputDef(
 
 RESOURCES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', '')
 
-def run(context):
+def run(panel: adsk.core.ToolbarPanel):
     """Initialize the gemstones command by setting up command definitions and UI elements."""
     try:
-        global _app, _ui, _panel
+        global _app, _ui
         _app = adsk.core.Application.get()
         _ui  = _app.userInterface
 
@@ -83,9 +82,7 @@ def run(context):
                                                                 createCommandInputDef.tooltip, 
                                                                 RESOURCES_FOLDER)        
 
-        solidWorkspace = _ui.workspaces.itemById('FusionSolidEnvironment')
-        _panel = solidWorkspace.toolbarPanels.itemById('SolidCreatePanel')
-        control = _panel.controls.addCommand(createCommandDefinition, '', False)     
+        control = panel.controls.addCommand(createCommandDefinition, '', False)     
         control.isPromoted = True
 
         editCommandDefinition = _ui.commandDefinitions.addButtonDefinition(editCommandInputDef.id, 
@@ -112,12 +109,10 @@ def run(context):
         showMessage(f'Run failed:\n{traceback.format_exc()}', True)
 
 
-def stop(context):
+def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the gemstones command by removing UI elements and handlers."""
     try:
-        global _panel
-
-        control = _panel.controls.itemById(CREATE_COMMAND_ID)
+        control = panel.controls.itemById(CREATE_COMMAND_ID)
         if control:
             control.deleteMe()
             
@@ -150,17 +145,18 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             global _faceSelectionInput, _pointSelectionInput, _sizeValueInput, _flipValueInput, _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
 
-            _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
-            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
-            _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
-            _faceSelectionInput.setSelectionLimits(1, 1)
-
             _pointSelectionInput = inputs.addSelectionInput(selectPointsInputDef.id, selectPointsInputDef.name, selectPointsInputDef.tooltip)
             _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchPoints)
             _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Vertices)
             _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.ConstructionPoints)
             _pointSelectionInput.tooltip = selectPointsInputDef.tooltip
-            _pointSelectionInput.setSelectionLimits(1)  
+            _pointSelectionInput.setSelectionLimits(1)
+
+            _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
+            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
+            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.ConstructionPlanes)
+            _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
+            _faceSelectionInput.setSelectionLimits(1, 1)  
 
             inputs.addSeparatorCommandInput('separatorAfterPoints')
 
@@ -230,17 +226,18 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             global _sizeValueInput, _flipValueInput, _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
 
-            _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
-            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
-            _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
-            _faceSelectionInput.setSelectionLimits(1, 1)
-
             _pointSelectionInput = inputs.addSelectionInput(selectPointsInputDef.id, selectPointsInputDef.name, selectPointsInputDef.tooltip)
             _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchPoints)
             _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Vertices)
             _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.ConstructionPoints)
             _pointSelectionInput.tooltip = selectPointsInputDef.tooltip
-            _pointSelectionInput.setSelectionLimits(1)  
+            _pointSelectionInput.setSelectionLimits(1)
+
+            _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
+            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
+            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.ConstructionPlanes)
+            _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
+            _faceSelectionInput.setSelectionLimits(1, 1)  
 
             inputs.addSeparatorCommandInput('separatorAfterPoints')
 
@@ -329,6 +326,11 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
                 if eventArgs.selection.entity is None:
                     eventArgs.isSelectable = False
                     return
+            
+            if type == adsk.fusion.ConstructionPlane.classType():
+                if eventArgs.selection.entity is None:
+                    eventArgs.isSelectable = False
+                    return
 
             if type == adsk.fusion.SketchPoint.classType() or type == adsk.fusion.BRepVertex.classType() or type == adsk.fusion.ConstructionPoint.classType():
                 preSelectEntity = eventArgs.selection.entity
@@ -375,14 +377,17 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
         super().__init__()
     def notify(self, args):
         try:
-            face: adsk.fusion.BRepFace = _faceSelectionInput.selection(0).entity
+            face = _faceSelectionInput.selection(0).entity
             
             size = _sizeValueInput.value
             flip = _flipValueInput.value
             absoluteDepthOffset = _absoluteDepthOffsetValueInput.value
             relativeDepthOffset = _relativeDepthOffsetValueInput.value
 
-            component = face.body.parentComponent
+            if face.objectType == adsk.fusion.ConstructionPlane.classType():
+                component = face.component
+            else:
+                component = face.body.parentComponent
             baseFeature = component.features.baseFeatures.add()
             baseFeature.startEdit()
 
@@ -410,8 +415,11 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
         try:
             eventArgs = adsk.core.CommandEventArgs.cast(args)        
 
-            face: adsk.fusion.BRepFace = _faceSelectionInput.selection(0).entity
-            comp = face.body.parentComponent
+            face = _faceSelectionInput.selection(0).entity
+            if face.objectType == adsk.fusion.ConstructionPlane.classType():
+                comp = face.component
+            else:
+                comp = face.body.parentComponent
             pointEntities = []
             for i in range(_pointSelectionInput.selectionCount):
                 pointEntities.append(_pointSelectionInput.selection(i).entity)
@@ -489,9 +497,6 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
             command = eventArgs.command
             command.beginStep()
 
-            face = _editedCustomFeature.dependencies.itemById('face').entity
-            _faceSelectionInput.addSelection(face)
-            
             i = 0
             while True:
                 try:
@@ -502,6 +507,9 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
                     i += 1
                 except:
                     break
+            
+            face = _editedCustomFeature.dependencies.itemById('face').entity
+            _faceSelectionInput.addSelection(face)
                 
         except:
             showMessage(f'EditActivateHandler: {traceback.format_exc()}\n', True)
@@ -623,7 +631,10 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         except:
             relativeDepthOffset = 0.0
 
-        component = faceEntity.body.parentComponent
+        if faceEntity.objectType == adsk.fusion.ConstructionPlane.classType():
+            component = faceEntity.component
+        else:
+            component = faceEntity.body.parentComponent
 
         baseFeature.startEdit()
         

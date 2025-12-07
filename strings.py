@@ -6,6 +6,7 @@ ADDIN_NAME = 'FusionJewelryToolkit'
 
 PREFIX = COMPANY_NAME + ADDIN_NAME
 
+TAB_ID = PREFIX + 'Tab'
 PANEL_ID = PREFIX + 'Panel'
 
 GEMSTONES_ON_FACE_AT_POINTS = 'GemstonesOnFaceAtPoints'
@@ -15,6 +16,7 @@ GEMSTONES_ON_FACE_BETWEEN_CURVES = 'GemstonesOnFaceBetweenCurves'
 
 PRONGS_ON_FACE_AT_POINTS = 'ProngsOnFaceAtPoints'
 PRONGS_BETWEEN_GEMSTONES = 'ProngsBetweenGemstones'
+
 
 CHANNELS_BETWEEN_GEMSTONES = 'ChannelsBetweenGemstones'
 
@@ -49,6 +51,61 @@ class CutterStrings:
 Cutter = CutterStrings()
 
 CHANNEL = 'channel'
+
+class UnfoldAlgorithm(Enum):
+    Mesh = 0
+    NURBS = 1
+
+class UnfoldSourceType(Enum):
+    Face = 0
+    Mesh = 1
+    
+class UnfoldStrings:
+    name = 'unfold'
+    surfaceUnfoldCommandId = 'SurfaceUnfold'
+    selectSourceInputId = 'selectSource'
+    originVertexInputId = 'originVertex'
+    xDirectionVertexInputId = 'xDirectionVertex'
+    yDirectionVertexInputId = 'yDirectionVertex'
+    accuracyValueInputId = 'accuracy'
+    algorithmInputId = 'algorithm'
+    algorithms = [member.name for member in UnfoldAlgorithm]
+
+    sourceDependencyId = 'source'
+    originVertexDependencyId = 'originVertex'
+    xDirectionVertexDependencyId = 'xDirVertex'
+    yDirectionVertexDependencyId = 'yDirVertex'
+    
+    sourcePoint3D = 'sourcePoint3D'
+    sourceNormal = 'sourceNormal'
+    sourceData = 'sourceData'
+    
+
+Unfold = UnfoldStrings()
+
+
+class MeshUnfoldStrings:
+    name = 'meshUnfold'
+    meshUnfoldCommandId = 'MeshUnfold'
+    selectMeshInputId = 'selectMesh'
+    originVertexInputId = 'originVertex'
+    xDirectionVertexInputId = 'xDirectionVertex'
+    yDirectionVertexInputId = 'yDirectionVertex'
+    meshBodyDependencyId = 'meshBody'
+    originVertexDependencyId = 'originVertex'
+    xDirectionVertexDependencyId = 'xDirVertex'
+    yDirectionVertexDependencyId = 'yDirVertex'
+
+MeshUnfold = MeshUnfoldStrings()
+
+
+class ObjectsRefoldStrings:
+    name = 'objectsRefold'
+    objectsRefoldCommandId = 'ObjectsRefold'
+    selectSketchInputId = 'selectSketch'
+    selectBodiesInputId = 'selectBodies'
+
+ObjectsRefold = ObjectsRefoldStrings()
 
 class InputDef:
     def __init__(self, id: str, name: str, tooltip: str):

@@ -5,7 +5,7 @@ import traceback
 from .. import constants
 from .. import strings
 from .showMessage import showMessage
-from .Utilities import getDataFromPointAndFace
+from .Surface import getDataFromPointAndFace
 
 
 class GemstoneInfo:
@@ -204,7 +204,7 @@ def createGemstone(face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: f
         temporaryBRep: adsk.fusion.TemporaryBRepManager = adsk.fusion.TemporaryBRepManager.get()
 
         
-        pointOnFace, normal, lengthDir, widthDir = getDataFromPointAndFace(face, point)
+        pointOnFace, lengthDir, widthDir, normal = getDataFromPointAndFace(face, point)
         if pointOnFace is None:
             return None
 
@@ -294,7 +294,7 @@ def updateGemstone(body: adsk.fusion.BRepBody, face: adsk.fusion.BRepFace, point
         girdleThickness = abs(cylindricalFace.boundingBox.minPoint.z - cylindricalFace.boundingBox.maxPoint.z)
 
         
-        newFacePoint, newFaceNormal, newLengthDirection, newWidthDirection = getDataFromPointAndFace(face, point)
+        newFacePoint, newLengthDirection, newWidthDirection, newFaceNormal = getDataFromPointAndFace(face, point)
         if newFacePoint is None:
             return None
 

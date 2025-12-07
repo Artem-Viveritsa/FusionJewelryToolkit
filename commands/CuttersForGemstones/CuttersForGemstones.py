@@ -28,8 +28,6 @@ _sizeRatioValueInput: adsk.core.ValueCommandInput = None
 _holeRatioValueInput: adsk.core.ValueCommandInput = None
 _coneAngleValueInput: adsk.core.ValueCommandInput = None
 
-_panel: adsk.core.ToolbarPanel = None
-
 RESOURCES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', '')
 
 COMMAND_ID = strings.PREFIX + strings.Cutter.cutterForGemstonesCommandId
@@ -82,21 +80,18 @@ cutterBottomTypeInputDef = strings.InputDef(
     )
 
 
-def run(context):
+def run(panel: adsk.core.ToolbarPanel):
     """Initialize the cutters command by setting up command definitions and UI elements."""
     try:
-        global _app, _ui, _panel, _customFeatureDefinition
+        global _app, _ui, _customFeatureDefinition
         _app = adsk.core.Application.get()
         _ui  = _app.userInterface
 
         createCommandDefinition = _ui.commandDefinitions.addButtonDefinition(createCommandInputDef.id, 
                                                                 createCommandInputDef.name, 
                                                                 createCommandInputDef.tooltip, 
-                                                                RESOURCES_FOLDER)        
-
-        solidWorkspace = _ui.workspaces.itemById('FusionSolidEnvironment')
-        _panel = solidWorkspace.toolbarPanels.itemById('SolidCreatePanel')
-        control = _panel.controls.addCommand(createCommandDefinition, '', False)     
+                                                                RESOURCES_FOLDER)
+        control = panel.controls.addCommand(createCommandDefinition, '', False)     
         control.isPromoted = True
 
         editCommandDefinition = _ui.commandDefinitions.addButtonDefinition(editCommandInputDef.id, 
@@ -122,12 +117,10 @@ def run(context):
         showMessage(f'Run failed:\n{traceback.format_exc()}', True)
 
 
-def stop(context):
+def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the cutters command by removing UI elements and handlers."""
     try:
-        global _panel
-
-        control = _panel.controls.itemById(CREATE_COMMAND_ID)
+        control = panel.controls.itemById(CREATE_COMMAND_ID)
         if control:
             control.deleteMe()
             
@@ -142,12 +135,16 @@ def stop(context):
         showMessage(f'Stop Failed:\n{traceback.format_exc()}', True)
 
 
-def updateVisibility(selectedIndex):
-    """Update the visibility of input fields based on the selected bottom type index."""
+def updateVisibility(selectedIndex: int) -> None:
+    """Update visibility of inputs according to the selected bottom type index.
+
+    This function expects an integer index (matching the enum member values).
+    """
     global _depthValueInput, _holeRatioValueInput, _coneAngleValueInput
-    _depthValueInput.isVisible = (selectedIndex == 0)
-    _holeRatioValueInput.isVisible = (selectedIndex == 0)
-    _coneAngleValueInput.isVisible = (selectedIndex == 0 or selectedIndex == 1)
+
+    _depthValueInput.isVisible = (selectedIndex == strings.CutterBottomType.Hole.value)
+    _holeRatioValueInput.isVisible = (selectedIndex == strings.CutterBottomType.Hole.value)
+    _coneAngleValueInput.isVisible = (selectedIndex in (strings.CutterBottomType.Hole.value, strings.CutterBottomType.Cone.value))
 
 
 class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
@@ -271,7 +268,17 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             for typename in strings.Cutter.bottomTypes: _cutterBottomTypeInput.listItems.add(typename, False)
             _cutterBottomTypeInput.tooltip = cutterBottomTypeInputDef.tooltip
 
-            selectedIndex = int(parameters.itemById(strings.Cutter.bottomTypeInputId).value)
+            try:
+                selectedIndex = int(parameters.itemById(strings.Cutter.bottomTypeInputId).value)
+            except (ValueError, TypeError):
+                val = parameters.itemById(strings.Cutter.bottomTypeInputId).value
+                val = parameters.itemById(strings.Cutter.bottomTypeInputId).value
+                match = None
+                for member in strings.CutterBottomType:
+                    if member.name.lower() == str(val).lower():
+                        match = member
+                        break
+                selectedIndex = match.value if match is not None else strings.CutterBottomType.Hole.value
             if 0 <= selectedIndex < _cutterBottomTypeInput.listItems.count:
                 _cutterBottomTypeInput.listItems.item(selectedIndex).isSelected = True
             else:
@@ -858,7 +865,16 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         sizeRatio = customFeature.parameters.itemById('sizeRatio').value
         holeRatio = customFeature.parameters.itemById('holeRatio').value
         coneAngle = customFeature.parameters.itemById('coneAngle').value
-        cutterBottomTypeIndex = int(customFeature.parameters.itemById(strings.Cutter.bottomTypeInputId).value)
+        try:
+            cutterBottomTypeIndex = int(customFeature.parameters.itemById(strings.Cutter.bottomTypeInputId).value)
+        except (ValueError, TypeError):
+            val = customFeature.parameters.itemById(strings.Cutter.bottomTypeInputId).value
+            match = None
+            for member in strings.CutterBottomType:
+                if member.name.lower() == str(val).lower():
+                    match = member
+                    break
+            cutterBottomTypeIndex = match.value if match is not None else strings.CutterBottomType.Hole.value
         cutterBottomType = strings.CutterBottomType(cutterBottomTypeIndex)
 
         component = gemstones[0].parentComponent

@@ -4,11 +4,10 @@ import adsk.core, adsk.fusion, traceback
 from ... import strings
 from ...helpers.showMessage import showMessage
 from ...helpers.Gemstones import createGemstone, updateGemstone, setGemstoneAttributes, updateGemstoneFeature, diamondMaterial
-from ...helpers.Utilities import calculatePointsAndSizesBetweenCurves, getCurve3D
+from ...helpers.Curves import calculatePointsAndSizesBetweenCurves, getCurve3D
 
 _app: adsk.core.Application = None
 _ui: adsk.core.UserInterface = None
-_panel: adsk.core.ToolbarPanel = None
 
 _customFeatureDefinition: adsk.fusion.CustomFeature = None
 
@@ -40,8 +39,8 @@ editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Gemstones', 'Edits
 
 selectFaceInputDef = strings.InputDef(
     'selectFace',
-    'Face',
-    'Select the face where the gemstone will be placed.'
+    'Select Face or Plane',
+    'Select the face or construction plane where the gemstones will be placed.'
     )
 
 selectCurve1InputDef = strings.InputDef(
@@ -112,21 +111,18 @@ relativeDepthOffsetInputDef = strings.InputDef(
 
 RESOURCES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', '')
 
-def run(context):
+def run(panel: adsk.core.ToolbarPanel):
     """Initialize the gemstones command by setting up command definitions and UI elements."""
     try:
-        global _app, _ui, _panel
+        global _app, _ui, _customFeatureDefinition
         _app = adsk.core.Application.get()
         _ui  = _app.userInterface
 
         createCommandDefinition = _ui.commandDefinitions.addButtonDefinition(createCommandInputDef.id, 
                                                                 createCommandInputDef.name, 
                                                                 createCommandInputDef.tooltip, 
-                                                                RESOURCES_FOLDER)        
-
-        solidWorkspace = _ui.workspaces.itemById('FusionSolidEnvironment')
-        _panel = solidWorkspace.toolbarPanels.itemById('SolidCreatePanel')
-        control = _panel.controls.addCommand(createCommandDefinition, '', False)     
+                                                                RESOURCES_FOLDER)
+        control = panel.controls.addCommand(createCommandDefinition, '', False)     
         control.isPromoted = True
 
         editCommandDefinition = _ui.commandDefinitions.addButtonDefinition(editCommandInputDef.id, 
@@ -153,12 +149,10 @@ def run(context):
         showMessage(f'Run failed:\n{traceback.format_exc()}', True)
 
 
-def stop(context):
+def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the gemstones command by removing UI elements and handlers."""
     try:
-        global _panel
-
-        control = _panel.controls.itemById(CREATE_COMMAND_ID)
+        control = panel.controls.itemById(CREATE_COMMAND_ID)
         if control:
             control.deleteMe()
             
@@ -193,11 +187,6 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             global _sizeStepValueInput, _targetGapValueInput, _sizeRatioValueInput
             global _flipValueInput, _flipDirectionValueInput, _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
 
-            _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
-            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
-            _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
-            _faceSelectionInput.setSelectionLimits(1, 1)
-
             _curve1SelectionInput = inputs.addSelectionInput(selectCurve1InputDef.id, selectCurve1InputDef.name, selectCurve1InputDef.tooltip)
             _curve1SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
             _curve1SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
@@ -209,6 +198,12 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _curve2SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
             _curve2SelectionInput.tooltip = selectCurve2InputDef.tooltip
             _curve2SelectionInput.setSelectionLimits(1, 1)
+
+            _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
+            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
+            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.ConstructionPlanes)
+            _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
+            _faceSelectionInput.setSelectionLimits(1, 1)
 
             inputs.addSeparatorCommandInput('separatorAfterSecondCurve')
 
@@ -297,11 +292,6 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             global _sizeRatioValueInput, _flipValueInput, _flipDirectionValueInput
             global _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
 
-            _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
-            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
-            _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
-            _faceSelectionInput.setSelectionLimits(1, 1)
-
             _curve1SelectionInput = inputs.addSelectionInput(selectCurve1InputDef.id, selectCurve1InputDef.name, selectCurve1InputDef.tooltip)
             _curve1SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
             _curve1SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
@@ -313,6 +303,12 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _curve2SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
             _curve2SelectionInput.tooltip = selectCurve2InputDef.tooltip
             _curve2SelectionInput.setSelectionLimits(1, 1)
+
+            _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
+            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
+            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.ConstructionPlanes)
+            _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
+            _faceSelectionInput.setSelectionLimits(1, 1)
 
             inputs.addSeparatorCommandInput('separatorAfterSecondCurve')
 
@@ -502,7 +498,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
         super().__init__()
     def notify(self, args):
         try:
-            face: adsk.fusion.BRepFace = _faceSelectionInput.selection(0).entity
+            face = _faceSelectionInput.selection(0).entity
             curve1Entity = _curve1SelectionInput.selection(0).entity
             curve2Entity = _curve2SelectionInput.selection(0).entity
             
@@ -526,7 +522,10 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             if len(pointsAndSizes) == 0:
                 return
 
-            component = face.body.parentComponent
+            if face.objectType == adsk.fusion.ConstructionPlane.classType():
+                component = face.component
+            else:
+                component = face.body.parentComponent
             baseFeat = component.features.baseFeatures.add()
             baseFeat.startEdit()
 
@@ -552,10 +551,13 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
         try:
             eventArgs = adsk.core.CommandEventArgs.cast(args)        
 
-            face: adsk.fusion.BRepFace = _faceSelectionInput.selection(0).entity
+            face = _faceSelectionInput.selection(0).entity
             curve1Entity = _curve1SelectionInput.selection(0).entity
             curve2Entity = _curve2SelectionInput.selection(0).entity
-            comp = face.body.parentComponent
+            if face.objectType == adsk.fusion.ConstructionPlane.classType():
+                comp = face.component
+            else:
+                comp = face.body.parentComponent
             
             curve1Geometry = getCurve3D(curve1Entity)
             curve2Geometry = getCurve3D(curve2Entity)
@@ -662,10 +664,6 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
             command = eventArgs.command
             command.beginStep()
 
-
-            face = _editedCustomFeature.dependencies.itemById('face').entity
-            _faceSelectionInput.addSelection(face)
-            
             curve1 = _editedCustomFeature.dependencies.itemById('curve1').entity
             if curve1 is not None:
                 _curve1SelectionInput.addSelection(curve1)
@@ -673,6 +671,9 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
             curve2 = _editedCustomFeature.dependencies.itemById('curve2').entity
             if curve2 is not None:
                 _curve2SelectionInput.addSelection(curve2)
+
+            face = _editedCustomFeature.dependencies.itemById('face').entity
+            _faceSelectionInput.addSelection(face)
                 
         except:
             showMessage(f'EditActivateHandler: {traceback.format_exc()}\n', True)
@@ -773,7 +774,10 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         
         if curve1Geometry is None or curve2Geometry is None: return False
 
-        component = faceEntity.body.parentComponent
+        if faceEntity.objectType == adsk.fusion.ConstructionPlane.classType():
+            component = faceEntity.component
+        else:
+            component = faceEntity.body.parentComponent
 
         try:
             flipDirection = customFeature.parameters.itemById(flipDirectionInputDef.id).expression.lower() == 'true'

@@ -5,14 +5,13 @@ from ... import strings, constants
 from ...helpers.showMessage import showMessage
 from ...helpers.Prongs import createProng, updateProngAndNormalize
 from ...helpers.Bodies import placeBody
-from ...helpers.Utilities import getDataFromPointAndFace
+from ...helpers.Surface import getDataFromPointAndFace
 
 
 _handlers = []
 
 _app: adsk.core.Application = None
 _ui: adsk.core.UserInterface = None
-_panel: adsk.core.ToolbarPanel = None
 
 _customFeatureDefinition: adsk.fusion.CustomFeature = None
 
@@ -38,8 +37,8 @@ editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Prongs', 'Edits th
 
 selectFaceInputDef = strings.InputDef(
     'selectFace',
-    'Select Face',
-    'Select the face where the prongs will be placed.'
+    'Select Face or Plane',
+    'Select the face or construction plane where the prongs will be placed.'
     )
 
 selectPointsInputDef = strings.InputDef(
@@ -61,27 +60,24 @@ heightInputDef = strings.InputDef(
     )
 
 
-def run(context):
+def run(panel: adsk.core.ToolbarPanel):
     """Initialize the prongs command when the add-in is loaded.
     
     Sets up command definitions, UI elements, and event handlers.
     
     Args:
-        context: The add-in context provided by Fusion 360
+        panel: The toolbar panel to add the command to
     """
     try:
-        global _app, _ui, _panel, _customFeatureDefinition
+        global _app, _ui, _customFeatureDefinition
         _app = adsk.core.Application.get()
         _ui  = _app.userInterface
 
         createCommandDefinition = _ui.commandDefinitions.addButtonDefinition(createCommandInputDef.id, 
                                                                 createCommandInputDef.name, 
                                                                 createCommandInputDef.tooltip, 
-                                                                RESOURCES_FOLDER)        
-
-        solidWorkspace = _ui.workspaces.itemById('FusionSolidEnvironment')
-        _panel = solidWorkspace.toolbarPanels.itemById('SolidCreatePanel')
-        control = _panel.controls.addCommand(createCommandDefinition, '', False)     
+                                                                RESOURCES_FOLDER)
+        control = panel.controls.addCommand(createCommandDefinition, '', False)     
         control.isPromoted = True
 
         editCommandDefinition = _ui.commandDefinitions.addButtonDefinition(editCommandInputDef.id, 
@@ -107,18 +103,16 @@ def run(context):
         showMessage(f'Run failed:\n{traceback.format_exc()}', True)
 
 
-def stop(context):
+def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the prongs command when the add-in is unloaded.
     
     Removes command definitions and UI elements.
     
     Args:
-        context: The add-in context provided by Fusion 360
+        panel: The toolbar panel to remove the command from
     """
     try:
-        global _panel
-
-        control = _panel.controls.itemById(CREATE_COMMAND_ID)
+        control = panel.controls.itemById(CREATE_COMMAND_ID)
         if control:
             control.deleteMe()
             
@@ -151,15 +145,16 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             inputs = command.commandInputs
             defaultLengthUnits = _app.activeProduct.unitsManager.defaultLengthUnits
 
-            _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
-            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
-            _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
-            _faceSelectionInput.setSelectionLimits(1, 1)
-
             _pointSelectionInput = inputs.addSelectionInput(selectPointsInputDef.id, selectPointsInputDef.name, selectPointsInputDef.tooltip)
             _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchPoints)
             _pointSelectionInput.tooltip = selectPointsInputDef.tooltip
             _pointSelectionInput.setSelectionLimits(1)
+
+            _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
+            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
+            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.ConstructionPlanes)
+            _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
+            _faceSelectionInput.setSelectionLimits(1, 1)
 
             inputs.addSeparatorCommandInput('separatorAfterPoints')
 
@@ -212,15 +207,16 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             if _editedCustomFeature is None:
                 return
 
-            _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
-            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
-            _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
-            _faceSelectionInput.setSelectionLimits(1, 1)
-
             _pointSelectionInput = inputs.addSelectionInput(selectPointsInputDef.id, selectPointsInputDef.name, selectPointsInputDef.tooltip)
             _pointSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchPoints)
             _pointSelectionInput.tooltip = selectPointsInputDef.tooltip
             _pointSelectionInput.setSelectionLimits(1)
+
+            _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
+            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
+            _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.ConstructionPlanes)
+            _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
+            _faceSelectionInput.setSelectionLimits(1, 1)
 
             inputs.addSeparatorCommandInput('separatorAfterPoints')
 
@@ -276,6 +272,11 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
             type = eventArgs.selection.entity.objectType
 
             if type == adsk.fusion.BRepFace.classType():
+                if eventArgs.selection.entity is None:
+                    eventArgs.isSelectable = False
+                    return
+            
+            if type == adsk.fusion.ConstructionPlane.classType():
                 if eventArgs.selection.entity is None:
                     eventArgs.isSelectable = False
                     return
@@ -347,7 +348,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
                 return
 
             
-            faceEntity: adsk.fusion.BRepFace = _faceSelectionInput.selection(0).entity
+            faceEntity = _faceSelectionInput.selection(0).entity
             if faceEntity is None:
                 return
 
@@ -370,8 +371,11 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
                 prongs.append(prong)
 
             
-            parametricBody = faceEntity.body
-            component = parametricBody.parentComponent
+            if faceEntity.objectType == adsk.fusion.ConstructionPlane.classType():
+                component = faceEntity.component
+            else:
+                parametricBody = faceEntity.body
+                component = parametricBody.parentComponent
 
             baseFeature = component.features.baseFeatures.add()
             baseFeature.startEdit()
@@ -392,9 +396,12 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             eventArgs = adsk.core.CommandEventArgs.cast(args)
 
             
-            faceEntity: adsk.fusion.BRepFace = _faceSelectionInput.selection(0).entity
-            parametricBody = faceEntity.body
-            component = parametricBody.parentComponent
+            faceEntity = _faceSelectionInput.selection(0).entity
+            if faceEntity.objectType == adsk.fusion.ConstructionPlane.classType():
+                component = faceEntity.component
+            else:
+                parametricBody = faceEntity.body
+                component = parametricBody.parentComponent
 
             
             pointEntities: list[adsk.fusion.SketchPoint] = []
@@ -473,10 +480,6 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
             command.beginStep()
 
             
-            faceEntity = _editedCustomFeature.dependencies.itemById('face').entity
-            _faceSelectionInput.addSelection(faceEntity)
-            
-            
             i = 0
             while True:
                 try:
@@ -487,6 +490,9 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
                     i += 1
                 except:
                     break
+            
+            faceEntity = _editedCustomFeature.dependencies.itemById('face').entity
+            _faceSelectionInput.addSelection(faceEntity)
 
         except:
             showMessage(f'EditActivateHandler: {traceback.format_exc()}\n', True)
@@ -579,7 +585,7 @@ def createBody(face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: float
         if prong is None:
             return None
         
-        pointOnFace, normal, lengthDirection, widthDirection = getDataFromPointAndFace(face, point)
+        pointOnFace, lengthDirection, widthDirection, normal = getDataFromPointAndFace(face, point)
         if pointOnFace is None:
             return None
         
@@ -612,7 +618,7 @@ def updateBody(body: adsk.fusion.BRepBody, face: adsk.fusion.BRepFace, point: ad
         if tempBody is None:
             return None
         
-        pointOnFace, normal, lengthDirection, widthDirection = getDataFromPointAndFace(face, point)
+        pointOnFace, lengthDirection, widthDirection, normal = getDataFromPointAndFace(face, point)
         if pointOnFace is None:
             return None
         
@@ -642,7 +648,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
                 baseFeature = feature
         if baseFeature is None: return False
 
-        faceEntity: adsk.fusion.BRepFace = customFeature.dependencies.itemById('face').entity
+        faceEntity = customFeature.dependencies.itemById('face').entity
         if faceEntity is None: return False
 
         
@@ -660,7 +666,10 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         size = customFeature.parameters.itemById(sizeInputDef.id).value
         depth = customFeature.parameters.itemById(heightInputDef.id).value
 
-        component = faceEntity.body.parentComponent
+        if faceEntity.objectType == adsk.fusion.ConstructionPlane.classType():
+            component = faceEntity.component
+        else:
+            component = faceEntity.body.parentComponent
 
         baseFeature.startEdit()
         

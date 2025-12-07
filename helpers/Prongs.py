@@ -5,7 +5,8 @@ from .. import constants
 from .showMessage import showMessage
 from .Gemstones import GemstoneInfo
 from .Bodies import placeBody
-from .Utilities import averageVector, averagePosition
+from .Vectors import averageVector
+from .Points import averagePosition
 
 class ProngInfo:
     """Class to store all information needed to create or update a single prong.
