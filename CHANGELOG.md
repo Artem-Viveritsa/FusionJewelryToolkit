@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.3] - 2025-12-08
+
+### Fixed
+- Fixed girdle thickness calculation in CuttersForGemstones command.
+
 ## [0.8.2] - 2025-12-08
 
 ### Changed

@@ -8,6 +8,7 @@ from .. import strings
 from .showMessage import showMessage
 from .Surface import getDataFromPointAndFace
 
+_temporaryBRep: adsk.fusion.TemporaryBRepManager = adsk.fusion.TemporaryBRepManager.get()
 
 class GemstoneInfo:
     """Stores pre-computed geometric data for a gemstone."""
@@ -17,16 +18,17 @@ class GemstoneInfo:
         Args:
             body: The BRepBody representing the gemstone
         """
-        self.body = body
-        self.topFace = None
-        self.topPlane = None
-        self.cylindricalFace = None
-        self.cylinder = None
-        self.centroid = None
-        self.radius = 0.0
-        self.flip = False
-        self.absoluteDepthOffset = 0.0
-        self.relativeDepthOffset = 0.0
+        self.body: adsk.fusion.BRepBody = body
+        self.topFace: adsk.fusion.BRepFace = None
+        self.topPlane: adsk.core.Plane = None
+        self.cylindricalFace: adsk.fusion.BRepFace = None
+        self.cylinder: adsk.core.Cylinder = None
+        self.centroid: adsk.core.Point3D = None
+        self.girdleThickness: float = 0.0
+        self.radius: float = 0.0
+        self.flip: bool = False
+        self.absoluteDepthOffset: float = 0.0
+        self.relativeDepthOffset: float = 0.0
         
         self._extractGeometryFromBody()
         self._extractParametersFromAttributes()
@@ -34,13 +36,16 @@ class GemstoneInfo:
     def _extractGeometryFromBody(self) -> None:
         """Extract geometric information (faces, planes, centroid) from the body."""
         try:
+            global _temporaryBRep
+            tempBody = _temporaryBRep.copy(self.body)
+
             # Find top face (largest planar face)
-            self.topFace = sorted(self.body.faces, key=lambda x: x.area, reverse=True)[0]
+            self.topFace = sorted(tempBody.faces, key=lambda x: x.area, reverse=True)[0]
             self.topPlane = adsk.core.Plane.cast(self.topFace.geometry)
             
             # Find the cylindrical girdle face
             normal = self.topPlane.normal
-            for face in self.body.faces:
+            for face in tempBody.faces:
                 if face.geometry.surfaceType == adsk.core.SurfaceTypes.CylinderSurfaceType:
                     tempCylinder = adsk.core.Cylinder.cast(face.geometry)
                     cylinderAxis = tempCylinder.axis
@@ -53,7 +58,7 @@ class GemstoneInfo:
             
             # Fallback to bounding box if no cylindrical face found
             if self.cylindricalFace is None or self.cylinder is None:
-                bbox = self.body.boundingBox
+                bbox = tempBody.boundingBox
                 self.centroid = bbox.minPoint.copy()
                 self.centroid.translateBy(adsk.core.Vector3D.create(
                     (bbox.maxPoint.x - bbox.minPoint.x) / 2,
@@ -67,6 +72,15 @@ class GemstoneInfo:
                         self.radius = r
                 self.cylinder = FakeCylinder(radius)
                 self.radius = radius
+
+            transformation = adsk.core.Matrix3D.create()
+            transformation.setToAlignCoordinateSystems(
+                self.centroid, self.topPlane.uDirection, self.topPlane.vDirection, normal,
+                constants.zeroPoint, constants.xVector, constants.yVector, constants.zVector
+                )
+            _temporaryBRep.transform(tempBody, transformation)
+
+            self.girdleThickness = abs(self.cylindricalFace.boundingBox.minPoint.z - self.cylindricalFace.boundingBox.maxPoint.z)
 
         except Exception as e:
             showMessage(f'_extractGeometryFromBody error: {str(e)}\n', False)

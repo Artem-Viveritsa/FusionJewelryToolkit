@@ -274,7 +274,6 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 selectedIndex = int(parameters.itemById(strings.Cutter.bottomTypeInputId).value)
             except (ValueError, TypeError):
                 val = parameters.itemById(strings.Cutter.bottomTypeInputId).value
-                val = parameters.itemById(strings.Cutter.bottomTypeInputId).value
                 match = None
                 for member in strings.CutterBottomType:
                     if member.name.lower() == str(val).lower():
@@ -723,7 +722,6 @@ def createBody(gemstoneInfo: GemstoneInfo, height: float, depth: float, sizeRati
         if gemstoneInfo is None or gemstoneInfo.body is None: return None
 
         temporaryBRep: adsk.fusion.TemporaryBRepManager = adsk.fusion.TemporaryBRepManager.get()
-        tempBody = temporaryBRep.copy(gemstoneInfo.body)
 
         lengthDirection = gemstoneInfo.topPlane.uDirection
         widthDirection = gemstoneInfo.topPlane.vDirection
@@ -761,18 +759,8 @@ def createBody(gemstoneInfo: GemstoneInfo, height: float, depth: float, sizeRati
             else:
                 temporaryBRep.booleanOperation(cutter, body, adsk.fusion.BooleanTypes.UnionBooleanType)
 
-        transformation = adsk.core.Matrix3D.create()
-
-        transformation.setToAlignCoordinateSystems(
-            girdleCentroid, lengthDirection, widthDirection, normal,
-            constants.zeroPoint, constants.xVector, constants.yVector, constants.zVector
-            )
-        temporaryBRep.transform(tempBody, transformation)
-
-        girdleThickness = abs(gemstoneInfo.cylindricalFace.boundingBox.minPoint.z - gemstoneInfo.cylindricalFace.boundingBox.maxPoint.z)
-
         translate = normal.copy()
-        translate.scaleBy(girdleThickness / -2)
+        translate.scaleBy(gemstoneInfo.girdleThickness / -2) 
         girdleCentroid.translateBy(translate)
 
         placeBody(cutter, girdleCentroid, lengthDirection, widthDirection, normal)
