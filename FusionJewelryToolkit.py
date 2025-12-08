@@ -29,7 +29,7 @@ commands = [
     ]
 
 
-from . import strings
+# from . import strings
 
 _app: adsk.core.Application = None
 _ui: adsk.core.UserInterface = None
@@ -43,7 +43,8 @@ def run(context):
     _ui  = _app.userInterface
 
     solidWorkspace = _ui.workspaces.itemById('FusionSolidEnvironment')
-    _panel = solidWorkspace.toolbarPanels.add(strings.PANEL_ID, 'Jewelry Toolkit')
+    # _panel = solidWorkspace.toolbarPanels.add(strings.PANEL_ID, 'Jewelry Toolkit')
+    _panel = solidWorkspace.toolbarPanels.itemById('SolidCreatePanel')
 
     for command in commands:
         command.run(_panel)

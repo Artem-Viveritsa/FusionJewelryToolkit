@@ -1,6 +1,6 @@
 # Fusion 360 Jewelry Toolkit
 
-A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in creates a dedicated "Jewelry Toolkit" toolbar panel with specialized commands for gemstone placement, prong creation, channels, cutters, and surface manipulation.
+A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in adds specialized commands for gemstone placement, prong creation, channels, cutters, and surface manipulation to the Solid → Create panel.
 
 [![Gemstones icon](commands/GemstonesOnFaceAtPoints/resources/32x32@2x.png)](#gemstonesonfaceatpoints--place-round-gemstones-on-a-face-at-specified-points) [![Gemstones icon](commands/GemstonesOnFaceAtCircles/resources/32x32@2x.png)](#gemstonesonfaceatcircles--place-round-gemstones-on-a-face-at-sketch-circles) [![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)](#gemstonesonfaceatcurve--place-gemstones-along-a-curve-with-variable-sizes) [![Gemstones icon](commands/GemstonesOnFaceBetweenCurves/resources/32x32@2x.png)](#gemstonesonfacebetweencurves--place-gemstones-between-two-curves) [![Prongs icon](commands/ProngsOnFaceAtPoints/resources/32x32@2x.png)](#prongsonfaceatpoints--generate-prongs-on-a-face-at-specified-points) [![ProngsBetweenGemstones icon](commands/ProngsBetweenGemstones/resources/32x32@2x.png)](#prongsbetweengemstones--create-prongs-between-gemstones) [![ChannelsBetweenGemstones icon](commands/ChannelsBetweenGemstones/resources/32x32@2x.png)](#channelsbetweengemstones--create-channels-between-gemstones) [![CuttersForGemstones icon](commands/CuttersForGemstones/resources/32x32@2x.png)](#cuttersforgemstones--create-cutter-bodies-for-gemstone-seating) [![SurfaceUnfold icon](commands/SurfaceUnfold/resources/32x32@2x.png)](#surfaceunfold--unfold-curved-surfaces-to-flat-2d-sketches-early-preview) [![ObjectsRefold icon](commands/ObjectsRefold/resources/32x32@2x.png)](#objectsrefold--refold-flat-patterns-onto-curved-surfaces-early-preview)
 
@@ -10,7 +10,7 @@ A small collection of utilities that speed up jewelry modeling in Fusion 360. Th
 2. Click the `+` button and choose "Script or Add-in from my computer".
 3. Select the `FusionJewelryToolkit` folder and click Open.
 4. To make the add-in run automatically when Fusion starts, enable the "Run on Startup" checkbox.
-5. After installation, a new "Jewelry Toolkit" panel will appear in the Utilities section of the toolbar with all commands organized in one place.
+5. After installation, the commands will appear in the Solid → Create panel.
 
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
@@ -19,7 +19,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
   - **SurfaceUnfold**: Unfold curved surfaces or meshes to flat 2D sketches for pattern creation
   - **ObjectsRefold**: Refold flat patterns back onto curved surfaces with automatic body wrapping
   - ⚠️ **Note**: These features are experimental and in early preview stage. Feedback welcome!
-- **UI Improvements**: All commands now organized in a dedicated "Jewelry Toolkit" custom panel for easier access.
+- **UI Improvements**: ~~All commands now organized in a dedicated "Jewelry Toolkit" custom panel for easier access.~~ 
+Moved commands back to the Solid → Create panel from the dedicated "Jewelry Toolkit" custom toolbar panel due to UI bugs where other interface elements disappeared.
 - See [full changelog](CHANGELOG.md) for complete version history.
 
 ---

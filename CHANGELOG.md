@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.4] - 2025-12-08
+
+### Changed
+- Moved commands back to the Solid → Create panel from the dedicated "Jewelry Toolkit" custom toolbar panel due to UI bugs where other interface elements disappeared.
+
 ## [0.8.3] - 2025-12-08
 
 ### Fixed
