@@ -15,6 +15,9 @@ _sourceSelectionInput: adsk.core.SelectionCommandInput = None
 _originVertexSelectionInput: adsk.core.SelectionCommandInput = None
 _xDirectionVertexSelectionInput: adsk.core.SelectionCommandInput = None
 _yDirectionVertexSelectionInput: adsk.core.SelectionCommandInput = None
+_constructionPlaneSelectionInput: adsk.core.SelectionCommandInput = None
+_xOffsetValueInput: adsk.core.ValueCommandInput = None
+_yOffsetValueInput: adsk.core.ValueCommandInput = None
 _accuracyValueInput: adsk.core.ValueCommandInput = None
 _algorithmDropdownInput: adsk.core.DropDownCommandInput = None
 
@@ -59,6 +62,24 @@ yDirectionVertexInputDef = strings.InputDef(
     strings.Unfold.yDirectionVertexInputId,
     'Y Direction Point',
     'Select a vertex or sketch point on the face to define the rotation (orientation) of the unfolded sketch.'
+    )
+
+constructionPlaneInputDef = strings.InputDef(
+    strings.Unfold.constructionPlaneInputId,
+    'Plane',
+    'Select the construction plane where the unfolded sketch will be created.'
+    )
+
+xOffsetInputDef = strings.InputDef(
+    strings.Unfold.xOffsetValueInputId,
+    'X Offset',
+    'Offset along the X axis of the construction plane.'
+    )
+
+yOffsetInputDef = strings.InputDef(
+    strings.Unfold.yOffsetValueInputId,
+    'Y Offset',
+    'Offset along the Y axis of the construction plane.'
     )
 
 algorithmInputDef = strings.InputDef(
@@ -218,6 +239,23 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             inputs.addSeparatorCommandInput('separatorAfterDirectionVertices')
 
+            global _constructionPlaneSelectionInput, _xOffsetValueInput, _yOffsetValueInput
+
+            _constructionPlaneSelectionInput = inputs.addSelectionInput(constructionPlaneInputDef.id, constructionPlaneInputDef.name, constructionPlaneInputDef.tooltip)
+            _constructionPlaneSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.ConstructionPlanes)
+            _constructionPlaneSelectionInput.tooltip = constructionPlaneInputDef.tooltip
+            _constructionPlaneSelectionInput.setSelectionLimits(1, 1)
+
+            xOffset = adsk.core.ValueInput.createByReal(0.0)
+            _xOffsetValueInput = inputs.addValueInput(xOffsetInputDef.id, xOffsetInputDef.name, defaultLengthUnits, xOffset)
+            _xOffsetValueInput.tooltip = xOffsetInputDef.tooltip
+
+            yOffset = adsk.core.ValueInput.createByReal(0.0)
+            _yOffsetValueInput = inputs.addValueInput(yOffsetInputDef.id, yOffsetInputDef.name, defaultLengthUnits, yOffset)
+            _yOffsetValueInput.tooltip = yOffsetInputDef.tooltip
+
+            inputs.addSeparatorCommandInput('separatorAfterOffsets')
+
             accuracy = adsk.core.ValueInput.createByReal(0.5) 
             _accuracyValueInput = inputs.addValueInput(accuracyInputDef.id, accuracyInputDef.name, defaultLengthUnits, accuracy)
             _accuracyValueInput.tooltip = accuracyInputDef.tooltip
@@ -300,13 +338,26 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             inputs.addSeparatorCommandInput('separatorAfterDirectionVertices')
 
-            params = _editedCustomFeature.parameters
+            global _constructionPlaneSelectionInput, _xOffsetValueInput, _yOffsetValueInput
 
-            try:
-                accuracyParam = params.itemById(accuracyInputDef.id)
-                accuracy = adsk.core.ValueInput.createByString(accuracyParam.expression)
-            except:
-                accuracy = adsk.core.ValueInput.createByReal(0.5)
+            _constructionPlaneSelectionInput = inputs.addSelectionInput(constructionPlaneInputDef.id, constructionPlaneInputDef.name, constructionPlaneInputDef.tooltip)
+            _constructionPlaneSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.ConstructionPlanes)
+            _constructionPlaneSelectionInput.tooltip = constructionPlaneInputDef.tooltip
+            _constructionPlaneSelectionInput.setSelectionLimits(1, 1)
+
+            parameters = _editedCustomFeature.parameters
+
+            xOffset = adsk.core.ValueInput.createByString(parameters.itemById(xOffsetInputDef.id).expression)
+            _xOffsetValueInput = inputs.addValueInput(xOffsetInputDef.id, xOffsetInputDef.name, defaultLengthUnits, xOffset)
+            _xOffsetValueInput.tooltip = xOffsetInputDef.tooltip
+
+            yOffset = adsk.core.ValueInput.createByString(parameters.itemById(yOffsetInputDef.id).expression)
+            _yOffsetValueInput = inputs.addValueInput(yOffsetInputDef.id, yOffsetInputDef.name, defaultLengthUnits, yOffset)
+            _yOffsetValueInput.tooltip = yOffsetInputDef.tooltip
+
+            inputs.addSeparatorCommandInput('separatorAfterOffsets')
+
+            accuracy = adsk.core.ValueInput.createByString(parameters.itemById(accuracyInputDef.id).expression)
             _accuracyValueInput = inputs.addValueInput(accuracyInputDef.id, accuracyInputDef.name, defaultLengthUnits, accuracy)
             _accuracyValueInput.tooltip = accuracyInputDef.tooltip
 
@@ -316,7 +367,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 _algorithmDropdownInput.listItems.add(algoName, False)
             
             try:
-                algorithmParam = params.itemById(algorithmInputDef.id)
+                algorithmParam = parameters.itemById(algorithmInputDef.id)
                 val = algorithmParam.value
                 try:
                     selectedIndex = int(val)
@@ -402,7 +453,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
     def __init__(self):
         super().__init__()
     def notify(self, args):
-        global _sourceSelectionInput, _accuracyValueInput, _originVertexSelectionInput, _xDirectionVertexSelectionInput, _yDirectionVertexSelectionInput
+        global _sourceSelectionInput, _accuracyValueInput, _originVertexSelectionInput, _xDirectionVertexSelectionInput, _yDirectionVertexSelectionInput, _constructionPlaneSelectionInput, _xOffsetValueInput, _yOffsetValueInput
         try:
             eventArgs = adsk.core.ValidateInputsEventArgs.cast(args)
 
@@ -419,6 +470,18 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                 return
 
             if _yDirectionVertexSelectionInput.selectionCount != 1:
+                eventArgs.areInputsValid = False
+                return
+
+            if _constructionPlaneSelectionInput.selectionCount != 1:
+                eventArgs.areInputsValid = False
+                return
+
+            if not _xOffsetValueInput.isValidExpression:
+                eventArgs.areInputsValid = False
+                return
+
+            if not _yOffsetValueInput.isValidExpression:
                 eventArgs.areInputsValid = False
                 return
 
@@ -461,7 +524,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
     def __init__(self):
         super().__init__()
     def notify(self, args):
-        global _sourceSelectionInput, _accuracyValueInput, _originVertexSelectionInput, _xDirectionVertexSelectionInput, _yDirectionVertexSelectionInput, _algorithmDropdownInput
+        global _sourceSelectionInput, _accuracyValueInput, _originVertexSelectionInput, _xDirectionVertexSelectionInput, _yDirectionVertexSelectionInput, _algorithmDropdownInput, _constructionPlaneSelectionInput, _xOffsetValueInput, _yOffsetValueInput
         try:
             eventArgs = adsk.core.CommandEventArgs.cast(args)
             
@@ -469,6 +532,9 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             originPoint = getPointGeometry(_originVertexSelectionInput.selection(0).entity)
             xDirPoint = getPointGeometry(_xDirectionVertexSelectionInput.selection(0).entity)
             yDirPoint = getPointGeometry(_yDirectionVertexSelectionInput.selection(0).entity)
+            constructionPlane = _constructionPlaneSelectionInput.selection(0).entity
+            xOffset = _xOffsetValueInput.value
+            yOffset = _yOffsetValueInput.value
 
             isMesh = sourceEntity.objectType == adsk.fusion.MeshBody.classType()
 
@@ -479,12 +545,11 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
                 face: adsk.fusion.BRepFace = sourceEntity
                 component = face.body.parentComponent
 
-            baseFeat = component.features.baseFeatures.add()
-            baseFeat.startEdit()
+            baseFeature = component.features.baseFeatures.add()
+            baseFeature.startEdit()
 
             sketches = component.sketches
-            xyPlane = component.xYConstructionPlane
-            sketch = sketches.add(xyPlane)
+            sketch = sketches.add(component.xYConstructionPlane)
             sketch.name = "Unfolded Surface"
 
             if isMesh:
@@ -493,14 +558,14 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
                 # remeshInput.meshRemeshMethodType = adsk.fusion.MeshRemeshMethodTypes.UniformRemeshType
                 # remeshInput.density = adsk.core.ValueInput.createByString('0.1')
                 # remeshInput.isPreserveBoundariesEnabled = True
-                # remeshInput.targetBaseFeature = baseFeat
+                # remeshInput.targetBaseFeature = baseFeature
 
                 # remeshFeature = component.features.meshRemeshFeatures.add(remeshInput)
 
                 # # remeshFeature.mesh
 
 
-                unfoldMeshToSketch(meshBody.displayMesh, sketch, originPoint, xDirPoint, yDirPoint)
+                unfoldMeshToSketch(meshBody.displayMesh, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane, xOffset, yOffset)
             else:
                 accuracy = _accuracyValueInput.value
                 algorithmName = _algorithmDropdownInput.selectedItem.name
@@ -508,7 +573,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
                     algorithm = strings.UnfoldAlgorithm[algorithmName]
                 except (KeyError, AttributeError):
                     algorithm = strings.UnfoldAlgorithm.Mesh
-                unfoldFaceToSketch(face, accuracy, sketch, originPoint, xDirPoint, yDirPoint, algorithm)
+                unfoldFaceToSketch(face, accuracy, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane, xOffset, yOffset, algorithm)
 
                 # calc = face.meshManager.createMeshCalculator()
                 # calc.surfaceTolerance = 5
@@ -524,15 +589,16 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
                 # remeshInput.meshRemeshMethodType = adsk.fusion.MeshRemeshMethodTypes.UniformRemeshType
                 # remeshInput.density = adsk.core.ValueInput.createByString('0.1')
                 # remeshInput.isPreserveBoundariesEnabled = True
-                # remeshInput.targetBaseFeature = baseFeat
+                # remeshInput.targetBaseFeature = baseFeature
 
                 # remeshFeature = component.features.meshRemeshFeatures.add(remeshInput)
 
                 # unfoldMeshToSketch(mesh, sketch, originPoint, xDirPoint, yDirPoint)
 
-            baseFeat.finishEdit()
+            baseFeature.finishEdit()
 
         except:
+            baseFeature.finishEdit()
             showMessage(f'ExecutePreviewHandler: {traceback.format_exc()}\n', True)
 
 
@@ -541,7 +607,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
     def __init__(self):
         super().__init__()
     def notify(self, args):
-        global _sourceSelectionInput, _accuracyValueInput, _originVertexSelectionInput, _xDirectionVertexSelectionInput, _yDirectionVertexSelectionInput, _algorithmDropdownInput, _customFeatureDefinition, _app
+        global _sourceSelectionInput, _accuracyValueInput, _originVertexSelectionInput, _xDirectionVertexSelectionInput, _yDirectionVertexSelectionInput, _algorithmDropdownInput, _customFeatureDefinition, _app, _constructionPlaneSelectionInput, _xOffsetValueInput, _yOffsetValueInput
         try:
             eventArgs = adsk.core.CommandEventArgs.cast(args)        
 
@@ -549,6 +615,9 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             originVertex = _originVertexSelectionInput.selection(0).entity
             xDirVertex = _xDirectionVertexSelectionInput.selection(0).entity
             yDirVertex = _yDirectionVertexSelectionInput.selection(0).entity
+            constructionPlane = _constructionPlaneSelectionInput.selection(0).entity
+            xOffset = _xOffsetValueInput.value
+            yOffset = _yOffsetValueInput.value
             
             originPoint = getPointGeometry(originVertex)
             xDirPoint = getPointGeometry(xDirVertex)
@@ -567,12 +636,11 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             baseFeature.startEdit()
 
             sketches = comp.sketches
-            xyPlane = comp.xYConstructionPlane
-            sketch = sketches.add(xyPlane)
+            sketch = sketches.add(comp.xYConstructionPlane)
             sketch.name = "Unfolded Surface"
 
             if isMesh:
-                unfoldMeshToSketch(meshBody.displayMesh, sketch, originPoint, xDirPoint, yDirPoint)
+                unfoldMeshToSketch(meshBody.displayMesh, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane, xOffset, yOffset)
             else:
                 accuracy = _accuracyValueInput.value
                 algorithmName = _algorithmDropdownInput.selectedItem.name
@@ -580,7 +648,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                     algorithm = strings.UnfoldAlgorithm[algorithmName]
                 except:
                     algorithm = strings.UnfoldAlgorithm.Mesh
-                unfoldFaceToSketch(face, accuracy, sketch, originPoint, xDirPoint, yDirPoint, algorithm)
+                unfoldFaceToSketch(face, accuracy, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane, xOffset, yOffset, algorithm)
 
             baseFeature.finishEdit()
 
@@ -598,6 +666,14 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                 algorithmIndex = adsk.core.ValueInput.createByReal(_algorithmDropdownInput.selectedItem.index)
                 customFeatureInput.addCustomParameter(algorithmInputDef.id, algorithmInputDef.name, algorithmIndex, '', False)
 
+            customFeatureInput.addDependency(strings.Unfold.constructionPlaneDependencyId, constructionPlane)
+
+            xOffsetInput = adsk.core.ValueInput.createByString(_xOffsetValueInput.expression)
+            customFeatureInput.addCustomParameter(xOffsetInputDef.id, xOffsetInputDef.name, xOffsetInput, defLengthUnits, True)
+
+            yOffsetInput = adsk.core.ValueInput.createByString(_yOffsetValueInput.expression)
+            customFeatureInput.addCustomParameter(yOffsetInputDef.id, yOffsetInputDef.name, yOffsetInput, defLengthUnits, True)
+
             customFeatureInput.addDependency(strings.Unfold.originVertexDependencyId, originVertex)
             customFeatureInput.addDependency(strings.Unfold.xDirectionVertexDependencyId, xDirVertex)
             customFeatureInput.addDependency(strings.Unfold.yDirectionVertexDependencyId, yDirVertex)
@@ -606,6 +682,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             comp.features.customFeatures.add(customFeatureInput)
 
         except:
+            baseFeature.finishEdit()
             eventArgs.executeFailed = True
             showMessage(f'CreateExecuteHandler: {traceback.format_exc()}\n', True)
 
@@ -617,7 +694,7 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
     def notify(self, args):
         try:
             global _restoreTimelineObject, _isRolledForEdit, _editedCustomFeature
-            global _sourceSelectionInput, _originVertexSelectionInput, _xDirectionVertexSelectionInput, _yDirectionVertexSelectionInput
+            global _sourceSelectionInput, _originVertexSelectionInput, _xDirectionVertexSelectionInput, _yDirectionVertexSelectionInput, _constructionPlaneSelectionInput
 
             if _isRolledForEdit: return
 
@@ -652,6 +729,10 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
             if yDirVertexDep and yDirVertexDep.entity:
                 _yDirectionVertexSelectionInput.addSelection(yDirVertexDep.entity)
 
+            constructionPlaneDep = _editedCustomFeature.dependencies.itemById(strings.Unfold.constructionPlaneDependencyId)
+            if constructionPlaneDep and constructionPlaneDep.entity:
+                _constructionPlaneSelectionInput.addSelection(constructionPlaneDep.entity)
+
             updateVisibility(sourceType)
 
         except:
@@ -677,7 +758,7 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
         super().__init__()
     def notify(self, args):
         global _editedCustomFeature, _isRolledForEdit
-        global _sourceSelectionInput, _originVertexSelectionInput, _xDirectionVertexSelectionInput, _yDirectionVertexSelectionInput, _accuracyValueInput, _algorithmDropdownInput
+        global _sourceSelectionInput, _originVertexSelectionInput, _xDirectionVertexSelectionInput, _yDirectionVertexSelectionInput, _accuracyValueInput, _algorithmDropdownInput, _constructionPlaneSelectionInput, _xOffsetValueInput, _yOffsetValueInput
 
         try:
             eventArgs = adsk.core.CommandEventArgs.cast(args)    
@@ -686,6 +767,7 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             originVertex = _originVertexSelectionInput.selection(0).entity
             xDirVertex = _xDirectionVertexSelectionInput.selection(0).entity
             yDirVertex = _yDirectionVertexSelectionInput.selection(0).entity
+            constructionPlane = _constructionPlaneSelectionInput.selection(0).entity
 
             isMesh = sourceEntity.objectType == adsk.fusion.MeshBody.classType()
 
@@ -699,6 +781,14 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
                     _editedCustomFeature.parameters.itemById(algorithmInputDef.id).value = _algorithmDropdownInput.selectedItem.index
                 except:
                     pass
+
+            _editedCustomFeature.dependencies.add(strings.Unfold.constructionPlaneDependencyId, constructionPlane)
+
+            try:
+                _editedCustomFeature.parameters.itemById(xOffsetInputDef.id).expression = _xOffsetValueInput.expression
+                _editedCustomFeature.parameters.itemById(yOffsetInputDef.id).expression = _yOffsetValueInput.expression
+            except:
+                pass
 
             _editedCustomFeature.dependencies.add(strings.Unfold.originVertexDependencyId, originVertex)
             _editedCustomFeature.dependencies.add(strings.Unfold.xDirectionVertexDependencyId, xDirVertex)
@@ -736,6 +826,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         True if the update was successful, False otherwise.
     """
     try:
+        component = customFeature.parentComponent
         baseFeature: adsk.fusion.BaseFeature = None
         sketch: adsk.fusion.Sketch = None
 
@@ -767,6 +858,23 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         xDirPoint = getPointGeometry(xDirVertex)
         yDirPoint = getPointGeometry(yDirVertex)
 
+        constructionPlaneDep = customFeature.dependencies.itemById(strings.Unfold.constructionPlaneDependencyId)
+        if constructionPlaneDep and constructionPlaneDep.entity:
+            constructionPlane = constructionPlaneDep.entity
+        else:
+            constructionPlane = component.xYConstructionPlane
+
+        try:
+            xOffset = customFeature.parameters.itemById(xOffsetInputDef.id).value
+        except:
+            xOffset = 0.0
+
+        try:
+            yOffset = customFeature.parameters.itemById(yOffsetInputDef.id).value
+        except:
+            yOffset = 0.0
+
+        
         baseFeature.startEdit()
                 
         curvesToDelete = [curve for curve in sketch.sketchCurves]
@@ -780,10 +888,9 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
             except:
                 pass
 
-
         if isMesh:
             meshBody: adsk.fusion.MeshBody = source
-            unfoldMeshToSketch(meshBody.displayMesh, sketch, originPoint, xDirPoint, yDirPoint)
+            unfoldMeshToSketch(meshBody.displayMesh, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane, xOffset, yOffset)
         else:
             faceEntity: adsk.fusion.BRepFace = source
 
@@ -812,13 +919,14 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
             except:
                 algorithm = strings.UnfoldAlgorithm.Mesh
 
-            unfoldFaceToSketch(faceEntity, accuracy, sketch, originPoint, xDirPoint, yDirPoint, algorithm)
+            unfoldFaceToSketch(faceEntity, accuracy, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane, xOffset, yOffset, algorithm)
         
         baseFeature.finishEdit()
         
         return True
     
     except:
+        baseFeature.finishEdit()
         showMessage(f'updateFeature: {traceback.format_exc()}\n', True)
         return False
 

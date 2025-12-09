@@ -14,13 +14,11 @@ A small collection of utilities that speed up jewelry modeling in Fusion 360. Th
 
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
-## What's new in version 0.8.0
-- **New Commands (Early Preview):**
-  - **SurfaceUnfold**: Unfold curved surfaces or meshes to flat 2D sketches for pattern creation
-  - **ObjectsRefold**: Refold flat patterns back onto curved surfaces with automatic body wrapping
+## What's new in version 0.8.5
+- **Enhanced SurfaceUnfold and ObjectsRefold:**
+  - Added support for selecting construction planes (not just XY plane) for unfolding surfaces
+  - Added X and Y offset parameters to position unfolded sketches on construction planes
   - ⚠️ **Note**: These features are experimental and in early preview stage. Feedback welcome!
-- **UI Improvements**: ~~All commands now organized in a dedicated "Jewelry Toolkit" custom panel for easier access.~~ 
-Moved commands back to the Solid → Create panel from the dedicated "Jewelry Toolkit" custom toolbar panel due to UI bugs where other interface elements disappeared.
 - See [full changelog](CHANGELOG.md) for complete version history.
 
 ---
@@ -139,8 +137,15 @@ Moved commands back to the Solid → Create panel from the dedicated "Jewelry To
 - **Description:** Unfolds curved BRep faces or mesh bodies to flat 2D sketch patterns. Useful for creating manufacturing templates, patterns for flat materials, or analyzing surface distortion.
 - **Selection:** 1 BRep face or 1 mesh body, plus 3 vertices for orientation (origin, X-direction, Y-direction).
 - **Key parameters:**
-  - **Algorithm** — Unfold algorithm. Options: `Mesh` (triangulation-based), `NURBS` (surface-based). Default: `Mesh`.
-  - **Accuracy** — Controls mesh density for unfolding precision. Higher values = more detail. Default: `0.5 mm`. Range: `0.1–10.0 mm`.
+  - **Select Source** — Select the face or mesh body to unfold.
+  - **Origin Point** — Select a vertex or sketch point on the face to be the origin (0,0) of the sketch.
+  - **X Direction Point** — Select a vertex or sketch point on the face to define the +X direction from origin.
+  - **Y Direction Point** — Select a vertex or sketch point on the face to define the rotation (orientation) of the unfolded sketch.
+  - **Construction Plane** — Select the construction plane where the unfolded sketch will be created. Default: XY plane.
+  - **X Offset** — Offset along the X axis of the construction plane. Default: `0 mm`.
+  - **Y Offset** — Offset along the Y axis of the construction plane. Default: `0 mm`.
+  - **Accuracy** — Unfolding accuracy (0.5 - 10 mm). Minimum allowed is 0.5 mm to avoid excessive computation. Default: `0.5 mm`.
+  - **Algorithm** — Select the unfolding algorithm: NURBS (parametric grid) or Mesh (tessellation). Default: `Mesh`.
 - **Limitations:** This feature is in early preview and may have limitations with highly complex or distorted surfaces.
 
 ---

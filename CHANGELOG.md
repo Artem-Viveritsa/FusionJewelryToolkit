@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.5] - 2025-12-08
+
+### Added
+- SurfaceUnfold now support selecting a construction plane for unfolding surfaces to custom planes instead of only the XY plane.
+- Added X and Y offset parameters to SurfaceUnfold for positioning the unfolded sketch on the construction plane.
+
+### Fixed
+- Improved error handling in custom feature operations to ensure base features are properly finished even when errors occur.
+
 ## [0.8.4] - 2025-12-08
 
 ### Changed

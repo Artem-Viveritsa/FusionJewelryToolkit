@@ -129,7 +129,7 @@ def getSurfaceUnfoldFeatureFromSketch(sketch: adsk.fusion.Sketch) -> adsk.fusion
         return None
 
 
-def getDepsFromSurfaceUnfoldFeature(customFeature: adsk.fusion.CustomFeature) -> tuple[adsk.fusion.BRepFace | adsk.fusion.MeshBody | None, adsk.core.Point3D, adsk.core.Point3D, adsk.core.Point3D, bool]:
+def getDepsFromSurfaceUnfoldFeature(customFeature: adsk.fusion.CustomFeature) -> tuple[adsk.fusion.BRepFace | adsk.fusion.MeshBody | None, adsk.core.Point3D, adsk.core.Point3D, adsk.core.Point3D, bool, adsk.fusion.ConstructionPlane | None]:
     """
     Get the source entity (face or mesh) and vertex dependencies from a SurfaceUnfold custom feature.
     
@@ -137,7 +137,7 @@ def getDepsFromSurfaceUnfoldFeature(customFeature: adsk.fusion.CustomFeature) ->
         customFeature: The SurfaceUnfold custom feature.
     
     Returns:
-        A tuple containing (sourceEntity, originPoint, xDirPoint, yDirPoint, isMesh).
+        A tuple containing (sourceEntity, originPoint, xDirPoint, yDirPoint, isMesh, constructionPlane).
         sourceEntity can be BRepFace or MeshBody.
         Elements can be None if not found.
     """
@@ -163,9 +163,12 @@ def getDepsFromSurfaceUnfoldFeature(customFeature: adsk.fusion.CustomFeature) ->
         xDirPoint = getPointGeometry(xDirVertex) if xDirVertex else None
         yDirPoint = getPointGeometry(yDirVertex) if yDirVertex else None
 
-        return sourceEntity, originPoint, xDirPoint, yDirPoint, isMesh
+        constructionPlaneDep = customFeature.dependencies.itemById(strings.Unfold.constructionPlaneDependencyId)
+        constructionPlane = constructionPlaneDep.entity if constructionPlaneDep else None
+
+        return sourceEntity, originPoint, xDirPoint, yDirPoint, isMesh, constructionPlane
     except:
-        return None, None, None, None, False
+        return None, None, None, None, False, None
 
 
 class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
@@ -367,12 +370,13 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             originPoint = None
             xDirPoint = None
             yDirPoint = None
+            constructionPlane = None
 
-            sourceEntity, originPoint, xDirPoint, yDirPoint, isMesh = getDepsFromSurfaceUnfoldFeature(unfoldFeature)
+            sourceEntity, originPoint, xDirPoint, yDirPoint, isMesh, constructionPlane = getDepsFromSurfaceUnfoldFeature(unfoldFeature)
             if not isMesh:
                 face = sourceEntity
 
-            resultBodies, validOldBodies, transformations = refoldBodiesToSurface(bodies, face, sketch, originPoint, xDirPoint, yDirPoint)
+            resultBodies, validOldBodies, transformations = refoldBodiesToSurface(bodies, face, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane)
             if not resultBodies: return
 
             baseFeature = component.features.baseFeatures.add()
@@ -434,8 +438,9 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             originPoint = None
             xDirPoint = None
             yDirPoint = None
+            constructionPlane = None
 
-            sourceEntity, originPoint, xDirPoint, yDirPoint, isMesh = getDepsFromSurfaceUnfoldFeature(unfoldFeature)
+            sourceEntity, originPoint, xDirPoint, yDirPoint, isMesh, constructionPlane = getDepsFromSurfaceUnfoldFeature(unfoldFeature)
             if isMesh:
                 face = None
             else:
@@ -445,7 +450,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                     eventArgs.executeFailed = True
                     return
 
-            resultBodies, validOldBodies, transformations = refoldBodiesToSurface(bodies, face, sketch, originPoint, xDirPoint, yDirPoint)
+            resultBodies, validOldBodies, transformations = refoldBodiesToSurface(bodies, face, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane)
 
             if not resultBodies:
                 showMessage('No bodies were transferred to the surface.', True)
@@ -488,6 +493,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             component.features.customFeatures.add(customFeatureInput)
 
         except:
+            baseFeature.finishEdit()
             eventArgs.executeFailed = True
             showMessage(f'CreateExecuteHandler: {traceback.format_exc()}\n', True)
 
@@ -654,15 +660,16 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         originPoint = None
         xDirPoint = None
         yDirPoint = None
+        constructionPlane = None
 
-        sourceEntity, originPoint, xDirPoint, yDirPoint, isMesh = getDepsFromSurfaceUnfoldFeature(unfoldFeature)
+        sourceEntity, originPoint, xDirPoint, yDirPoint, isMesh, constructionPlane = getDepsFromSurfaceUnfoldFeature(unfoldFeature)
         if isMesh:
             face = None
         else:
             face = sourceEntity
             if face is None: return False
 
-        resultBodies, _, _ = refoldBodiesToSurface(bodies, face, sketch, originPoint, xDirPoint, yDirPoint)
+        resultBodies, _, _ = refoldBodiesToSurface(bodies, face, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane)
 
         if not resultBodies: return False
 
@@ -681,10 +688,10 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
 
         baseFeature.finishEdit()
         
-
         return True
 
     except:
+        baseFeature.finishEdit()
         showMessage(f'updateFeature: {traceback.format_exc()}\n', True)
         return False
     

@@ -411,6 +411,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             baseFeature.finishEdit()
 
         except:
+            baseFeature.finishEdit()
             showMessage(f'ExecutePreviewHandler: {traceback.format_exc()}\n', True)
 
 
@@ -479,6 +480,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             component.features.customFeatures.add(customFeatureInput)
 
         except:
+            baseFeature.finishEdit()
             eventArgs.executeFailed = True
             showMessage(f'CreateExecuteHandler: {traceback.format_exc()}\n', True)
 
@@ -705,30 +707,23 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
 
         
         connections = findValidConnections(gemstoneInfos, maxGap)
-        
-        if connections is None or len(connections) == 0:
-            
-            baseFeature.startEdit()
-            while baseFeature.bodies.count > 0:
-                baseFeature.bodies.item(0).deleteMe()
-            baseFeature.finishEdit()
-            return True
-
-        
         prongInfos = createProngInfosFromConnections(connections, gemstoneInfos, sizeRatio, heightRatio, widthBetweenProngsRatio, weldDistance)
         
-        if not prongInfos:
-            
-            baseFeature.startEdit()
+        baseFeature.startEdit()
+
+        if connections is None or len(connections) == 0:
             while baseFeature.bodies.count > 0:
                 baseFeature.bodies.item(0).deleteMe()
             baseFeature.finishEdit()
             return True
 
+        if not prongInfos:
+            while baseFeature.bodies.count > 0:
+                baseFeature.bodies.item(0).deleteMe()
+            baseFeature.finishEdit()
+            return True
         
         component = customFeature.parentComponent
-
-        baseFeature.startEdit()
         
         
         existingBodies = [baseFeature.bodies.item(i) for i in range(baseFeature.bodies.count)]
@@ -756,6 +751,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         return True
     
     except:
+        baseFeature.finishEdit()
         showMessage(f'UpdateFeature: {traceback.format_exc()}\n', True)
         return False
     

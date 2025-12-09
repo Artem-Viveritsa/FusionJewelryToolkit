@@ -106,6 +106,48 @@ def getPointGeometry(entity: adsk.core.Base) -> adsk.core.Point3D | None:
     return None
 
 
+def toPlaneSpace(point: adsk.core.Point3D, constructionPlane: adsk.fusion.ConstructionPlane) -> adsk.core.Point3D:
+    """Project a 3D point onto a construction plane and return its coordinates in the plane's local coordinate system.
+
+    Args:
+        point: The 3D point to project
+        constructionPlane: The construction plane to project onto
+
+    Returns:
+        Point3D with coordinates (u, v, 0) representing the point's position in the plane's coordinate system
+    """
+    if not constructionPlane:
+        return adsk.core.Point3D.create(point.x, point.y, 0)
+    
+    planeGeometry = constructionPlane.geometry
+    vec = planeGeometry.origin.vectorTo(point)
+    u = vec.dotProduct(planeGeometry.uDirection)
+    v = vec.dotProduct(planeGeometry.vDirection)
+    return adsk.core.Point3D.create(u, v, 0)
+
+
+def projectToPlane(point: adsk.core.Point3D, constructionPlane: adsk.fusion.ConstructionPlane) -> adsk.core.Point3D:
+    """Project a 3D point onto a construction plane in global space.
+
+    Args:
+        point: The 3D point to project
+        constructionPlane: The construction plane to project onto
+
+    Returns:
+        The projected Point3D on the plane
+    """
+    plane = constructionPlane.geometry
+    normal = plane.normal
+    origin = plane.origin
+    vec = origin.vectorTo(point)
+    dist = vec.dotProduct(normal)
+    translation = normal.copy()
+    translation.scaleBy(-dist)
+    projectedPoint = point.copy()
+    projectedPoint.translateBy(translation)
+    return projectedPoint
+
+
 def point3dToStr(point: adsk.core.Point3D, precision: int = 4) -> str:
     """Convert a Point3D to a string representation.
     

@@ -360,22 +360,23 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
                 component = faceEntity.component
             else:
                 component = faceEntity.body.parentComponent
-            baseFeat = component.features.baseFeatures.add()
-            baseFeat.startEdit()
+            baseFeature = component.features.baseFeatures.add()
+            baseFeature.startEdit()
 
             for i in range(_circleSelectionInput.selectionCount):
                 sketchCircle: adsk.fusion.SketchCircle = _circleSelectionInput.selection(i).entity
                 size = sketchCircle.radius * 2
                 gemstone = createGemstone(faceEntity, sketchCircle.worldGeometry.center, size, flip, absoluteDepthOffset, relativeDepthOffset)
                 if gemstone is not None:
-                    body = component.bRepBodies.add(gemstone, baseFeat)
+                    body = component.bRepBodies.add(gemstone, baseFeature)
                     setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset)
                     body.material = diamondMaterial
 
-            baseFeat.finishEdit()
+            baseFeature.finishEdit()
             
 
         except:
+            baseFeature.finishEdit()
             showMessage(f'ExecutePreviewHandler: {traceback.format_exc()}\n', True)
 
 
@@ -396,8 +397,8 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             for i in range(_circleSelectionInput.selectionCount):
                 circleEntities.append(_circleSelectionInput.selection(i).entity)
 
-            baseFeat = comp.features.baseFeatures.add()
-            baseFeat.startEdit()
+            baseFeature = comp.features.baseFeatures.add()
+            baseFeature.startEdit()
 
             for i in range(len(circleEntities)):
                 sketchCircle = circleEntities[i]
@@ -407,11 +408,11 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                     eventArgs.executeFailed = True
                     return
                 
-                body = comp.bRepBodies.add(gemstone, baseFeat)
+                body = comp.bRepBodies.add(gemstone, baseFeature)
                 setGemstoneAttributes(body, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value)
                 body.material = diamondMaterial
 
-            baseFeat.finishEdit()
+            baseFeature.finishEdit()
 
             
             design: adsk.fusion.Design = _app.activeProduct
@@ -434,9 +435,10 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             for i in range(len(circleEntities)):
                 customFeatureInput.addDependency(f'circle{i}', circleEntities[i])
 
-            customFeatureInput.setStartAndEndFeatures(baseFeat, baseFeat)
+            customFeatureInput.setStartAndEndFeatures(baseFeature, baseFeature)
             comp.features.customFeatures.add(customFeatureInput)
         except:
+            baseFeature.finishEdit()
             eventArgs.executeFailed = True
             showMessage(f'CreateExecuteHandler: {traceback.format_exc()}\n', True)
 
@@ -634,6 +636,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         return success
     
     except:
+        baseFeature.finishEdit()
         showMessage(f'updateFeature: {traceback.format_exc()}\n', True)
         return False
     

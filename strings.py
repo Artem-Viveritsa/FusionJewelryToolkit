@@ -74,33 +74,21 @@ class UnfoldStrings:
     accuracyValueInputId = 'accuracy'
     algorithmInputId = 'algorithm'
     algorithms = [member.name for member in UnfoldAlgorithm]
+    constructionPlaneInputId = 'constructionPlane'
+    xOffsetValueInputId = 'xOffset'
+    yOffsetValueInputId = 'yOffset'
 
     sourceDependencyId = 'source'
     originVertexDependencyId = 'originVertex'
     xDirectionVertexDependencyId = 'xDirVertex'
     yDirectionVertexDependencyId = 'yDirVertex'
+    constructionPlaneDependencyId = 'constructionPlane'
     
     sourcePoint3D = 'sourcePoint3D'
     sourceNormal = 'sourceNormal'
     sourceData = 'sourceData'
     
-
 Unfold = UnfoldStrings()
-
-
-class MeshUnfoldStrings:
-    name = 'meshUnfold'
-    meshUnfoldCommandId = 'MeshUnfold'
-    selectMeshInputId = 'selectMesh'
-    originVertexInputId = 'originVertex'
-    xDirectionVertexInputId = 'xDirectionVertex'
-    yDirectionVertexInputId = 'yDirectionVertex'
-    meshBodyDependencyId = 'meshBody'
-    originVertexDependencyId = 'originVertex'
-    xDirectionVertexDependencyId = 'xDirVertex'
-    yDirectionVertexDependencyId = 'yDirVertex'
-
-MeshUnfold = MeshUnfoldStrings()
 
 
 class ObjectsRefoldStrings:

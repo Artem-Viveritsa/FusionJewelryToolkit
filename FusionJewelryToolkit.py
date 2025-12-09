@@ -46,6 +46,8 @@ def run(context):
     # _panel = solidWorkspace.toolbarPanels.add(strings.PANEL_ID, 'Jewelry Toolkit')
     _panel = solidWorkspace.toolbarPanels.itemById('SolidCreatePanel')
 
+    if not _panel: return
+    
     for command in commands:
         command.run(_panel)
 
@@ -53,7 +55,9 @@ def run(context):
 def stop(context):
     global _app, _ui, _tab, _panel
 
+    if not _panel: return
+    
     for command in commands:
         command.stop(_panel)
         
-    _panel.deleteMe()
+    # _panel.deleteMe()

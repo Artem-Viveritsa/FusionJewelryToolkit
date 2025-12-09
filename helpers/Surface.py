@@ -6,7 +6,7 @@ import adsk.core
 import adsk.fusion
 from .. import strings, constants
 from .showMessage import showMessage
-from .Points import point3dToStr, strToPoint3d, averagePosition, findClosestPointIndex, triangleArea, isPointInTriangle, trianglesOverlap
+from .Points import point3dToStr, strToPoint3d, averagePosition, findClosestPointIndex, triangleArea, isPointInTriangle, trianglesOverlap, toPlaneSpace, projectToPlane
 from .Vectors import vector3dToStr, strToVector3d, averageVector
 
 
@@ -40,17 +40,8 @@ def getDataFromPointAndFace(face: adsk.fusion.BRepFace | adsk.fusion.Constructio
         
         if face.objectType == adsk.fusion.ConstructionPlane.classType():
             constructionPlane: adsk.fusion.ConstructionPlane = face
-            plane = constructionPlane.geometry
-            evaluator = plane.evaluator
-
-            normal = plane.normal
-            origin = plane.origin
-            vec = origin.vectorTo(point)
-            dist = vec.dotProduct(normal)
-            translation = normal.copy()
-            translation.scaleBy(-dist)
-            point = point.copy()
-            point.translateBy(translation)
+            point = projectToPlane(point, constructionPlane)
+            evaluator = constructionPlane.geometry.evaluator
         else:
             brepFace: adsk.fusion.BRepFace = face
             evaluator = brepFace.evaluator
@@ -476,9 +467,12 @@ def preprocess(
     yDirectionIndex: int = None,
     points3D: List[adsk.core.Point3D] = None,
     normals: Dict[int, adsk.core.Vector3D] = None,
-    sketch: adsk.fusion.Sketch = None
+    sketch: adsk.fusion.Sketch = None,
+    constructionPlane: adsk.fusion.ConstructionPlane = None,
+    xOffset: float = 0.0,
+    yOffset: float = 0.0
 ) -> Dict[int, adsk.core.Point3D]:
-    """Apply rotation to align xDirectionIndex with X axis and return rotated 2D points as 3D.
+    """Apply rotation to align xDirectionIndex with X axis and transform to 3D construction plane coordinates.
     
     Args:
         positions2D: Dictionary mapping point indices to 2D positions.
@@ -487,9 +481,12 @@ def preprocess(
         points3D: Optional list of 3D points for attribute generation.
         normals: Optional dictionary of normal vectors for each point.
         sketch: Optional sketch to save attributes to.
+        constructionPlane: Construction plane for 3D transformation.
+        xOffset: Offset along the X axis of the construction plane in cm.
+        yOffset: Offset along the Y axis of the construction plane in cm.
     
     Returns:
-        Dictionary mapping point indices to rotated Point3D (z=0)
+        Dictionary mapping point indices to transformed Point3D in construction plane space.
     """
     rotationAngle = 0.0
     reflectX = False
@@ -505,8 +502,17 @@ def preprocess(
     
     cosA, sinA = math.cos(rotationAngle), math.sin(rotationAngle)
     mappedPoints: Dict[int, adsk.core.Point3D] = {}
-
     unfoldDataAttributes: Dict[str, Dict[str, str]] = {}
+    
+    planeGeometry = constructionPlane.geometry if constructionPlane else None
+    if planeGeometry:
+        planeOrigin = planeGeometry.origin
+        planeXAxis = planeGeometry.uDirection
+        planeYAxis = planeGeometry.vDirection
+    else:
+        planeOrigin = constants.zeroPoint
+        planeXAxis = constants.xVector
+        planeYAxis = constants.yVector
     
     for index, position in positions2D.items():
         rotatedX = position.x * cosA - position.y * sinA
@@ -514,26 +520,32 @@ def preprocess(
         if reflectX:
             rotatedY = -rotatedY
         
-        point3D = adsk.core.Point3D.create(rotatedX, rotatedY, 0)
-        point3dStr = point3dToStr(point3D)
+        totalX = rotatedX + xOffset
+        totalY = rotatedY + yOffset
         
+        point3D = planeOrigin.copy()
+        xVec = planeXAxis.copy()
+        xVec.scaleBy(totalX)
+        point3D.translateBy(xVec)
+        yVec = planeYAxis.copy()
+        yVec.scaleBy(totalY)
+        point3D.translateBy(yVec)
+        
+        mappedPoints[index] = point3D
+        
+        point3dStr = point3dToStr(point3D)
         pointData: Dict[str, str] = {}
         
         if points3D and index < len(points3D):
-            sourcePoint = points3D[index]
-            pointData[strings.Unfold.sourcePoint3D] = point3dToStr(sourcePoint)
+            pointData[strings.Unfold.sourcePoint3D] = point3dToStr(points3D[index])
         
         if normals and index in normals:
-            normalVector = normals[index]
-            pointData[strings.Unfold.sourceNormal] = vector3dToStr(normalVector)
+            pointData[strings.Unfold.sourceNormal] = vector3dToStr(normals[index])
         
         if pointData:
             unfoldDataAttributes[point3dStr] = pointData
-        
-        mappedPoints[index] = point3D
 
-    if sketch:
-        sketch.attributes.add(strings.PREFIX, strings.Unfold.sourceData, json.dumps(unfoldDataAttributes))
+    sketch.attributes.add(strings.PREFIX, strings.Unfold.sourceData, json.dumps(unfoldDataAttributes))
 
     return mappedPoints
 
@@ -600,7 +612,9 @@ def drawEdgesToSketch(
 
 
 def unfoldFaceToSketch(face: adsk.fusion.BRepFace, accuracy: float, sketch: adsk.fusion.Sketch, 
-                       originPoint: adsk.core.Point3D, xDirPoint: adsk.core.Point3D, yDirPoint: adsk.core.Point3D, algorithm: strings.UnfoldAlgorithm = strings.UnfoldAlgorithm.Mesh):
+                       originPoint: adsk.core.Point3D, xDirPoint: adsk.core.Point3D, yDirPoint: adsk.core.Point3D, 
+                       constructionPlane: adsk.fusion.ConstructionPlane, xOffset: float, yOffset: float,
+                       algorithm: strings.UnfoldAlgorithm = strings.UnfoldAlgorithm.Mesh):
     """
     Unfold a face to a flat sketch representation.
     
@@ -609,13 +623,14 @@ def unfoldFaceToSketch(face: adsk.fusion.BRepFace, accuracy: float, sketch: adsk
     - NURBS: Uses SurfaceEvaluator with uniform grid (balanced)
     """
     if algorithm == strings.UnfoldAlgorithm.Mesh:
-        unfoldFaceToSketchWithMesh(face, accuracy, sketch, originPoint, xDirPoint, yDirPoint)
+        unfoldFaceToSketchWithMesh(face, accuracy, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane, xOffset, yOffset)
     else:
-        unfoldFaceToSketchWithNurbs(face, accuracy, sketch, originPoint, xDirPoint, yDirPoint)
+        unfoldFaceToSketchWithNurbs(face, accuracy, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane, xOffset, yOffset)
 
 
 def unfoldMeshToSketch(mesh: adsk.fusion.TriangleMesh, sketch: adsk.fusion.Sketch, 
-                       originPoint: adsk.core.Point3D, xDirPoint: adsk.core.Point3D, yDirPoint: adsk.core.Point3D):
+                       originPoint: adsk.core.Point3D, xDirPoint: adsk.core.Point3D, yDirPoint: adsk.core.Point3D,
+                       constructionPlane: adsk.fusion.ConstructionPlane, xOffset: float, yOffset: float):
     """Unfold a mesh body to a flat sketch representation.
     
     Args:
@@ -624,6 +639,9 @@ def unfoldMeshToSketch(mesh: adsk.fusion.TriangleMesh, sketch: adsk.fusion.Sketc
         originPoint: The point to use as the origin (0,0) in the sketch.
         xDirPoint: The point to define the +X direction from origin.
         yDirPoint: The point to define the +Y direction from origin.
+        constructionPlane: The construction plane for 3D transformation.
+        xOffset: Offset along the X axis of the construction plane.
+        yOffset: Offset along the Y axis of the construction plane.
     """
     try:
         sketch.isComputeDeferred = True
@@ -647,7 +665,7 @@ def unfoldMeshToSketch(mesh: adsk.fusion.TriangleMesh, sketch: adsk.fusion.Sketc
         
         normals = {index: normalVectorsArray[index] for index in range(len(normalVectorsArray)) if index in positions2D}
         
-        mappedPoints = preprocess(positions2D, xDirectionIndex, yDirectionIndex, nodes, normals, sketch)
+        mappedPoints = preprocess(positions2D, xDirectionIndex, yDirectionIndex, nodes, normals, sketch, constructionPlane, xOffset, yOffset)
         
         drawEdgesToSketch(triangles, visitedTriangles, mappedPoints, edgeToTriangles, sketch)
 
@@ -660,7 +678,8 @@ def unfoldMeshToSketch(mesh: adsk.fusion.TriangleMesh, sketch: adsk.fusion.Sketc
 
 
 def unfoldFaceToSketchWithMesh(face: adsk.fusion.BRepFace, accuracy: float, sketch: adsk.fusion.Sketch, 
-                           originPoint: adsk.core.Point3D, xDirPoint: adsk.core.Point3D, yDirPoint: adsk.core.Point3D):
+                           originPoint: adsk.core.Point3D, xDirPoint: adsk.core.Point3D, yDirPoint: adsk.core.Point3D,
+                           constructionPlane: adsk.fusion.ConstructionPlane, xOffset: float, yOffset: float):
     """Unfold a face to a flat sketch representation using mesh triangulation."""
     try:
         calc = face.meshManager.createMeshCalculator()
@@ -673,14 +692,15 @@ def unfoldFaceToSketchWithMesh(face: adsk.fusion.BRepFace, accuracy: float, sket
         if mesh is None:
             return
 
-        unfoldMeshToSketch(mesh, sketch, originPoint, xDirPoint, yDirPoint)
+        unfoldMeshToSketch(mesh, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane, xOffset, yOffset)
 
     except:
         showMessage(f'unfoldFaceToSketchMesh: {traceback.format_exc()}\n', True)
 
 
 def unfoldFaceToSketchWithNurbs(face: adsk.fusion.BRepFace, stepSize: float, sketch: adsk.fusion.Sketch, 
-                            originPoint: adsk.core.Point3D, xDirPoint: adsk.core.Point3D, yDirPoint: adsk.core.Point3D):
+                            originPoint: adsk.core.Point3D, xDirPoint: adsk.core.Point3D, yDirPoint: adsk.core.Point3D,
+                            constructionPlane: adsk.fusion.ConstructionPlane, xOffset: float, yOffset: float):
     """Unfold a face to a flat sketch representation using SurfaceEvaluator."""
     try:
         sketch.isComputeDeferred = True
@@ -765,7 +785,7 @@ def unfoldFaceToSketchWithNurbs(face: adsk.fusion.BRepFace, stepSize: float, ske
         else:
             normals = calculateVertexNormals(triangles, validPoints3D, visitedTriangles)
         
-        mappedPoints = preprocess(positions2D, xDirectionIndex, yDirectionIndex, validPoints3D, normals, sketch)
+        mappedPoints = preprocess(positions2D, xDirectionIndex, yDirectionIndex, validPoints3D, normals, sketch, constructionPlane, xOffset, yOffset)
 
         def skipDiagonal(iA, iB):
             if iA in validToGridPosition and iB in validToGridPosition:
@@ -790,7 +810,8 @@ def refoldBodiesToSurface(
     sketch: adsk.fusion.Sketch,
     originPoint: adsk.core.Point3D = None,
     xDirPoint: adsk.core.Point3D = None,
-    yDirPoint: adsk.core.Point3D = None
+    yDirPoint: adsk.core.Point3D = None,
+    constructionPlane: adsk.fusion.ConstructionPlane = None
 ) -> Tuple[adsk.core.ObjectCollection, adsk.core.ObjectCollection, List[adsk.core.Matrix3D]]:
     """
     Transfer bodies from the sketch plane to the original surface.
@@ -799,6 +820,7 @@ def refoldBodiesToSurface(
         bodies: ObjectCollection of bodies to transfer to the surface.
         face: The original face from SurfaceUnfold command.
         sketch: The sketch created by SurfaceUnfold command.
+        constructionPlane: The construction plane used for the unfold.
     
     Returns:
         Tuple of (resultBodies, originalBodies, transformations):
@@ -840,35 +862,43 @@ def refoldBodiesToSurface(
             if temporaryBody is None: continue
 
             centroidPosition = temporaryBody.orientedMinimumBoundingBox.centerPoint
+            centroidPositionOnPlane = projectToPlane(centroidPosition, constructionPlane)
 
             pointDataList: List[Tuple[adsk.core.Point3D, adsk.core.Point3D, adsk.core.Vector3D, float]] = []
 
             for point2D, sourcePoint3D, sourceNormal in basePointDataList:
-                pointDataList.append((point2D, sourcePoint3D, sourceNormal, 0.0))
+                pointPlaneSpace = projectToPlane(point2D, constructionPlane)
+                pointDataList.append((pointPlaneSpace, sourcePoint3D, sourceNormal, 0.0))
 
-            centroid2D = adsk.core.Point3D.create(centroidPosition.x, centroidPosition.y, 0)
             for i, item in enumerate(pointDataList):
-                distance = centroid2D.distanceTo(item[0])
+                distance = centroidPositionOnPlane.distanceTo(item[0])
                 pointDataList[i] = (item[0], item[1], item[2], distance)
             pointDataList.sort(key=lambda p: p[3])
 
-            interpolatedPosition, interpolatedNormal = interpolateDataInPointTriangles(centroidPosition, pointDataList)
+            interpolatedPosition, interpolatedNormal = interpolateDataInPointTriangles(centroidPositionOnPlane, pointDataList)
 
             if interpolatedPosition is None: continue
 
             if face is not None:
                 targetPointOnFace, targetXDirection, targetYDirection, targetNormal = getDataFromPointAndFace(face, interpolatedPosition)
-                if targetPointOnFace is None:
-                    continue
+                if targetPointOnFace is None: continue
             else:
                 targetPointOnFace = interpolatedPosition
-                targetNormal = interpolatedNormal if interpolatedNormal is not None else constants.zVector
                 targetXDirection = constants.xVector
                 targetYDirection = constants.yVector
+                targetNormal = interpolatedNormal if interpolatedNormal is not None else constants.zVector
 
             transformation = adsk.core.Matrix3D.create()
 
-            sketchNormal = sketch.xDirection.crossProduct(sketch.yDirection)
+            planeGeometry = constructionPlane.geometry if constructionPlane else None
+            if planeGeometry:
+                sketchX = planeGeometry.uDirection
+                sketchY = planeGeometry.vDirection
+                sketchNormal = planeGeometry.normal
+            else:
+                sketchX = sketch.xDirection
+                sketchY = sketch.yDirection
+                sketchNormal = sketchX.crossProduct(sketchY)
 
             globalXDirection = originPoint.vectorTo(xDirPoint)
             projectedXDirection = globalXDirection.copy()
@@ -891,7 +921,7 @@ def refoldBodiesToSurface(
             targetYDirection.normalize()
 
             transformation.setToAlignCoordinateSystems(
-                centroid2D, sketch.xDirection, sketch.yDirection, sketchNormal,
+                centroidPositionOnPlane, sketchX, sketchY, sketchNormal,
                 targetPointOnFace, targetXDirection, targetYDirection, targetNormal
             )
             

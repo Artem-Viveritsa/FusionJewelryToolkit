@@ -346,6 +346,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             baseFeature.finishEdit()
 
         except:
+            baseFeature.finishEdit()
             showMessage(f'ExecutePreviewHandler: {traceback.format_exc()}\n', True)
 
 
@@ -404,6 +405,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             component.features.customFeatures.add(customFeatureInput)
 
         except:
+            baseFeature.finishEdit()
             eventArgs.executeFailed = True
             showMessage(f'CreateExecuteHandler: {traceback.format_exc()}\n', True)
 
@@ -690,6 +692,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         return True
     
     except:
+        baseFeature.finishEdit()
         showMessage(f'UpdateFeature: {traceback.format_exc()}\n', True)
         return False
     
