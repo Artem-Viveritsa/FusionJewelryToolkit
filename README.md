@@ -16,7 +16,7 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 
 ## What's new
 - **GemstonesInfo (Early Preview):**
-  - Added `GemstonesInfo` utility that detects gemstone bodies created by the add-in and overlays their diameters as on-model text for quick visual inspection. This feature is experimental and in early preview; it may have limitations and behavior subject to change.
+  - Added `GemstonesInfo` utility that detects gemstone bodies created by the add-in and overlays their diameters as on-model text for quick visual inspection. Displays a summary list of gemstone sizes with total counts in the command dialog. This feature is experimental and in early preview; it may have limitations and behavior subject to change.
 - **UI change:**
     - Moved commands panel to the `Utilities` tab to improve discoverability and avoid conflicts with Solid → Create.
 - **Enhanced SurfaceUnfold and ObjectsRefold:**
@@ -166,7 +166,7 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 
 ![Gemstones Info icon](commands/GemstonesInfo/resources/32x32@2x.png)
 ## GemstonesInfo — Show detected gemstone diameters on-model (Early Preview)
-- **Description:** Detects gemstone bodies created by the add-in and overlays their diameters as on-model text labels to help with quick inspection and verification.
+- **Description:** Detects gemstone bodies created by the add-in and overlays their diameters as on-model text labels to help with quick inspection and verification. The command dialog also displays a summary list of all gemstone sizes with their total counts, sorted from smallest to largest.
 - **Selection:** No explicit selection required — the command scans the model for bodies marked as gemstones and displays overlay text for each detected gemstone.
-- **Behavior:** Uses attribute metadata attached to gemstone bodies to detect them, computes centroid and normal, and places text slightly offset along the gemstone normal (diameter shown in mm).
+- **Behavior:** Uses attribute metadata attached to gemstone bodies to detect them, computes centroid and normal, and places text slightly offset along the gemstone normal (diameter shown in mm). The summary list in the dialog shows each unique diameter with the number of gemstones of that size.
 - **Limitations:** This feature is in early preview and may have limitations or unexpected behavior; user feedback is appreciated.

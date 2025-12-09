@@ -13,6 +13,7 @@ _app: adsk.core.Application = None
 _ui: adsk.core.UserInterface = None
 _handlers: list = []
 _cgGroup: adsk.fusion.CustomGraphicsGroup = None
+_gemstonesList: list[tuple[float, int]] = []
 
 COMMAND_ID: str = strings.PREFIX + strings.GEMSTONES_INFO
 
@@ -62,10 +63,12 @@ class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             cmd.destroy.add(onDestroy)
             _handlers.append(onDestroy)
 
-            inputs = cmd.commandInputs
-            inputs.addTextBoxCommandInput('info', 'Info', 'Gemstone diameters are shown in the overlay.', 2, True)
-
             showGemstonesInfo()
+            
+            inputs = cmd.commandInputs
+            gemstoneText = '\n'.join([f"<b>{diameter:.2f}</b> – {count}<br>" for diameter, count in _gemstonesList]) if _gemstonesList else 'No gemstones found'
+            numRows = max(len(_gemstonesList), 1)
+            inputs.addTextBoxCommandInput('info', 'Info', gemstoneText, numRows, True)
             
         except:
             showMessage('Failed:\n{}'.format(traceback.format_exc()), True)
@@ -96,7 +99,7 @@ def showGemstonesInfo() -> None:
     diameter.
     """
 
-    global _cgGroup, _app
+    global _cgGroup, _app, _gemstonesList
     
     design = adsk.fusion.Design.cast(_app.activeProduct)
 
@@ -113,25 +116,34 @@ def showGemstonesInfo() -> None:
                 pass
         return False
 
-    gemstones: list[adsk.fusion.BRepBody] = []
+    gemstoneInfos: list[Gemstones.GemstoneInfo] = []
     if design:
         root = design.rootComponent
         for body in root.bRepBodies:
             if body.isLightBulbOn and is_gemstone(body):
-                gemstones.append(body)
+                gemInfo = Gemstones.GemstoneInfo(body)
+                gemstoneInfos.append(gemInfo)
         
         for occ in root.allOccurrences:
             if occ.isLightBulbOn:
                 for body in occ.bRepBodies:
                     if body.isLightBulbOn and is_gemstone(body):
-                        gemstones.append(body)
+                        gemInfo = Gemstones.GemstoneInfo(body)
+                        gemstoneInfos.append(gemInfo)
     
-    if not gemstones:
+    gemstoneDict: dict[float, int] = {}
+    for gemInfo in gemstoneInfos:
+        diameterMm = round(gemInfo.diameter * 10, 2)
+        gemstoneDict[diameterMm] = gemstoneDict.get(diameterMm, 0) + 1
+    
+    sorted_items = sorted(gemstoneDict.items(), key=lambda x: x[0])
+    _gemstonesList = [(diameter, count) for diameter, count in sorted_items]
+    
+    if not gemstoneInfos:
         return
 
     try:
-        for gemstone in gemstones:
-            gemInfo = Gemstones.GemstoneInfo(gemstone)
+        for gemInfo in gemstoneInfos:
             centroid = gemInfo.centroid.copy()
             
             text = f"{gemInfo.diameter * 10:.2f}" # in mm

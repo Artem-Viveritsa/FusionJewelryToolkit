@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.1] - 2025-12-09
+
+### Changed
+- `GemstonesInfo`: Updated to display a summary list of gemstone sizes with total counts in the command dialog, sorted from smallest to largest diameter.
+
 ## [0.9.0] - 2025-12-09
 
 ### Added
