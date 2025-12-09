@@ -105,3 +105,11 @@ class InputDef:
         self.id: str = id
         self.name: str = name
         self.tooltip: str = tooltip
+
+def getCommandIds(id: str) -> tuple[str, str, str]:
+    """Returns commandId, createCommandId, editCommandId."""
+    commandId = PREFIX + id
+    createCommandId = commandId + 'Create'
+    editCommandId = commandId + 'Edit'
+
+    return commandId, createCommandId, editCommandId

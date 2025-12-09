@@ -15,8 +15,12 @@ A small collection of utilities that speed up jewelry modeling in Fusion 360. Th
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
 ## What's new
-- **GemstonesInfo (Early Preview):**
-  - Added `GemstonesInfo` utility that detects gemstone bodies created by the add-in and overlays their diameters as on-model text for quick visual inspection. Displays a summary list of gemstone sizes with total counts in the command dialog. This feature is experimental and in early preview; it may have limitations and behavior subject to change.
+- **Enhanced Gemstone Placement:**
+  - Added **Uniform Distribution** parameter to `GemstonesOnFaceAtCurve` and `GemstonesOnFaceBetweenCurves` for even spacing without end gaps.
+  - Improved `GemstonesOnFaceBetweenCurves` UI with streamlined curve selection.
+- **GemstonesInfo improvements:**
+  - Fixed text rendering with proper billboarding for better visibility from all angles.
+  - Enhanced dialog display to properly show all gemstone size summaries.
 - **UI change:**
     - Moved commands panel to the `Utilities` tab to improve discoverability and avoid conflicts with Solid → Create.
 - **Enhanced SurfaceUnfold and ObjectsRefold:**
@@ -62,6 +66,7 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
   - **End Size** — Gemstone diameter at the curve end. Default: `0.7 mm`. Minimum: `0.5 mm`.
   - **Size Step** — Size discretization step. Gemstone sizes are rounded to multiples of this value. Default: `0.05 mm`. Range: `0–1.0 mm`.
   - **Target Gap** — Target distance between adjacent gemstones along the curve. Default: `0.1 mm`.
+  - **Uniform Distribution** — Distribute gemstones uniformly along the curve. Ensures gemstones fill the entire available length from start offset to end offset without gaps at the ends. Default: `false`.
   - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
   - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
   - **Relative Depth Offset** — Depth offset as a fraction of gemstone size. Controls how deep the gemstone sits (0.1 = 10% of diameter). Default: `0`.
@@ -76,6 +81,7 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
   - **Start Offset** — Distance from the start of the curves to the first gemstone. Default: `0 mm`.
   - **End Offset** — Distance from the end of the curves to the last gemstone. Default: `0 mm`.
   - **Flip Direction** — Flip gemstone placement direction. Starts placing gemstones from the opposite end of the curves. Default: `false`.
+  - **Uniform Distribution** — Distribute gemstones uniformly along the curves. Ensures gemstones fill the entire available length from start offset to end offset without gaps at the ends. Default: `false`.
   - **Size Ratio** — Multiplier for gemstone size based on curve distance. Default: `1.0`. Range: `0.5–2.0`.
   - **Size Step** — Size discretization step. Gemstone sizes are rounded to multiples of this value. Default: `0.05 mm`. Range: `0–1.0 mm`.
   - **Target Gap** — Target distance between adjacent gemstones along the curve path. Default: `0.1 mm`.
@@ -167,6 +173,6 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 ![Gemstones Info icon](commands/GemstonesInfo/resources/32x32@2x.png)
 ## GemstonesInfo — Show detected gemstone diameters on-model (Early Preview)
 - **Description:** Detects gemstone bodies created by the add-in and overlays their diameters as on-model text labels to help with quick inspection and verification. The command dialog also displays a summary list of all gemstone sizes with their total counts, sorted from smallest to largest.
-- **Selection:** No explicit selection required — the command scans the model for bodies marked as gemstones and displays overlay text for each detected gemstone.
-- **Behavior:** Uses attribute metadata attached to gemstone bodies to detect them, computes centroid and normal, and places text slightly offset along the gemstone normal (diameter shown in mm). The summary list in the dialog shows each unique diameter with the number of gemstones of that size.
+- **Selection:** No explicit selection required — the command scans the model for bodies marked as gemstones (including occurrences) and displays overlay text for each detected gemstone.
+- **Behavior:** Uses attribute metadata attached to gemstone bodies to detect them, computes centroid and normal, and places text slightly offset along the gemstone normal (diameter shown in mm). The text is displayed using billboarding for better visibility from all angles. The summary list in the dialog shows each unique diameter with the number of gemstones of that size.
 - **Limitations:** This feature is in early preview and may have limitations or unexpected behavior; user feedback is appreciated.

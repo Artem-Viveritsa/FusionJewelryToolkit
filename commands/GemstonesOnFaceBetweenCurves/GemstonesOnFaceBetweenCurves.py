@@ -12,9 +12,9 @@ _ui: adsk.core.UserInterface = None
 _customFeatureDefinition: adsk.fusion.CustomFeature = None
 
 _faceSelectionInput: adsk.core.SelectionCommandInput = None
-_curve1SelectionInput: adsk.core.SelectionCommandInput = None
-_curve2SelectionInput: adsk.core.SelectionCommandInput = None
+_curvesSelectionInput: adsk.core.SelectionCommandInput = None
 _flipDirectionValueInput: adsk.core.BoolValueCommandInput = None
+_uniformDistributionValueInput: adsk.core.BoolValueCommandInput = None
 _startOffsetValueInput: adsk.core.ValueCommandInput = None
 _endOffsetValueInput: adsk.core.ValueCommandInput = None
 _sizeStepValueInput: adsk.core.ValueCommandInput = None
@@ -30,9 +30,7 @@ _isRolledForEdit: bool = False
 
 _handlers = []
 
-COMMAND_ID = strings.PREFIX + strings.GEMSTONES_ON_FACE_BETWEEN_CURVES
-CREATE_COMMAND_ID = COMMAND_ID + 'Create'
-EDIT_COMMAND_ID = COMMAND_ID + 'Edit'
+COMMAND_ID, CREATE_COMMAND_ID, EDIT_COMMAND_ID = strings.getCommandIds(strings.GEMSTONES_ON_FACE_BETWEEN_CURVES)
 
 createCommandInputDef = strings.InputDef(CREATE_COMMAND_ID, 'Gemstones between Curves', 'Creates gemstones between two selected curves on a face.')
 editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Gemstones', 'Edits the parameters of existing gemstones.')
@@ -43,22 +41,22 @@ selectFaceInputDef = strings.InputDef(
     'Select the face or construction plane where the gemstones will be placed.'
     )
 
-selectCurve1InputDef = strings.InputDef(
-    'selectCurve1',
-    'First Rail',
-    'Select the first sketch curve or edge.'
-    )
-
-selectCurve2InputDef = strings.InputDef(
-    'selectCurve2',
-    'Second Rail',
-    'Select the second sketch curve or edge.'
+selectCurvesInputDef = strings.InputDef(
+    'selectCurves',
+    'Select Rails',
+    'Select the two sketch curves or edges to define the rails.'
     )
 
 flipDirectionInputDef = strings.InputDef(
     'flipDirection',
     'Flip Direction',
     "Flip the direction of gemstone placement.\nIf checked, gemstones will start from the opposite end of the curves."
+    )
+
+uniformDistributionInputDef = strings.InputDef(
+    'uniformDistribution',
+    'Uniform Distribution',
+    "Distribute gemstones uniformly along the curves.\nEnsures gemstones fill the entire available length\nfrom start offset to end offset without gaps at the ends."
     )
 
 startOffsetInputDef = strings.InputDef(
@@ -183,21 +181,15 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             inputs = command.commandInputs
             defaultLengthUnits = _app.activeProduct.unitsManager.defaultLengthUnits
 
-            global _faceSelectionInput, _curve1SelectionInput, _curve2SelectionInput, _startOffsetValueInput, _endOffsetValueInput
+            global _faceSelectionInput, _curvesSelectionInput, _startOffsetValueInput, _endOffsetValueInput
             global _sizeStepValueInput, _targetGapValueInput, _sizeRatioValueInput
-            global _flipValueInput, _flipDirectionValueInput, _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
+            global _flipValueInput, _flipDirectionValueInput, _uniformDistributionValueInput, _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
 
-            _curve1SelectionInput = inputs.addSelectionInput(selectCurve1InputDef.id, selectCurve1InputDef.name, selectCurve1InputDef.tooltip)
-            _curve1SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
-            _curve1SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
-            _curve1SelectionInput.tooltip = selectCurve1InputDef.tooltip
-            _curve1SelectionInput.setSelectionLimits(1, 1)
-
-            _curve2SelectionInput = inputs.addSelectionInput(selectCurve2InputDef.id, selectCurve2InputDef.name, selectCurve2InputDef.tooltip)
-            _curve2SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
-            _curve2SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
-            _curve2SelectionInput.tooltip = selectCurve2InputDef.tooltip
-            _curve2SelectionInput.setSelectionLimits(1, 1)
+            _curvesSelectionInput = inputs.addSelectionInput(selectCurvesInputDef.id, selectCurvesInputDef.name, selectCurvesInputDef.tooltip)
+            _curvesSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
+            _curvesSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
+            _curvesSelectionInput.tooltip = selectCurvesInputDef.tooltip
+            _curvesSelectionInput.setSelectionLimits(2, 2)
 
             _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
             _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
@@ -210,6 +202,10 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             flipDirection = False
             _flipDirectionValueInput = inputs.addBoolValueInput(flipDirectionInputDef.id, flipDirectionInputDef.name, True, '', flipDirection)
             _flipDirectionValueInput.tooltip = flipDirectionInputDef.tooltip
+
+            uniformDistribution = False
+            _uniformDistributionValueInput = inputs.addBoolValueInput(uniformDistributionInputDef.id, uniformDistributionInputDef.name, True, '', uniformDistribution)
+            _uniformDistributionValueInput.tooltip = uniformDistributionInputDef.tooltip
 
             startOffset = adsk.core.ValueInput.createByReal(0.0)
             _startOffsetValueInput = inputs.addValueInput(startOffsetInputDef.id, startOffsetInputDef.name, defaultLengthUnits, startOffset)
@@ -283,26 +279,20 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             inputs = command.commandInputs
             defaultLengthUnits = _app.activeProduct.unitsManager.defaultLengthUnits
 
-            global _editedCustomFeature, _faceSelectionInput, _curve1SelectionInput, _curve2SelectionInput
+            global _editedCustomFeature, _faceSelectionInput, _curvesSelectionInput
             _editedCustomFeature = _ui.activeSelections.item(0).entity
             if _editedCustomFeature is None:
                 return
 
             global _startOffsetValueInput, _endOffsetValueInput, _sizeStepValueInput, _targetGapValueInput
-            global _sizeRatioValueInput, _flipValueInput, _flipDirectionValueInput
+            global _sizeRatioValueInput, _flipValueInput, _flipDirectionValueInput, _uniformDistributionValueInput
             global _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
 
-            _curve1SelectionInput = inputs.addSelectionInput(selectCurve1InputDef.id, selectCurve1InputDef.name, selectCurve1InputDef.tooltip)
-            _curve1SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
-            _curve1SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
-            _curve1SelectionInput.tooltip = selectCurve1InputDef.tooltip
-            _curve1SelectionInput.setSelectionLimits(1, 1)
-
-            _curve2SelectionInput = inputs.addSelectionInput(selectCurve2InputDef.id, selectCurve2InputDef.name, selectCurve2InputDef.tooltip)
-            _curve2SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
-            _curve2SelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
-            _curve2SelectionInput.tooltip = selectCurve2InputDef.tooltip
-            _curve2SelectionInput.setSelectionLimits(1, 1)
+            _curvesSelectionInput = inputs.addSelectionInput(selectCurvesInputDef.id, selectCurvesInputDef.name, selectCurvesInputDef.tooltip)
+            _curvesSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
+            _curvesSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
+            _curvesSelectionInput.tooltip = selectCurvesInputDef.tooltip
+            _curvesSelectionInput.setSelectionLimits(2, 2)
 
             _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
             _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
@@ -321,6 +311,14 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 flipDirection = False
             _flipDirectionValueInput = inputs.addBoolValueInput(flipDirectionInputDef.id, flipDirectionInputDef.name, True, '', flipDirection)
             _flipDirectionValueInput.tooltip = flipDirectionInputDef.tooltip
+
+            try:
+                uniformDistributionParam = params.itemById(uniformDistributionInputDef.id)
+                uniformDistribution = uniformDistributionParam.expression.lower() == 'true'
+            except:
+                uniformDistribution = False
+            _uniformDistributionValueInput = inputs.addBoolValueInput(uniformDistributionInputDef.id, uniformDistributionInputDef.name, True, '', uniformDistribution)
+            _uniformDistributionValueInput.tooltip = uniformDistributionInputDef.tooltip
 
             try:
                 startOffsetParam = params.itemById(startOffsetInputDef.id)
@@ -449,7 +447,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
         try:
             eventArgs = adsk.core.ValidateInputsEventArgs.cast(args)
 
-            if _faceSelectionInput.selectionCount != 1 or _curve1SelectionInput.selectionCount != 1 or _curve2SelectionInput.selectionCount != 1:
+            if _faceSelectionInput.selectionCount != 1 or _curvesSelectionInput.selectionCount != 2:
                 eventArgs.areInputsValid = False
                 return
 
@@ -458,6 +456,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                          _sizeRatioValueInput.isValidExpression,
                          _flipValueInput.isValid,
                          _flipDirectionValueInput.isValid,
+                         _uniformDistributionValueInput.isValid,
                          _absoluteDepthOffsetValueInput.isValidExpression,
                          _relativeDepthOffsetValueInput.isValidExpression] ):
                 eventArgs.areInputsValid = False
@@ -499,8 +498,8 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
     def notify(self, args):
         try:
             face = _faceSelectionInput.selection(0).entity
-            curve1Entity = _curve1SelectionInput.selection(0).entity
-            curve2Entity = _curve2SelectionInput.selection(0).entity
+            curve1Entity = _curvesSelectionInput.selection(0).entity
+            curve2Entity = _curvesSelectionInput.selection(1).entity
             
             curve1Geometry = getCurve3D(curve1Entity)
             curve2Geometry = getCurve3D(curve2Entity)
@@ -515,10 +514,11 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             sizeRatio = _sizeRatioValueInput.value
             flip = _flipValueInput.value
             flipDirection = _flipDirectionValueInput.value
+            uniformDistribution = _uniformDistributionValueInput.value
             absoluteDepthOffset = _absoluteDepthOffsetValueInput.value
             relativeDepthOffset = _relativeDepthOffsetValueInput.value
 
-            pointsAndSizes = calculatePointsAndSizesBetweenCurves(curve1Geometry, curve2Geometry, startOffset, endOffset, sizeStep, targetGap, sizeRatio, flipDirection)
+            pointsAndSizes = calculatePointsAndSizesBetweenCurves(curve1Geometry, curve2Geometry, startOffset, endOffset, sizeStep, targetGap, sizeRatio, flipDirection, uniformDistribution)
             if len(pointsAndSizes) == 0:
                 return
 
@@ -552,8 +552,8 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             eventArgs = adsk.core.CommandEventArgs.cast(args)        
 
             face = _faceSelectionInput.selection(0).entity
-            curve1Entity = _curve1SelectionInput.selection(0).entity
-            curve2Entity = _curve2SelectionInput.selection(0).entity
+            curve1Entity = _curvesSelectionInput.selection(0).entity
+            curve2Entity = _curvesSelectionInput.selection(1).entity
             if face.objectType == adsk.fusion.ConstructionPlane.classType():
                 comp = face.component
             else:
@@ -568,7 +568,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
 
             pointsAndSizes = calculatePointsAndSizesBetweenCurves(curve1Geometry, curve2Geometry, _startOffsetValueInput.value, _endOffsetValueInput.value,
                                                                    _sizeStepValueInput.value, _targetGapValueInput.value,
-                                                                   _sizeRatioValueInput.value, _flipDirectionValueInput.value)
+                                                                   _sizeRatioValueInput.value, _flipDirectionValueInput.value, _uniformDistributionValueInput.value)
             if len(pointsAndSizes) == 0:
                 eventArgs.executeFailed = True
                 return
@@ -595,6 +595,9 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
 
             flipDirectionInput = adsk.core.ValueInput.createByString(str(_flipDirectionValueInput.value).lower())
             customFeatureInput.addCustomParameter(flipDirectionInputDef.id, flipDirectionInputDef.name, flipDirectionInput, '', True)
+
+            uniformDistributionInput = adsk.core.ValueInput.createByString(str(_uniformDistributionValueInput.value).lower())
+            customFeatureInput.addCustomParameter(uniformDistributionInputDef.id, uniformDistributionInputDef.name, uniformDistributionInput, '', True)
 
             startOffsetInput = adsk.core.ValueInput.createByString(_startOffsetValueInput.expression)
             customFeatureInput.addCustomParameter(startOffsetInputDef.id, startOffsetInputDef.name, startOffsetInput,
@@ -668,11 +671,11 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
 
             curve1 = _editedCustomFeature.dependencies.itemById('curve1').entity
             if curve1 is not None:
-                _curve1SelectionInput.addSelection(curve1)
+                _curvesSelectionInput.addSelection(curve1)
 
             curve2 = _editedCustomFeature.dependencies.itemById('curve2').entity
             if curve2 is not None:
-                _curve2SelectionInput.addSelection(curve2)
+                _curvesSelectionInput.addSelection(curve2)
 
             face = _editedCustomFeature.dependencies.itemById('face').entity
             _faceSelectionInput.addSelection(face)
@@ -705,8 +708,8 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             eventArgs = adsk.core.CommandEventArgs.cast(args)    
 
             faceEntity = _faceSelectionInput.selection(0).entity
-            curve1Entity = _curve1SelectionInput.selection(0).entity
-            curve2Entity = _curve2SelectionInput.selection(0).entity
+            curve1Entity = _curvesSelectionInput.selection(0).entity
+            curve2Entity = _curvesSelectionInput.selection(1).entity
 
             _editedCustomFeature.dependencies.deleteAll()
             _editedCustomFeature.dependencies.add('face', faceEntity)
@@ -714,6 +717,7 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             _editedCustomFeature.dependencies.add('curve2', curve2Entity)
 
             _editedCustomFeature.parameters.itemById(flipDirectionInputDef.id).expression = str(_flipDirectionValueInput.value).lower()
+            _editedCustomFeature.parameters.itemById(uniformDistributionInputDef.id).expression = str(_uniformDistributionValueInput.value).lower()
             _editedCustomFeature.parameters.itemById(startOffsetInputDef.id).expression = _startOffsetValueInput.expression
             _editedCustomFeature.parameters.itemById(endOffsetInputDef.id).expression = _endOffsetValueInput.expression
             _editedCustomFeature.parameters.itemById(sizeStepInputDef.id).expression = _sizeStepValueInput.expression
@@ -785,6 +789,11 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
             flipDirection = customFeature.parameters.itemById(flipDirectionInputDef.id).expression.lower() == 'true'
         except:
             flipDirection = False
+
+        try:
+            uniformDistribution = customFeature.parameters.itemById(uniformDistributionInputDef.id).expression.lower() == 'true'
+        except:
+            uniformDistribution = False
         
         startOffset = customFeature.parameters.itemById(startOffsetInputDef.id).value
         endOffset = customFeature.parameters.itemById(endOffsetInputDef.id).value
@@ -802,7 +811,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         absoluteDepthOffset = customFeature.parameters.itemById(absoluteDepthOffsetInputDef.id).value
         relativeDepthOffset = customFeature.parameters.itemById(relativeDepthOffsetInputDef.id).value
 
-        pointsAndSizes = calculatePointsAndSizesBetweenCurves(curve1Geometry, curve2Geometry, startOffset, endOffset, sizeStep, targetGap, sizeRatio, flipDirection)
+        pointsAndSizes = calculatePointsAndSizesBetweenCurves(curve1Geometry, curve2Geometry, startOffset, endOffset, sizeStep, targetGap, sizeRatio, flipDirection, uniformDistribution)
         if len(pointsAndSizes) == 0: return False
 
         baseFeature.startEdit()

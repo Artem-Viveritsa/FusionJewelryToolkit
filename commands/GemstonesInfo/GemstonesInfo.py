@@ -67,7 +67,7 @@ class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             
             inputs = cmd.commandInputs
             gemstoneText = '\n'.join([f"<b>{diameter:.2f}</b> – {count}<br>" for diameter, count in _gemstonesList]) if _gemstonesList else 'No gemstones found'
-            numRows = max(len(_gemstonesList), 1)
+            numRows = max(len(_gemstonesList), 1) + 1
             inputs.addTextBoxCommandInput('info', 'Info', gemstoneText, numRows, True)
             
         except:
@@ -157,7 +157,7 @@ def showGemstonesInfo() -> None:
             
             cgText = _cgGroup.addText(text, 'Arial', 0.03, transform)
                         
-            cgText.billBoarding = adsk.fusion.CustomGraphicsBillBoard.create(centroid)
+            cgText.billBoarding = adsk.fusion.CustomGraphicsBillBoard.create(None)
             
             solidColor = adsk.fusion.CustomGraphicsSolidColorEffect.create(adsk.core.Color.create(0, 0, 0, 255))
             cgText.color = solidColor

@@ -387,7 +387,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
     def notify(self, args):
         try:
             eventArgs = adsk.core.CommandEventArgs.cast(args)        
-
+            comp: adsk.fusion.Component = None
             faceEntity = _faceSelectionInput.selection(0).entity
             if faceEntity.objectType == adsk.fusion.ConstructionPlane.classType():
                 comp = faceEntity.component

@@ -7,6 +7,7 @@ from .Points import averagePosition
 
 def calculatePointsAndSizesAlongCurve(curve: adsk.core.Curve3D, startOffset: float, endOffset: float,
                                       startSize: float, endSize: float, sizeStep: float, targetGap: float, flipDirection: bool,
+                                      uniformDistribution: bool = False,
                                       nonlinear: bool = False, nonlinearSize: float = 0.1, nonlinearPosition: float = 0.5) -> list[tuple[adsk.core.Point3D, float]]:
     """Calculate points and sizes along a curve with variable gemstone sizes.
 
@@ -19,6 +20,7 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.core.Curve3D, startOffset: flo
         sizeStep: Size discretization step (sizes rounded to multiples of this value).
         targetGap: Target gap between adjacent gemstones.
         flipDirection: If True, reverses the direction (swaps start/end offsets and sizes).
+        uniformDistribution: If True, distributes gemstones uniformly to fill the entire available length.
         nonlinear: If True, use nonlinear interpolation passing through nonlinearSize at nonlinearPosition.
         nonlinearSize: The size of the gemstone at the nonlinearPosition (in internal units, cm).
         nonlinearPosition: Absolute position of the nonlinearity peak along the curve (in cm, from 0 to total curve length).
@@ -91,8 +93,8 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.core.Curve3D, startOffset: flo
                     return point
             return None
 
-        centerPositions = []
-        gemstoneSizes = []
+        centerPositions: list[float] = []
+        gemstoneSizes: list[float] = []
         
         currentCenterPosition = startOffset
         
@@ -130,6 +132,30 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.core.Curve3D, startOffset: flo
         
         if len(centerPositions) == 0:
             return result
+
+        if uniformDistribution and len(centerPositions) > 0:
+            if len(centerPositions) == 1:
+                centerPositions[0] = (effectiveStartPosition + effectiveEndPosition) / 2.0
+            else:
+                firstRadius = gemstoneSizes[0] / 2.0
+                lastRadius = gemstoneSizes[-1] / 2.0
+                middleSizesSum = sum(gemstoneSizes[1:-1]) if len(gemstoneSizes) > 2 else 0.0
+                
+                occupiedLength = firstRadius + middleSizesSum + lastRadius
+                totalGapSpace = availableLength - occupiedLength
+                uniformGap = totalGapSpace / (len(centerPositions) - 1)
+                
+                newCenterPositions = []
+                currentPos = effectiveStartPosition
+                
+                for i in range(len(gemstoneSizes)):
+                    newCenterPositions.append(currentPos)
+                    if i < len(gemstoneSizes) - 1:
+                        currentRadius = gemstoneSizes[i] / 2.0
+                        nextRadius = gemstoneSizes[i + 1] / 2.0
+                        currentPos += currentRadius + uniformGap + nextRadius
+                
+                centerPositions = newCenterPositions
         
         for i in range(len(centerPositions)):
             positionOnCurve = totalCurveLength - centerPositions[i] if flipDirection else centerPositions[i]
@@ -176,7 +202,8 @@ def calculatePointsAndSizesBetweenCurves(
     sizeStep: float, 
     targetGap: float, 
     sizeRatio: float,
-    flipDirection: bool = False
+    flipDirection: bool = False,
+    uniformDistribution: bool = False
 ) -> list[tuple[adsk.core.Point3D, float]]:
     """Calculate points and sizes between two curves based on the distance between them.
 
@@ -192,6 +219,7 @@ def calculatePointsAndSizesBetweenCurves(
         targetGap: Target gap between adjacent gemstones.
         sizeRatio: Ratio of gemstone size to the distance between curves (0.5-2.0).
         flipDirection: If True, gemstones start from the opposite side.
+        uniformDistribution: If True, distributes gemstones uniformly to fill the entire available length.
 
     Returns:
         A list of tuples (Point3D, size) representing gemstone positions and sizes.
@@ -365,6 +393,35 @@ def calculatePointsAndSizesBetweenCurves(
                 nextCenterPosition = currentCenterPosition + lengthDelta * scaleFactor
             
             currentCenterPosition = nextCenterPosition
+        
+        if uniformDistribution and len(result) > 0:
+            if len(result) == 1:
+                centerPosition = (effectiveStartPosition + effectiveEndPosition) / 2.0
+                point = getPointAtLength(centerPosition)
+                if point:
+                    result[0] = (point, result[0][1])
+            else:
+                firstRadius = result[0][1] / 2.0
+                lastRadius = result[-1][1] / 2.0
+                middleSizesSum = sum(size for _, size in result[1:-1]) if len(result) > 2 else 0.0
+                
+                occupiedLength = firstRadius + middleSizesSum + lastRadius
+                totalGapSpace = (effectiveEndPosition - effectiveStartPosition) - occupiedLength
+                uniformGap = totalGapSpace / (len(result) - 1)
+                
+                newResult = []
+                currentPos = effectiveStartPosition
+                
+                for i, (_, size) in enumerate(result):
+                    point = getPointAtLength(currentPos)
+                    if point:
+                        newResult.append((point, size))
+                    if i < len(result) - 1:
+                        currentRadius = size / 2.0
+                        nextRadius = result[i + 1][1] / 2.0
+                        currentPos += currentRadius + uniformGap + nextRadius
+                
+                result = newResult
         
         return result
     

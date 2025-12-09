@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.2] - 2025-12-09
+
+### Added
+- `GemstonesOnFaceAtCurve`: Added **Uniform Distribution** parameter to distribute gemstones evenly along the curve without gaps at the ends.
+- `GemstonesOnFaceBetweenCurves`: Added **Uniform Distribution** parameter to distribute gemstones evenly between curves without gaps at the ends.
+- `GemstonesOnFaceBetweenCurves`: Refactored curve selection to use a single input accepting both curves at once, improving user experience.
+
+### Changed
+- `Curves.py`: Refactored calculation functions to support uniform distribution mode for both curve-based gemstone placement algorithms.
+
+### Fixed
+- `GemstonesOnFaceAtCurve`: Fixed compatibility with nonlinear interpolation parameters during feature editing.
+
 ## [0.9.1] - 2025-12-09
 
 ### Changed
