@@ -26,6 +26,7 @@ class GemstoneInfo:
         self.centroid: adsk.core.Point3D = None
         self.girdleThickness: float = 0.0
         self.radius: float = 0.0
+        self.diameter: float = 0.0
         self.flip: bool = False
         self.absoluteDepthOffset: float = 0.0
         self.relativeDepthOffset: float = 0.0
@@ -54,6 +55,7 @@ class GemstoneInfo:
                         self.cylinder = tempCylinder
                         self.centroid = face.centroid
                         self.radius = tempCylinder.radius
+                        self.diameter = self.radius * 2
                         break
             
             # Fallback to bounding box if no cylindrical face found

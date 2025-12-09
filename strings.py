@@ -15,6 +15,7 @@ GEMSTONES_ON_FACE_AT_POINTS = 'GemstonesOnFaceAtPoints'
 GEMSTONES_ON_FACE_AT_CIRCLES = 'GemstonesOnFaceAtCircles'
 GEMSTONES_ON_FACE_AT_CURVE = 'GemstonesOnFaceAtCurve'
 GEMSTONES_ON_FACE_BETWEEN_CURVES = 'GemstonesOnFaceBetweenCurves'
+GEMSTONES_INFO = 'GemstonesInfo'
 
 PRONGS_ON_FACE_AT_POINTS = 'ProngsOnFaceAtPoints'
 PRONGS_BETWEEN_GEMSTONES = 'ProngsBetweenGemstones'

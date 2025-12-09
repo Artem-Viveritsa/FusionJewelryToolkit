@@ -9,6 +9,7 @@ from .commands.ProngsBetweenGemstones import ProngsBetweenGemstones
 
 from .commands.ChannelsBetweenGemstones import ChannelsBetweenGemstones
 from .commands.CuttersForGemstones import CuttersForGemstones
+from .commands.GemstonesInfo import GemstonesInfo
 
 from .commands.SurfaceUnfold import SurfaceUnfold
 from .commands.ObjectsRefold import ObjectsRefold
@@ -26,10 +27,11 @@ commands = [
     CuttersForGemstones,
     SurfaceUnfold,
     ObjectsRefold,
+    GemstonesInfo,
     ]
 
 
-# from . import strings
+from . import strings
 
 _app: adsk.core.Application = None
 _ui: adsk.core.UserInterface = None
@@ -43,8 +45,8 @@ def run(context):
     _ui  = _app.userInterface
 
     solidWorkspace = _ui.workspaces.itemById('FusionSolidEnvironment')
-    # _panel = solidWorkspace.toolbarPanels.add(strings.PANEL_ID, 'Jewelry Toolkit')
-    _panel = solidWorkspace.toolbarPanels.itemById('SolidCreatePanel')
+    _panel = solidWorkspace.toolbarPanels.add(strings.PANEL_ID, 'Jewelry Toolkit')
+    # _panel = solidWorkspace.toolbarPanels.itemById('SolidCreatePanel')
 
     if not _panel: return
     
@@ -60,4 +62,4 @@ def stop(context):
     for command in commands:
         command.stop(_panel)
         
-    # _panel.deleteMe()
+    _panel.deleteMe()

@@ -1,8 +1,8 @@
 # Fusion 360 Jewelry Toolkit
 
-A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in adds specialized commands for gemstone placement, prong creation, channels, cutters, and surface manipulation to the Solid → Create panel.
+A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in adds specialized commands for gemstone placement, prong creation, channels, cutters, and surface manipulation.
 
-[![Gemstones icon](commands/GemstonesOnFaceAtPoints/resources/32x32@2x.png)](#gemstonesonfaceatpoints--place-round-gemstones-on-a-face-at-specified-points) [![Gemstones icon](commands/GemstonesOnFaceAtCircles/resources/32x32@2x.png)](#gemstonesonfaceatcircles--place-round-gemstones-on-a-face-at-sketch-circles) [![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)](#gemstonesonfaceatcurve--place-gemstones-along-a-curve-with-variable-sizes) [![Gemstones icon](commands/GemstonesOnFaceBetweenCurves/resources/32x32@2x.png)](#gemstonesonfacebetweencurves--place-gemstones-between-two-curves) [![Prongs icon](commands/ProngsOnFaceAtPoints/resources/32x32@2x.png)](#prongsonfaceatpoints--generate-prongs-on-a-face-at-specified-points) [![ProngsBetweenGemstones icon](commands/ProngsBetweenGemstones/resources/32x32@2x.png)](#prongsbetweengemstones--create-prongs-between-gemstones) [![ChannelsBetweenGemstones icon](commands/ChannelsBetweenGemstones/resources/32x32@2x.png)](#channelsbetweengemstones--create-channels-between-gemstones) [![CuttersForGemstones icon](commands/CuttersForGemstones/resources/32x32@2x.png)](#cuttersforgemstones--create-cutter-bodies-for-gemstone-seating) [![SurfaceUnfold icon](commands/SurfaceUnfold/resources/32x32@2x.png)](#surfaceunfold--unfold-curved-surfaces-to-flat-2d-sketches-early-preview) [![ObjectsRefold icon](commands/ObjectsRefold/resources/32x32@2x.png)](#objectsrefold--refold-flat-patterns-onto-curved-surfaces-early-preview)
+[![Gemstones icon](commands/GemstonesOnFaceAtPoints/resources/32x32@2x.png)](#gemstonesonfaceatpoints--place-round-gemstones-on-a-face-at-specified-points) [![Gemstones icon](commands/GemstonesOnFaceAtCircles/resources/32x32@2x.png)](#gemstonesonfaceatcircles--place-round-gemstones-on-a-face-at-sketch-circles) [![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)](#gemstonesonfaceatcurve--place-gemstones-along-a-curve-with-variable-sizes) [![Gemstones icon](commands/GemstonesOnFaceBetweenCurves/resources/32x32@2x.png)](#gemstonesonfacebetweencurves--place-gemstones-between-two-curves) [![Prongs icon](commands/ProngsOnFaceAtPoints/resources/32x32@2x.png)](#prongsonfaceatpoints--generate-prongs-on-a-face-at-specified-points) [![ProngsBetweenGemstones icon](commands/ProngsBetweenGemstones/resources/32x32@2x.png)](#prongsbetweengemstones--create-prongs-between-gemstones) [![ChannelsBetweenGemstones icon](commands/ChannelsBetweenGemstones/resources/32x32@2x.png)](#channelsbetweengemstones--create-channels-between-gemstones) [![CuttersForGemstones icon](commands/CuttersForGemstones/resources/32x32@2x.png)](#cuttersforgemstones--create-cutter-bodies-for-gemstone-seating) [![SurfaceUnfold icon](commands/SurfaceUnfold/resources/32x32@2x.png)](#surfaceunfold--unfold-curved-surfaces-to-flat-2d-sketches-early-preview) [![ObjectsRefold icon](commands/ObjectsRefold/resources/32x32@2x.png)](#objectsrefold--refold-flat-patterns-onto-curved-surfaces-early-preview) [![Gemstones Info icon](commands/GemstonesInfo/resources/32x32@2x.png)](#gemstonesinfo--show-detected-gemstone-diameters-on-model-early-preview)
 
 
 ## Installation
@@ -10,11 +10,15 @@ A small collection of utilities that speed up jewelry modeling in Fusion 360. Th
 2. Click the `+` button and choose "Script or Add-in from my computer".
 3. Select the `FusionJewelryToolkit` folder and click Open.
 4. To make the add-in run automatically when Fusion starts, enable the "Run on Startup" checkbox.
-5. After installation, the commands will appear in the Solid → Create panel.
+5. After installation, the commands will appear in the Utilities tab instead of the Solid → Create panel.
 
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
-## What's new in version 0.8.5
+## What's new
+- **GemstonesInfo (Early Preview):**
+  - Added `GemstonesInfo` utility that detects gemstone bodies created by the add-in and overlays their diameters as on-model text for quick visual inspection. This feature is experimental and in early preview; it may have limitations and behavior subject to change.
+- **UI change:**
+    - Moved commands panel to the `Utilities` tab to improve discoverability and avoid conflicts with Solid → Create.
 - **Enhanced SurfaceUnfold and ObjectsRefold:**
   - Added support for selecting construction planes (not just XY plane) for unfolding surfaces
   - Added X and Y offset parameters to position unfolded sketches on construction planes
@@ -81,6 +85,7 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 
 ---
 
+---
 ![Prongs icon](commands/ProngsOnFaceAtPoints/resources/32x32@2x.png)
 ## ProngsOnFaceAtPoints — Generate prongs on a face at specified points
 - **Description:** Generates prong bodies at selected sketch points on a chosen face or construction plane.
@@ -156,3 +161,12 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 - **Selection:** 1 sketch (created by SurfaceUnfold) and one or more BRep bodies to refold onto the original curved surface.
 - **Key parameters:** None — the command uses metadata from the SurfaceUnfold sketch to reverse the unfolding transformation.
 - **Limitations:** Currently, the command creates copies of the selected bodies instead of moving the existing ones. 
+
+---
+
+![Gemstones Info icon](commands/GemstonesInfo/resources/32x32@2x.png)
+## GemstonesInfo — Show detected gemstone diameters on-model (Early Preview)
+- **Description:** Detects gemstone bodies created by the add-in and overlays their diameters as on-model text labels to help with quick inspection and verification.
+- **Selection:** No explicit selection required — the command scans the model for bodies marked as gemstones and displays overlay text for each detected gemstone.
+- **Behavior:** Uses attribute metadata attached to gemstone bodies to detect them, computes centroid and normal, and places text slightly offset along the gemstone normal (diameter shown in mm).
+- **Limitations:** This feature is in early preview and may have limitations or unexpected behavior; user feedback is appreciated.
