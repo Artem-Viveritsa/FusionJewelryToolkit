@@ -678,9 +678,6 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             _editedCustomFeature.parameters.itemById('coneAngle').expression = _coneAngleValueInput.expression
             _editedCustomFeature.parameters.itemById(strings.Cutter.bottomTypeInputId).expression = str(_cutterBottomTypeInput.selectedItem.index)
 
-            
-            updateFeature(_editedCustomFeature)
-
         except:
             showMessage(f'EditExecuteHandler: {traceback.format_exc()}\n', True)
 

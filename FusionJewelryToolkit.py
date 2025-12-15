@@ -25,8 +25,10 @@ commands = [
     
     ChannelsBetweenGemstones,
     CuttersForGemstones,
+    
     SurfaceUnfold,
     ObjectsRefold,
+
     GemstonesInfo,
     ]
 

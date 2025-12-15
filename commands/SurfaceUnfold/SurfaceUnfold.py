@@ -794,8 +794,6 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             _editedCustomFeature.dependencies.add(strings.Unfold.xDirectionVertexDependencyId, xDirVertex)
             _editedCustomFeature.dependencies.add(strings.Unfold.yDirectionVertexDependencyId, yDirVertex)
 
-            updateFeature(_editedCustomFeature)
-
         except:
             showMessage(f'EditExecuteHandler: {traceback.format_exc()}\n', True)
 

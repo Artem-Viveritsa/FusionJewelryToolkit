@@ -481,30 +481,23 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             
             eventArgs = adsk.core.CommandEventArgs.cast(args)    
 
-            # Cache gemstone entities
             gemstoneCount = _gemstonesSelectionInput.selectionCount
             gemstoneEntities = []
             for i in range(gemstoneCount):
                 gemstoneEntities.append(_gemstonesSelectionInput.selection(i).entity)
 
-            # Clear and rebuild dependencies to handle cases where the user selects different geometry during edit.
             _editedCustomFeature.dependencies.deleteAll()
 
             for i in range(gemstoneCount):
                 gemstone = gemstoneEntities[i]
-                # Use the first face as dependency to support different gemstone cuts
                 if gemstone.faces.count == 0:
                     eventArgs.executeFailed = True
                     return
                 firstGemstoneFace = gemstone.faces[0]
                 _editedCustomFeature.dependencies.add(f'firstGemstoneFace{i}', firstGemstoneFace)
 
-            # Update the parameter.
             _editedCustomFeature.parameters.itemById('ratio').expression = _ratioValueInput.expression
             _editedCustomFeature.parameters.itemById('maxGap').expression = _maxGapValueInput.expression
-
-            # Update the feature to recompute geometry and handle changes in gemstone count or parameter values.
-            updateFeature(_editedCustomFeature)
 
         except:
             showMessage(f'EditExecuteHandler: {traceback.format_exc()}\n', True)

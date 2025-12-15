@@ -580,9 +580,6 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             _editedCustomFeature.parameters.itemById('maxGap').expression = _maxGapValueInput.expression
             _editedCustomFeature.parameters.itemById('weldDistance').expression = _weldDistanceValueInput.expression
 
-            
-            updateFeature(_editedCustomFeature)
-
         except:
             showMessage(f'EditExecuteHandler: {traceback.format_exc()}\n', True)
 

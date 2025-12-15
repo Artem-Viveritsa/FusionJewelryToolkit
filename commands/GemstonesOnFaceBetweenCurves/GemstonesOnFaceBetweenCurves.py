@@ -727,8 +727,6 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             _editedCustomFeature.parameters.itemById(absoluteDepthOffsetInputDef.id).expression = _absoluteDepthOffsetValueInput.expression
             _editedCustomFeature.parameters.itemById(relativeDepthOffsetInputDef.id).expression = _relativeDepthOffsetValueInput.expression
 
-            updateFeature(_editedCustomFeature)
-
         except:
             showMessage(f'EditExecuteHandler: {traceback.format_exc()}\n', True)
 

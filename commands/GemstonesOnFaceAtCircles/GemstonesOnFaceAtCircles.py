@@ -413,7 +413,6 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                 body.material = diamondMaterial
 
             baseFeature.finishEdit()
-
             
             design: adsk.fusion.Design = _app.activeProduct
             defLengthUnits = design.unitsManager.defaultLengthUnits
@@ -455,20 +454,16 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
 
             eventArgs = adsk.core.CommandEventArgs.cast(args)
             
-            
             design: adsk.fusion.Design = _app.activeProduct
             timeline = design.timeline
             markerPosition = timeline.markerPosition
             _restoreTimelineObject = timeline.item(markerPosition - 1)
 
-            
             _editedCustomFeature.timelineObject.rollTo(True)
             _isRolledForEdit = True
-
             
             command = eventArgs.command
             command.beginStep()
-
 
             i = 0
             while True:
@@ -526,8 +521,6 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             _editedCustomFeature.parameters.itemById(flipInputDef.id).expression = str(_flipValueInput.value).lower()
             _editedCustomFeature.parameters.itemById(absoluteDepthOffsetInputDef.id).expression = _absoluteDepthOffsetValueInput.expression
             _editedCustomFeature.parameters.itemById(relativeDepthOffsetInputDef.id).expression = _relativeDepthOffsetValueInput.expression
-
-            updateFeature(_editedCustomFeature)
 
         except:
             showMessage(f'EditExecuteHandler: {traceback.format_exc()}\n', True)
@@ -599,9 +592,9 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
             relativeDepthOffset = 0.0
 
         if faceEntity.objectType == adsk.fusion.ConstructionPlane.classType():
-            component = faceEntity.component
+            component: adsk.fusion.Component = faceEntity.component
         else:
-            component = faceEntity.body.parentComponent
+            component: adsk.fusion.Component = faceEntity.body.parentComponent
 
         baseFeature.startEdit()
         

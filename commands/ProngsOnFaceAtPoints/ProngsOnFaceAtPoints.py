@@ -539,8 +539,6 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             _editedCustomFeature.parameters.itemById(sizeInputDef.id).expression = _sizeValueInput.expression
             _editedCustomFeature.parameters.itemById(heightInputDef.id).expression = _heightValueInput.expression
 
-            updateFeature(_editedCustomFeature)
-
         except:
             showMessage(f'EditExecuteHandler: {traceback.format_exc()}\n', True)
         

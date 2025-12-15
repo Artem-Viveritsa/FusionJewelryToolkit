@@ -15,18 +15,10 @@ A small collection of utilities that speed up jewelry modeling in Fusion 360. Th
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
 ## What's new
-- **Enhanced Gemstone Placement:**
-  - Added **Uniform Distribution** parameter to `GemstonesOnFaceAtCurve` and `GemstonesOnFaceBetweenCurves` for even spacing without end gaps.
-  - Improved `GemstonesOnFaceBetweenCurves` UI with streamlined curve selection.
-- **GemstonesInfo improvements:**
-  - Fixed text rendering with proper billboarding for better visibility from all angles.
-  - Enhanced dialog display to properly show all gemstone size summaries.
-- **UI change:**
-    - Moved commands panel to the `Utilities` tab to improve discoverability and avoid conflicts with Solid → Create.
-- **Enhanced SurfaceUnfold and ObjectsRefold:**
-  - Added support for selecting construction planes (not just XY plane) for unfolding surfaces
-  - Added X and Y offset parameters to position unfolded sketches on construction planes
-  - ⚠️ **Note**: These features are experimental and in early preview stage. Feedback welcome!
+- **ObjectsRefold improvements:** Now preserves body attributes, materials, and names when refolding bodies onto curved surfaces.
+- **Performance optimization:** Improved custom feature update mechanism across all commands for faster editing.
+- **Enhanced Gemstone Placement:** Added **Uniform Distribution** parameter to `GemstonesOnFaceAtCurve` and `GemstonesOnFaceBetweenCurves` for even spacing without end gaps.
+- **GemstonesInfo:** Shows gemstone size summaries with total counts in the command dialog.
 - See [full changelog](CHANGELOG.md) for complete version history.
 
 ---

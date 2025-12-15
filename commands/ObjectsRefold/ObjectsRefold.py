@@ -6,6 +6,7 @@ from ... import strings
 from ...helpers.showMessage import showMessage
 from ...helpers.Surface import refoldBodiesToSurface
 from ...helpers.Points import getPointGeometry
+from ...helpers import Bodies
 
 
 _handlers = []
@@ -376,29 +377,13 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             if not isMesh:
                 face = sourceEntity
 
-            resultBodies, validOldBodies, transformations = refoldBodiesToSurface(bodies, face, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane)
+            resultBodies, _, _ = refoldBodiesToSurface(bodies, face, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane)
             if not resultBodies: return
 
             baseFeature = component.features.baseFeatures.add()
-
             baseFeature.startEdit()
-
-            # for i in range(validOldBodies.count):
-            #     body = validOldBodies.item(i)
-            #     # body = component.bRepBodies.add(validOldBodies.item(i), baseFeature)
-            #     transformation = transformations[i]
-
-            #     bodyCollection = adsk.core.ObjectCollection.create()
-            #     bodyCollection.add(body)
-
-            #     moveFeatureInput = component.features.moveFeatures.createInput2(bodyCollection)
-            #     moveFeatureInput.targetBaseFeature = baseFeature
-            #     moveFeatureInput.defineAsFreeMove(transformation)
-            #     component.features.moveFeatures.add(moveFeatureInput)
-
             for resultBody in resultBodies:
                 component.bRepBodies.add(resultBody, baseFeature)
-
             baseFeature.finishEdit()
 
         except:
@@ -450,35 +435,21 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                     eventArgs.executeFailed = True
                     return
 
-            resultBodies, validOldBodies, transformations = refoldBodiesToSurface(bodies, face, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane)
+            resultBodies, validOldBodies, _ = refoldBodiesToSurface(bodies, face, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane)
 
             if not resultBodies:
                 showMessage('No bodies were transferred to the surface.', True)
                 eventArgs.executeFailed = True
                 return
             
-            # moveFeatures: List[adsk.fusion.MoveFeature] = []
-            
-            # for i in range(validOldBodies.count):
-            #     body = validOldBodies.item(i)
-            #     transformation = transformations[i]
-            #     bodyCollection = adsk.core.ObjectCollection.create()
-            #     bodyCollection.add(body)
-            #     moveFeatureInput = component.features.moveFeatures.createInput2(bodyCollection)
-            #     moveFeatureInput.defineAsFreeMove(transformation)
-            #     moveFeatures.append(component.features.moveFeatures.add(moveFeatureInput))
-
             baseFeature = component.features.baseFeatures.add()
             baseFeature.startEdit()
-
             for i, resultBody in enumerate(resultBodies):
-                component.bRepBodies.add(resultBody, baseFeature)
-                # bodies[i].deleteMe()
-
+                body = component.bRepBodies.add(resultBody, baseFeature)
+                Bodies.copyAttributes(validOldBodies[i], body)
             baseFeature.finishEdit()
 
             customFeatureInput = component.features.customFeatures.createInput(_customFeatureDefinition)
-
             customFeatureInput.addDependency('sketch', sketch)
             
             for i, body in enumerate(bodies):
@@ -488,7 +459,6 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                 firstBodyFace = body.faces[0]
                 customFeatureInput.addDependency(f'firstBodyFace{i}', firstBodyFace)
 
-            # customFeatureInput.setStartAndEndFeatures(moveFeatures[0], moveFeatures[-1])
             customFeatureInput.setStartAndEndFeatures(baseFeature, baseFeature)
             component.features.customFeatures.add(customFeatureInput)
 
@@ -587,9 +557,9 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
                     return
                 firstBodyFace = body.faces[0]
                 _editedCustomFeature.dependencies.add(f'firstBodyFace{i}', firstBodyFace)
-
+            
             updateFeature(_editedCustomFeature)
-
+            
         except:
             showMessage(f'EditExecuteHandler: {traceback.format_exc()}\n', True)
 
@@ -636,20 +606,16 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         if sketchDep is None or sketchDep.entity is None: return False
         sketch: adsk.fusion.Sketch = sketchDep.entity
 
-        firstBodyFaces: list[adsk.fusion.BRepFace] = []
+        bodies = adsk.core.ObjectCollection.create()
         i = 0
         while True:
             faceDep = customFeature.dependencies.itemById(f'firstBodyFace{i}')
             if faceDep is None: break
-            firstBodyFace = faceDep.entity
+            firstBodyFace: adsk.fusion.BRepFace = faceDep.entity
             if firstBodyFace is None: break
-            firstBodyFaces.append(firstBodyFace)
+            bodies.add(firstBodyFace.body)
             i += 1
-        if len(firstBodyFaces) == 0: return False
-
-        bodies = adsk.core.ObjectCollection.create()
-        for face_item in firstBodyFaces:
-            bodies.add(face_item.body)
+        if len(bodies) == 0: return False
 
         unfoldFeature = getSurfaceUnfoldFeatureFromSketch(sketch)
         if unfoldFeature is None: return False
@@ -669,7 +635,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
             face = sourceEntity
             if face is None: return False
 
-        resultBodies, _, _ = refoldBodiesToSurface(bodies, face, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane)
+        resultBodies, validOldBodies, _ = refoldBodiesToSurface(bodies, face, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane)
 
         if not resultBodies: return False
 
@@ -681,7 +647,9 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
                 currentBody = baseFeature.bodies.item(i)
                 baseFeature.updateBody(currentBody, resultBody)
             else:
-                component.bRepBodies.add(resultBody, baseFeature)
+                sourceBody = validOldBodies[i]
+                newBody = component.bRepBodies.add(resultBody, baseFeature)
+                if not _isRolledForEdit: Bodies.copyAttributes(sourceBody, newBody)
 
         while baseFeature.bodies.count > len(resultBodies):
             baseFeature.bodies.item(baseFeature.bodies.count - 1).deleteMe()
@@ -694,15 +662,57 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         baseFeature.finishEdit()
         showMessage(f'updateFeature: {traceback.format_exc()}\n', True)
         return False
+
+
+def copyAttributes(customFeature: adsk.fusion.CustomFeature):
+    """
+    Copy attributes from source bodies to result bodies in the custom feature.
     
+    Args:
+        customFeature: The custom feature containing the bodies to update.
+    """
+    try:
+        baseFeature: adsk.fusion.BaseFeature = None
+        for feature in customFeature.features:
+            if feature.objectType == adsk.fusion.BaseFeature.classType():
+                baseFeature = feature
+                break
+        if baseFeature is None:
+            return
+        
+        sourceBodies: list[adsk.fusion.BRepBody] = []
+        i = 0
+        while True:
+            faceDep = customFeature.dependencies.itemById(f'firstBodyFace{i}')
+            if faceDep is None:
+                break
+            firstBodyFace = faceDep.entity
+            if firstBodyFace is None or firstBodyFace.body is None:
+                break
+            sourceBodies.append(firstBodyFace.body)
+            i += 1
+        
+        if len(sourceBodies) == 0:
+            return
+        
+        for i in range(min(len(sourceBodies), baseFeature.bodies.count)):
+            sourceBody = sourceBodies[i]
+            targetBody = baseFeature.bodies.item(i)
+            
+            Bodies.copyAttributes(sourceBody, targetBody)
+    
+    except:
+        showMessage(f'copyAttributes: {traceback.format_exc()}\n', True)
+
 
 def rollBack():
     """Roll back the timeline to the state before editing."""
     global _restoreTimelineObject, _isRolledForEdit, _editedCustomFeature
 
     if _isRolledForEdit:
+        _editedCustomFeature.timelineObject.rollTo(False)
+        copyAttributes(_editedCustomFeature)
         _restoreTimelineObject.rollTo(False)
-        # _editedCustomFeature.timelineObject.rollTo(False)
         _isRolledForEdit = False
 
     _editedCustomFeature = None

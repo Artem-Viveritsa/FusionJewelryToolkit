@@ -409,54 +409,105 @@ def interpolateDataInPointTriangles(
     pointDataList: List[Tuple[adsk.core.Point3D, adsk.core.Point3D, adsk.core.Vector3D, float]]
 ) -> Tuple[adsk.core.Point3D | None, adsk.core.Vector3D | None]:
     """
-    Interpolate position and normal from surrounding point triangle.
+    Interpolate position and normal from surrounding points using barycentric coordinates or inverse distance weighting.
     
     Args:
         centroidPosition: The centroid position to interpolate for.
-        pointDataList: List of (point2D, sourcePoint3D, sourceNormal, distance) tuples.
+        pointDataList: List of (point2D, sourcePoint3D, sourceNormal, distance) tuples sorted by distance.
     
     Returns:
-        Tuple of (interpolatedPosition, interpolatedNormal) or (None, None) if no valid triangle found.
+        Tuple of (interpolatedPosition, interpolatedNormal) or (None, None) if no valid data.
     """
-    interpolatedPosition = None
-    interpolatedNormal = None
+    if len(pointDataList) == 0:
+        return None, None
     
-    for i in range(len(pointDataList) - 2):
-        point1, sourcePoint1, normal1, _ = pointDataList[i]
-        point2, sourcePoint2, normal2, _ = pointDataList[i + 1]
-        point3, sourcePoint3, normal3, _ = pointDataList[i + 2]
-
-        if isPointInTriangle(centroidPosition.x, centroidPosition.y, point1.x, point1.y, point2.x, point2.y, point3.x, point3.y):
-            areaTotal = triangleArea(point1.x, point1.y, point2.x, point2.y, point3.x, point3.y)
-            if areaTotal > 0:
-                a = triangleArea(centroidPosition.x, centroidPosition.y, point2.x, point2.y, point3.x, point3.y) / areaTotal
-                b = triangleArea(centroidPosition.x, centroidPosition.y, point3.x, point3.y, point1.x, point1.y) / areaTotal
-                c = triangleArea(centroidPosition.x, centroidPosition.y, point1.x, point1.y, point2.x, point2.y) / areaTotal
-
-                interpolatedPosition = adsk.core.Point3D.create(
-                    a * sourcePoint1.x + b * sourcePoint2.x + c * sourcePoint3.x,
-                    a * sourcePoint1.y + b * sourcePoint2.y + c * sourcePoint3.y,
-                    a * sourcePoint1.z + b * sourcePoint2.z + c * sourcePoint3.z
+    if len(pointDataList) == 1:
+        return pointDataList[0][1], pointDataList[0][2]
+    
+    if len(pointDataList) == 2:
+        interpolatedPosition = averagePosition([pointDataList[0][1], pointDataList[1][1]])
+        interpolatedNormal = None
+        if pointDataList[0][2] and pointDataList[1][2]:
+            interpolatedNormal = averageVector([pointDataList[0][2], pointDataList[1][2]], normalize=True)
+        return interpolatedPosition, interpolatedNormal
+    
+    point1, sourcePoint1, normal1, _ = pointDataList[0]
+    point2, sourcePoint2, normal2, _ = pointDataList[1]
+    point3, sourcePoint3, normal3, _ = pointDataList[2]
+    
+    if isPointInTriangle(centroidPosition.x, centroidPosition.y, point1.x, point1.y, point2.x, point2.y, point3.x, point3.y):
+        areaTotal = triangleArea(point1.x, point1.y, point2.x, point2.y, point3.x, point3.y)
+        if areaTotal > 1e-9:
+            a = triangleArea(centroidPosition.x, centroidPosition.y, point2.x, point2.y, point3.x, point3.y) / areaTotal
+            b = triangleArea(centroidPosition.x, centroidPosition.y, point3.x, point3.y, point1.x, point1.y) / areaTotal
+            c = triangleArea(centroidPosition.x, centroidPosition.y, point1.x, point1.y, point2.x, point2.y) / areaTotal
+            
+            interpolatedPosition = adsk.core.Point3D.create(
+                a * sourcePoint1.x + b * sourcePoint2.x + c * sourcePoint3.x,
+                a * sourcePoint1.y + b * sourcePoint2.y + c * sourcePoint3.y,
+                a * sourcePoint1.z + b * sourcePoint2.z + c * sourcePoint3.z
+            )
+            
+            interpolatedNormal = None
+            if normal1 and normal2 and normal3:
+                interpolatedNormal = adsk.core.Vector3D.create(
+                    a * normal1.x + b * normal2.x + c * normal3.x,
+                    a * normal1.y + b * normal2.y + c * normal3.y,
+                    a * normal1.z + b * normal2.z + c * normal3.z
                 )
-                
-                if normal1 and normal2 and normal3:
-                    interpolatedNormal = adsk.core.Vector3D.create(
-                        a * normal1.x + b * normal2.x + c * normal3.x,
-                        a * normal1.y + b * normal2.y + c * normal3.y,
-                        a * normal1.z + b * normal2.z + c * normal3.z
-                    )
-                    interpolatedNormal.normalize()
-                
-                break
-
-    if interpolatedPosition is None:
-        if len(pointDataList) >= 2:
-            interpolatedPosition = averagePosition([pointDataList[0][1], pointDataList[1][1]])
-            if pointDataList[0][2] and pointDataList[1][2]:
-                interpolatedNormal = averageVector([pointDataList[0][2], pointDataList[1][2]], normalize=True)
-        elif len(pointDataList) == 1:
-            interpolatedPosition = pointDataList[0][1]
-            interpolatedNormal = pointDataList[0][2]
+                interpolatedNormal.normalize()
+            
+            return interpolatedPosition, interpolatedNormal
+    
+    numPoints = min(len(pointDataList), 5)
+    weights = []
+    totalWeight = 0.0
+    epsilon = 1e-9
+    
+    for i in range(numPoints):
+        point2D, _, _, distance = pointDataList[i]
+        if distance < epsilon:
+            return pointDataList[i][1], pointDataList[i][2]
+        
+        weight = 1.0 / (distance * distance)
+        weights.append(weight)
+        totalWeight += weight
+    
+    if totalWeight < epsilon:
+        return pointDataList[0][1], pointDataList[0][2]
+    
+    interpolatedX = 0.0
+    interpolatedY = 0.0
+    interpolatedZ = 0.0
+    interpolatedNormalX = 0.0
+    interpolatedNormalY = 0.0
+    interpolatedNormalZ = 0.0
+    hasNormals = True
+    
+    for i in range(numPoints):
+        _, sourcePoint, normal, _ = pointDataList[i]
+        normalizedWeight = weights[i] / totalWeight
+        
+        interpolatedX += sourcePoint.x * normalizedWeight
+        interpolatedY += sourcePoint.y * normalizedWeight
+        interpolatedZ += sourcePoint.z * normalizedWeight
+        
+        if normal:
+            interpolatedNormalX += normal.x * normalizedWeight
+            interpolatedNormalY += normal.y * normalizedWeight
+            interpolatedNormalZ += normal.z * normalizedWeight
+        else:
+            hasNormals = False
+    
+    interpolatedPosition = adsk.core.Point3D.create(interpolatedX, interpolatedY, interpolatedZ)
+    
+    interpolatedNormal = None
+    if hasNormals:
+        interpolatedNormal = adsk.core.Vector3D.create(interpolatedNormalX, interpolatedNormalY, interpolatedNormalZ)
+        if interpolatedNormal.length > epsilon:
+            interpolatedNormal.normalize()
+        else:
+            interpolatedNormal = None
     
     return interpolatedPosition, interpolatedNormal
 

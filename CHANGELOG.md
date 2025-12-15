@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.3] - 2025-12-15
+
+### Changed
+- Optimized custom feature update mechanism across all commands by removing redundant `updateFeature()` calls in edit handlers.
+- Improved `ObjectsRefold` to preserve body attributes, materials, and names when refolding bodies onto surfaces.
+
+### Added
+- `Bodies.py`: New `copyAttributes()` helper function to copy attributes, appearance, material, and name between bodies.
+
+### Fixed
+- Enhanced `interpolateDataInPointTriangles()` in `Surface.py` to use inverse distance weighting for more accurate position and normal interpolation in edge cases.
+
 ## [0.9.2] - 2025-12-09
 
 ### Added
