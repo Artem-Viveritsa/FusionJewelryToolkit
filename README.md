@@ -15,6 +15,7 @@ A small collection of utilities that speed up jewelry modeling in Fusion 360. Th
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
 ## What's new
+- **Gemstone Orientation Control:** Added **Flip Face Normal** parameter to all gemstone placement commands for rotating gemstones 180° around the face normal.
 - **ObjectsRefold improvements:** Now preserves body attributes, materials, and names when refolding bodies onto curved surfaces.
 - **Performance optimization:** Improved custom feature update mechanism across all commands for faster editing.
 - **Enhanced Gemstone Placement:** Added **Uniform Distribution** parameter to `GemstonesOnFaceAtCurve` and `GemstonesOnFaceBetweenCurves` for even spacing without end gaps.
@@ -29,7 +30,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 - **Selection:** 1 face or construction plane and one or more points (sketch points, vertices, or construction points). The face/plane may have any curvature or complexity; the points do not need to lie directly on the face/plane.
 - **Key parameters:**
   - **Size** — Gemstone diameter. Default: `1.5 mm`. Determines the overall size of the gemstone.
-  - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
+  - **Flip Gemstones** — Flip gemstone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
+  - **Flip Face Normal** — Flip gemstone relative to face normal. Rotates the gemstone 180 degrees around the face normal. Default: `false`.
   - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
   - **Relative Depth Offset** — Depth offset as a fraction of gemstone size. Controls how deep the gemstone sits (0.1 = 10% of diameter). Default: `0`.
 
@@ -40,7 +42,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 - **Description:** Creates round-cut gemstone bodies at selected sketch circles on a chosen face or construction plane. The gemstone size matches the circle diameter.
 - **Selection:** 1 face or construction plane and one or more sketch circles. The face/plane may have any curvature or complexity; the circles do not need to lie directly on the face/plane. Minimum circle diameter is `0.5 mm`.
 - **Key parameters:**
-  - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
+  - **Flip Gemstones** — Flip gemstone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
+  - **Flip Face Normal** — Flip gemstone relative to face normal. Rotates the gemstone 180 degrees around the face normal. Default: `false`.
   - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
   - **Relative Depth Offset** — Depth offset as a fraction of gemstone size. Controls how deep the gemstone sits (0.1 = 10% of diameter). Default: `0`.
 
@@ -59,7 +62,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
   - **Size Step** — Size discretization step. Gemstone sizes are rounded to multiples of this value. Default: `0.05 mm`. Range: `0–1.0 mm`.
   - **Target Gap** — Target distance between adjacent gemstones along the curve. Default: `0.1 mm`.
   - **Uniform Distribution** — Distribute gemstones uniformly along the curve. Ensures gemstones fill the entire available length from start offset to end offset without gaps at the ends. Default: `false`.
-  - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
+  - **Flip Gemstones** — Flip gemstone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
+  - **Flip Face Normal** — Flip gemstone relative to face normal. Rotates the gemstone 180 degrees around the face normal. Default: `false`.
   - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
   - **Relative Depth Offset** — Depth offset as a fraction of gemstone size. Controls how deep the gemstone sits (0.1 = 10% of diameter). Default: `0`.
 
@@ -77,7 +81,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
   - **Size Ratio** — Multiplier for gemstone size based on curve distance. Default: `1.0`. Range: `0.5–2.0`.
   - **Size Step** — Size discretization step. Gemstone sizes are rounded to multiples of this value. Default: `0.05 mm`. Range: `0–1.0 mm`.
   - **Target Gap** — Target distance between adjacent gemstones along the curve path. Default: `0.1 mm`.
-  - **Flip (orientation)** — Flip the stone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
+  - **Flip Gemstones** — Flip gemstone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
+  - **Flip Face Normal** — Flip gemstone relative to face normal. Rotates the gemstone 180 degrees around the face normal. Default: `false`.
   - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
   - **Relative Depth Offset** — Depth offset as a fraction of gemstone size. Controls how deep the gemstone sits (0.1 = 10% of diameter). Default: `0`.
 

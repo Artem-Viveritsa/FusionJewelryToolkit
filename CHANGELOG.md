@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.4] - 2025-12-17
+
+### Added
+- Added **Flip Face Normal** parameter to all gemstone placement commands (`GemstonesOnFaceAtPoints`, `GemstonesOnFaceAtCircles`, `GemstonesOnFaceAtCurve`, `GemstonesOnFaceBetweenCurves`) to rotate gemstones 180° around the face normal for better orientation control.
+
+### Changed
+- Renamed "Flip (orientation)" parameter to "Flip Gemstones" across all gemstone commands for clarity.
+
+### Fixed
+- Added backward compatibility handling in `EditExecuteHandler` for older custom features missing the new flipFaceNormal parameter to prevent runtime errors.
+
 ## [0.9.3] - 2025-12-15
 
 ### Changed

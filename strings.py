@@ -27,6 +27,7 @@ ENTITY = 'entity'
 
 GEMSTONE = 'gemstone'
 GEMSTONE_IS_FLIPPED = 'gemstoneIsFlipped'
+GEMSTONE_FLIP_FACE_NORMAL = 'gemstoneFlipFaceNormal'
 GEMSTONE_RELATIVE_DEPTH_OFFSET = 'gemstoneRelativeDepthOffset'
 GEMSTONE_ABSOLUTE_DEPTH_OFFSET = 'gemstoneAbsoluteDepthOffset'
 GEMSTONE_CUT = 'gemstoneCut'

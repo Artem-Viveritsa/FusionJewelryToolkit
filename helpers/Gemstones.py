@@ -28,6 +28,7 @@ class GemstoneInfo:
         self.radius: float = 0.0
         self.diameter: float = 0.0
         self.flip: bool = False
+        self.flipFaceNormal: bool = False
         self.absoluteDepthOffset: float = 0.0
         self.relativeDepthOffset: float = 0.0
         
@@ -120,12 +121,13 @@ class GemstoneInfo:
             showMessage(f'_extractParametersFromFeature error: {str(e)}\n', False)
     
     def _extractParametersFromAttributes(self) -> None:
-        """Extract flip, absoluteDepthOffset, and relativeDepthOffset from the body attributes."""
+        """Extract flip, flipFaceNormal, absoluteDepthOffset, and relativeDepthOffset from the body attributes."""
         try:
             attr = self.body.attributes.itemByName(strings.PREFIX, strings.PROPERTIES)
             if attr:
                 props = json.loads(attr.value)
                 self.flip = props.get(strings.GEMSTONE_IS_FLIPPED, False)
+                self.flipFaceNormal = props.get(strings.GEMSTONE_FLIP_FACE_NORMAL, False)
                 self.absoluteDepthOffset = props.get(strings.GEMSTONE_ABSOLUTE_DEPTH_OFFSET, 0.0)
                 self.relativeDepthOffset = props.get(strings.GEMSTONE_RELATIVE_DEPTH_OFFSET, 0.0)
         except Exception as e:
@@ -198,7 +200,7 @@ def findValidConnections(gemstoneInfos: list[GemstoneInfo], maxGap: float) -> li
     return connections
 
 
-def createGemstone(face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: float, flip: bool = False, absoluteDepthOffset: float = 0.0, relativeDepthOffset: float = 0.0):
+def createGemstone(face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: float, flip: bool = False, absoluteDepthOffset: float = 0.0, relativeDepthOffset: float = 0.0, flipFaceNormal: bool = False):
     """Create a gemstone body based on the face, point, size, and flip.
 
     Args:
@@ -208,6 +210,7 @@ def createGemstone(face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: f
         flip: Whether to flip the gemstone orientation.
         absoluteDepthOffset: The absolute depth offset.
         relativeDepthOffset: The relative depth offset.
+        flipFaceNormal: Whether to flip the gemstone relative to face normal.
 
     Returns:
         The created gemstone body or None if creation failed.
@@ -219,9 +222,13 @@ def createGemstone(face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: f
 
         
         pointOnFace, lengthDir, widthDir, normal = getDataFromPointAndFace(face, point)
-        if pointOnFace is None:
-            return None
+        if pointOnFace is None: return None
 
+        lengthDir.scaleBy(size)
+        widthDir.scaleBy(size)
+        normal.scaleBy(size)
+
+        if flipFaceNormal: normal.scaleBy(-1)
         
         filePath = os.path.join(constants.ASSETS_FOLDER, strings.GEMSTONE_ROUND_CUT + '.sat')
         gemstone = temporaryBRep.createFromFile(filePath).item(0)
@@ -231,16 +238,11 @@ def createGemstone(face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: f
 
         girdleThickness = abs(cylindricalFace.boundingBox.minPoint.z - cylindricalFace.boundingBox.maxPoint.z)
 
-        lengthDir.scaleBy(size)
-        widthDir.scaleBy(size)
-        normal.scaleBy(size)
 
         translate = normal.copy()
         translate.scaleBy(girdleThickness / 2)
         pointOnFace.translateBy(translate)
 
-        
-        
         originalNormal = normal.copy()
         originalNormal.normalize()
         
@@ -264,7 +266,7 @@ def createGemstone(face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: f
         showMessage(f'createGemstone: {traceback.format_exc()}\n', True)
 
 
-def updateGemstone(body: adsk.fusion.BRepBody, face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: float = 1.5, flip: bool = False, absoluteDepthOffset: float = 0.0, relativeDepthOffset: float = 0.0) -> adsk.fusion.BRepBody | None:
+def updateGemstone(body: adsk.fusion.BRepBody, face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: float = 1.5, flip: bool = False, absoluteDepthOffset: float = 0.0, relativeDepthOffset: float = 0.0, flipFaceNormal: bool = False) -> adsk.fusion.BRepBody | None:
     """Update an existing gemstone body with new parameters.
 
     Args:
@@ -275,6 +277,7 @@ def updateGemstone(body: adsk.fusion.BRepBody, face: adsk.fusion.BRepFace, point
         flip: Whether to flip the gemstone orientation.
         absoluteDepthOffset: The absolute depth offset.
         relativeDepthOffset: The relative depth offset.
+        flipFaceNormal: Whether to flip the gemstone relative to face normal.
 
     Returns:
         The updated gemstone body or None if update failed.
@@ -294,7 +297,6 @@ def updateGemstone(body: adsk.fusion.BRepBody, face: adsk.fusion.BRepFace, point
         oldSize = cylinder.radius * 2
         sizeScale = size / oldSize
         
-
         oldNormal = topPlane.normal
         if flip: oldNormal.scaleBy(-1)
 
@@ -315,6 +317,8 @@ def updateGemstone(body: adsk.fusion.BRepBody, face: adsk.fusion.BRepFace, point
         newLengthDirection.scaleBy(sizeScale)
         newWidthDirection.scaleBy(sizeScale)
         newFaceNormal.scaleBy(sizeScale)
+
+        if flipFaceNormal: newFaceNormal.scaleBy(-1)
 
         translate = newFaceNormal.copy()
         translate.scaleBy(girdleThickness / 2)
@@ -341,7 +345,7 @@ def updateGemstone(body: adsk.fusion.BRepBody, face: adsk.fusion.BRepFace, point
         showMessage(f'updateGemstone: {traceback.format_exc()}\n', True)
         
 
-def setGemstoneAttributes(body: adsk.fusion.BRepBody, flip: bool = None, absoluteDepthOffset: float = None, relativeDepthOffset: float = None):
+def setGemstoneAttributes(body: adsk.fusion.BRepBody, flip: bool = None, absoluteDepthOffset: float = None, relativeDepthOffset: float = None, flipFaceNormal: bool = None):
     """Set the name and attributes for a gemstone body.
 
     Args:
@@ -349,6 +353,7 @@ def setGemstoneAttributes(body: adsk.fusion.BRepBody, flip: bool = None, absolut
         flip: Whether the gemstone is flipped. If None, attribute is not set.
         absoluteDepthOffset: The absolute depth offset. If None, attribute is not set.
         relativeDepthOffset: The relative depth offset. If None, attribute is not set.
+        flipFaceNormal: Whether the gemstone is flipped relative to face normal. If None, attribute is not set.
     """
     body.name = strings.GEMSTONE_ROUND_CUT
     
@@ -362,6 +367,8 @@ def setGemstoneAttributes(body: adsk.fusion.BRepBody, flip: bool = None, absolut
         properties[strings.GEMSTONE_ABSOLUTE_DEPTH_OFFSET] = absoluteDepthOffset
     if relativeDepthOffset is not None:
         properties[strings.GEMSTONE_RELATIVE_DEPTH_OFFSET] = relativeDepthOffset
+    if flipFaceNormal is not None:
+        properties[strings.GEMSTONE_FLIP_FACE_NORMAL] = flipFaceNormal
     
     body.attributes.add(strings.PREFIX, strings.PROPERTIES, json.dumps(properties))
 
@@ -379,6 +386,11 @@ def updateGemstoneFeature(customFeature: adsk.fusion.CustomFeature):
         flip = None
     
     try:
+        flipFaceNormal = customFeature.parameters.itemById('flipFaceNormal').expression.lower() == 'true'
+    except:
+        flipFaceNormal = None
+    
+    try:
         absoluteDepthOffset = customFeature.parameters.itemById('absoluteDepthOffset').value
     except:
         absoluteDepthOffset = None
@@ -392,7 +404,7 @@ def updateGemstoneFeature(customFeature: adsk.fusion.CustomFeature):
         if feature.objectType == adsk.fusion.BaseFeature.classType():
             baseFeature: adsk.fusion.BaseFeature = feature
             for body in baseFeature.bodies:
-                setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset)
+                setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset, flipFaceNormal)
 
 
 diamondMaterial = constants.materialLibrary.materials.itemByName('Diamond') 

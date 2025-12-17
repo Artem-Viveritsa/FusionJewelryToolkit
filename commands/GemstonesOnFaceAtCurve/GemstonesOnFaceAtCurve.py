@@ -21,6 +21,7 @@ _endSizeValueInput: adsk.core.ValueCommandInput = None
 _sizeStepValueInput: adsk.core.ValueCommandInput = None
 _targetGapValueInput: adsk.core.ValueCommandInput = None
 _flipValueInput: adsk.core.BoolValueCommandInput = None
+_flipFaceNormalValueInput: adsk.core.BoolValueCommandInput = None
 _flipDirectionValueInput: adsk.core.BoolValueCommandInput = None
 _uniformDistributionValueInput: adsk.core.BoolValueCommandInput = None
 _absoluteDepthOffsetValueInput: adsk.core.ValueCommandInput = None
@@ -90,8 +91,14 @@ targetGapInputDef = strings.InputDef(
 
 flipInputDef = strings.InputDef(
     'flip', 
-    'Flip Gemstone', 
+    'Flip Gemstones', 
     "Flip gemstone orientation.\nReverses the direction the gemstone faces relative to the surface."
+    )
+
+flipFaceNormalInputDef = strings.InputDef(
+    'flipFaceNormal',
+    'Flip Face Normal',
+    "Flip gemstone relative to face normal.\nRotates the gemstone 180 degrees around the face normal."
     )
 
 flipDirectionInputDef = strings.InputDef(
@@ -212,7 +219,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             global _faceSelectionInput, _curveSelectionInput, _startOffsetValueInput, _endOffsetValueInput
             global _startSizeValueInput, _endSizeValueInput, _sizeStepValueInput, _targetGapValueInput
-            global _flipValueInput, _flipDirectionValueInput, _uniformDistributionValueInput
+            global _flipValueInput, _flipFaceNormalValueInput, _flipDirectionValueInput, _uniformDistributionValueInput
             global _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
             global _nonlinearValueInput, _nonlinearSizeValueInput, _nonlinearPositionValueInput
 
@@ -286,6 +293,10 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _flipValueInput = inputs.addBoolValueInput(flipInputDef.id, flipInputDef.name, True, '', flip)
             _flipValueInput.tooltip = flipInputDef.tooltip
 
+            flipFaceNormal = False
+            _flipFaceNormalValueInput = inputs.addBoolValueInput(flipFaceNormalInputDef.id, flipFaceNormalInputDef.name, True, '', flipFaceNormal)
+            _flipFaceNormalValueInput.tooltip = flipFaceNormalInputDef.tooltip
+
             
             absoluteDepthOffset = adsk.core.ValueInput.createByReal(0.0)
             _absoluteDepthOffsetValueInput = inputs.addValueInput(absoluteDepthOffsetInputDef.id, absoluteDepthOffsetInputDef.name, defaultLengthUnits, absoluteDepthOffset)
@@ -338,7 +349,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 return
 
             global _startOffsetValueInput, _endOffsetValueInput, _startSizeValueInput, _endSizeValueInput
-            global _sizeStepValueInput, _targetGapValueInput, _flipValueInput, _flipDirectionValueInput
+            global _sizeStepValueInput, _targetGapValueInput, _flipValueInput, _flipFaceNormalValueInput, _flipDirectionValueInput
             global _uniformDistributionValueInput
             global _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
             global _nonlinearValueInput, _nonlinearSizeValueInput, _nonlinearPositionValueInput
@@ -464,6 +475,14 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _flipValueInput.tooltip = flipInputDef.tooltip
 
             try:
+                flipFaceNormalParam = params.itemById(flipFaceNormalInputDef.id)
+                flipFaceNormal = flipFaceNormalParam.expression.lower() == 'true'
+            except:
+                flipFaceNormal = False
+            _flipFaceNormalValueInput = inputs.addBoolValueInput(flipFaceNormalInputDef.id, flipFaceNormalInputDef.name, True, '', flipFaceNormal)
+            _flipFaceNormalValueInput.tooltip = flipFaceNormalInputDef.tooltip
+
+            try:
                 absoluteDepthOffsetParam = params.itemById(absoluteDepthOffsetInputDef.id)
                 absoluteDepthOffset = adsk.core.ValueInput.createByString(absoluteDepthOffsetParam.expression)
             except:
@@ -545,7 +564,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
             if not all( [_startOffsetValueInput.isValidExpression, _endOffsetValueInput.isValidExpression,
                          _startSizeValueInput.isValidExpression, _endSizeValueInput.isValidExpression,
                          _sizeStepValueInput.isValidExpression, _targetGapValueInput.isValidExpression,
-                         _flipValueInput.isValid, _flipDirectionValueInput.isValid,
+                         _flipValueInput.isValid, _flipFaceNormalValueInput.isValid, _flipDirectionValueInput.isValid,
                          _uniformDistributionValueInput.isValid,
                          _absoluteDepthOffsetValueInput.isValidExpression,
                          _relativeDepthOffsetValueInput.isValidExpression,
@@ -619,6 +638,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             sizeStep = _sizeStepValueInput.value
             targetGap = _targetGapValueInput.value
             flip = _flipValueInput.value
+            flipFaceNormal = _flipFaceNormalValueInput.value
             flipDirection = _flipDirectionValueInput.value
             uniformDistribution = _uniformDistributionValueInput.value
             absoluteDepthOffset = _absoluteDepthOffsetValueInput.value
@@ -631,18 +651,20 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             if len(pointsAndSizes) == 0:
                 return
 
+            component: adsk.fusion.Component = None
             if face.objectType == adsk.fusion.ConstructionPlane.classType():
                 component = face.component
             else:
                 component = face.body.parentComponent
+
             baseFeature = component.features.baseFeatures.add()
             baseFeature.startEdit()
 
             for point, size in pointsAndSizes:
-                gemstone = createGemstone(face, point, size, flip, absoluteDepthOffset, relativeDepthOffset)
+                gemstone = createGemstone(face, point, size, flip, absoluteDepthOffset, relativeDepthOffset, flipFaceNormal)
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeature)
-                    setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset)
+                    setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset, flipFaceNormal)
                     body.material = diamondMaterial
 
             baseFeature.finishEdit()
@@ -687,13 +709,13 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             baseFeature.startEdit()
 
             for point, size in pointsAndSizes:
-                gemstone = createGemstone(face, point, size, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value)
+                gemstone = createGemstone(face, point, size, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value, _flipFaceNormalValueInput.value)
                 if gemstone is None:
                     eventArgs.executeFailed = True
                     return
                 
                 body = comp.bRepBodies.add(gemstone, baseFeature)
-                setGemstoneAttributes(body, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value)
+                setGemstoneAttributes(body, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value, _flipFaceNormalValueInput.value)
                 body.material = diamondMaterial
 
             baseFeature.finishEdit()
@@ -729,6 +751,9 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                          
             flipInput = adsk.core.ValueInput.createByString(str(_flipValueInput.value).lower())
             customFeatureInput.addCustomParameter(flipInputDef.id, flipInputDef.name, flipInput, '', True)
+
+            flipFaceNormalInput = adsk.core.ValueInput.createByString(str(_flipFaceNormalValueInput.value).lower())
+            customFeatureInput.addCustomParameter(flipFaceNormalInputDef.id, flipFaceNormalInputDef.name, flipFaceNormalInput, '', True)
 
             flipDirectionInput = adsk.core.ValueInput.createByString(str(_flipDirectionValueInput.value).lower())
             customFeatureInput.addCustomParameter(flipDirectionInputDef.id, flipDirectionInputDef.name, flipDirectionInput, '', True)
@@ -848,6 +873,11 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             _editedCustomFeature.parameters.itemById(flipInputDef.id).expression = str(_flipValueInput.value).lower()
             _editedCustomFeature.parameters.itemById(absoluteDepthOffsetInputDef.id).expression = _absoluteDepthOffsetValueInput.expression
             _editedCustomFeature.parameters.itemById(relativeDepthOffsetInputDef.id).expression = _relativeDepthOffsetValueInput.expression
+            
+            try:
+                _editedCustomFeature.parameters.itemById(flipFaceNormalInputDef.id).expression = str(_flipFaceNormalValueInput.value).lower()
+            except:
+                pass
 
         except:
             showMessage(f'EditExecuteHandler: {traceback.format_exc()}\n', True)
@@ -918,6 +948,11 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         relativeDepthOffset = customFeature.parameters.itemById(relativeDepthOffsetInputDef.id).value
 
         try:
+            flipFaceNormal = customFeature.parameters.itemById(flipFaceNormalInputDef.id).expression.lower() == 'true'
+        except:
+            flipFaceNormal = False
+
+        try:
             nonlinear = customFeature.parameters.itemById(nonlinearInputDef.id).expression.lower() == 'true'
         except:
             nonlinear = False
@@ -953,18 +988,18 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
 
             if i < baseFeature.bodies.count:
                 currentBody = baseFeature.bodies.item(i)
-                newBody = updateGemstone(currentBody, faceEntity, point, size, flip, absoluteDepthOffset, relativeDepthOffset)
+                newBody = updateGemstone(currentBody, faceEntity, point, size, flip, absoluteDepthOffset, relativeDepthOffset, flipFaceNormal)
                 if newBody is not None:
                     baseFeature.updateBody(currentBody, newBody)
                 else:
                     success = False
             else:
-                gemstone = createGemstone(faceEntity, point, size, flip, absoluteDepthOffset, relativeDepthOffset)
+                gemstone = createGemstone(faceEntity, point, size, flip, absoluteDepthOffset, relativeDepthOffset, flipFaceNormal)
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeature)
                     body.material = diamondMaterial
                     
-                    if not _isRolledForEdit: setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset)
+                    if not _isRolledForEdit: setGemstoneAttributes(body, flip, absoluteDepthOffset, relativeDepthOffset, flipFaceNormal)
                     
                 else:
                     success = False

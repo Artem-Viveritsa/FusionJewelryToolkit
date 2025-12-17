@@ -6,7 +6,7 @@
 	"description":	{
 		"": "A small collection of utilities that speed up jewelry modeling."
 	},
-	"version":	"0.9.3",
+	"version":	"0.9.4",
 	"runOnStartup":	true,
 	"supportedOS":	"windows|mac",
 	"editEnabled":	true
