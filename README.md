@@ -15,11 +15,10 @@ A small collection of utilities that speed up jewelry modeling in Fusion 360. Th
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
 ## What's new
-- **Gemstone Orientation Control:** Added **Flip Face Normal** parameter to all gemstone placement commands for rotating gemstones 180° around the face normal.
-- **ObjectsRefold improvements:** Now preserves body attributes, materials, and names when refolding bodies onto curved surfaces.
-- **Performance optimization:** Improved custom feature update mechanism across all commands for faster editing.
-- **Enhanced Gemstone Placement:** Added **Uniform Distribution** parameter to `GemstonesOnFaceAtCurve` and `GemstonesOnFaceBetweenCurves` for even spacing without end gaps.
-- **GemstonesInfo:** Shows gemstone size summaries with total counts in the command dialog.
+- **Enhanced GemstonesInfo:** Interactive command dialog with gemstone selection and detailed size summaries now integrated in the command UI.
+- **Refactored gemstone validation:** Introduced `isGemstone()` helper function for consistent gemstone body identification across multiple commands.
+- **Improved code maintainability:** Reduced code duplication in `CuttersForGemstones`, `ProngsBetweenGemstones`, and `ChannelsBetweenGemstones` by using centralized gemstone validation.
+- **Gemstone geometry analysis:** Helper supports both attribute-based detection and geometry analysis for fallback gemstone identification.
 - See [full changelog](CHANGELOG.md) for complete version history.
 
 ---

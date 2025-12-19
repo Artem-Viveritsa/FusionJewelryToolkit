@@ -10,6 +10,74 @@ from .Surface import getDataFromPointAndFace
 
 _temporaryBRep: adsk.fusion.TemporaryBRepManager = adsk.fusion.TemporaryBRepManager.get()
 
+
+def isGemstone(body: adsk.fusion.BRepBody, forceGeometryCheck: bool = True) -> bool:
+    """Check if a body is a gemstone.
+    
+    First checks for the presence of gemstone attributes.
+    Falls back to geometry analysis if forceGeometryCheck is True: looks for a single planar top face
+    and a single cylindrical girdle face with parallel axes.
+    
+    Args:
+        body: The BRepBody to check.
+        forceGeometryCheck: If True, performs geometry analysis when attributes are absent.
+        
+    Returns:
+        True if the body is identified as a gemstone, False otherwise.
+    """
+    if body is None: return False
+    if body.faces.count != 58: return False
+    
+    attr = body.attributes.itemByName(strings.PREFIX, strings.PROPERTIES)
+    if attr:
+        try:
+            props = json.loads(attr.value)
+            if props.get(strings.ENTITY) == strings.GEMSTONE:
+                return True
+            else:
+                return False
+        except:
+            pass
+    
+    if not forceGeometryCheck:
+        return False
+    
+    try:
+        tempBRep = adsk.fusion.TemporaryBRepManager.get()
+        tempBody = tempBRep.copy(body)
+        
+        planarFaces: list[adsk.fusion.BRepFace] = []
+        cylindricalFaces: list[adsk.fusion.BRepFace] = []
+        
+        for face in tempBody.faces:
+            surfaceType = face.geometry.surfaceType
+            if surfaceType == adsk.core.SurfaceTypes.PlaneSurfaceType:
+                planarFaces.append(face)
+            elif surfaceType == adsk.core.SurfaceTypes.CylinderSurfaceType:
+                cylindricalFaces.append(face)
+        
+        if len(cylindricalFaces) != 1:
+            return False
+        
+        cylindricalFace = cylindricalFaces[0]
+        cylinder = adsk.core.Cylinder.cast(cylindricalFace.geometry)
+        cylinderAxis = cylinder.axis
+        
+        topFace = sorted(planarFaces, key=lambda x: x.area, reverse=True)[0] if planarFaces else None
+        if topFace is None:
+            return False
+        
+        topPlane = adsk.core.Plane.cast(topFace.geometry)
+        topNormal = topPlane.normal
+        
+        if cylinderAxis.isParallelTo(topNormal):
+            return True
+        
+    except:
+        pass
+    
+    return False
+
 class GemstoneInfo:
     """Stores pre-computed geometric data for a gemstone."""
     def __init__(self, body: adsk.fusion.BRepBody):

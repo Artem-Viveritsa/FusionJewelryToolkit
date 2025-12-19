@@ -1,13 +1,12 @@
 import os
 import adsk.core, adsk.fusion, traceback
-import json
 import math
 
 from ... import strings
 from ... import constants
 from ...helpers.showMessage import showMessage
 from ...helpers.Bodies import placeBody
-from ...helpers.Gemstones import extractGemstonesInfo, GemstoneInfo
+from ...helpers.Gemstones import extractGemstonesInfo, GemstoneInfo, isGemstone
 
 
 _handlers = []
@@ -360,17 +359,7 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
                         eventArgs.isSelectable = False
                         return
 
-                attribute = preSelectBody.attributes.itemByName(strings.PREFIX, strings.PROPERTIES)
-                if attribute is None:
-                    eventArgs.isSelectable = False
-                    return
-                
-                try:
-                    properties = json.loads(attribute.value)
-                    if properties.get(strings.ENTITY) != strings.GEMSTONE:
-                        eventArgs.isSelectable = False
-                        return
-                except:
+                if not isGemstone(preSelectBody):
                     eventArgs.isSelectable = False
                     return
                                 

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.5] - 2025-12-19
+
+### Added
+- `Gemstones.py`: New `isGemstone()` helper function to identify gemstone bodies by attributes or geometry analysis. Checks for gemstone attribute first, then performs geometry analysis looking for a single planar top face and cylindrical girdle face.
+- `GemstonesInfo`: Enhanced with interactive selection input to choose specific gemstones for detailed information display. Supports showing info for all gemstones or selected subset.
+
+### Changed
+- Refactored gemstone body validation in `CuttersForGemstones`, `ProngsBetweenGemstones`, and `ChannelsBetweenGemstones` to use the new `isGemstone()` function, reducing code duplication and improving maintainability.
+- `GemstonesInfo`: Converted from overlay-based visualization to command dialog with dynamic gemstone size summary display and selection filtering.
+
 ## [0.9.4] - 2025-12-17
 
 ### Added

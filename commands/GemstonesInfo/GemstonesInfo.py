@@ -1,4 +1,3 @@
-import json
 import os
 import traceback
 
@@ -7,27 +6,32 @@ import adsk.fusion
 
 from ... import strings
 from ...helpers import Gemstones
+from ...helpers.Gemstones import isGemstone
 from ...helpers.showMessage import showMessage
+
 
 _app: adsk.core.Application = None
 _ui: adsk.core.UserInterface = None
 _handlers: list = []
-_cgGroup: adsk.fusion.CustomGraphicsGroup = None
-_gemstonesList: list[tuple[float, int]] = []
+
+_gemstonesSelectionInput: adsk.core.SelectionCommandInput = None
+_infoTextInput: adsk.core.TextBoxCommandInput = None
 
 COMMAND_ID: str = strings.PREFIX + strings.GEMSTONES_INFO
-
 RESOURCES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', '')
+
 
 def run(panel: adsk.core.ToolbarPanel) -> None:
     try:
         global _app, _ui
         _app = adsk.core.Application.get()
-        _ui  = _app.userInterface
+        _ui = _app.userInterface
 
         cmdDef = _ui.commandDefinitions.itemById(COMMAND_ID)
         if not cmdDef:
-            cmdDef = _ui.commandDefinitions.addButtonDefinition(COMMAND_ID, 'Gemstones Info', 'Show info about gemstones', RESOURCES_FOLDER)
+            cmdDef = _ui.commandDefinitions.addButtonDefinition(
+                COMMAND_ID, 'Gemstones Info', 'Show info about gemstones', RESOURCES_FOLDER
+            )
 
         control = panel.controls.addCommand(cmdDef, '', False)
         control.isPromoted = True
@@ -37,131 +41,223 @@ def run(panel: adsk.core.ToolbarPanel) -> None:
         _handlers.append(onCommandCreated)
 
     except:
-        showMessage('Failed:\n{}'.format(traceback.format_exc()), True)
+        showMessage(f'Failed:\n{traceback.format_exc()}', True)
+
 
 def stop(panel: adsk.core.ToolbarPanel) -> None:
     try:
         control = panel.controls.itemById(COMMAND_ID)
         if control:
             control.deleteMe()
-            
+
         commandDefinition = _ui.commandDefinitions.itemById(COMMAND_ID)
         if commandDefinition:
             commandDefinition.deleteMe()
     except:
-        showMessage('Stop Failed:\n{}'.format(traceback.format_exc()), True)
+        showMessage(f'Stop Failed:\n{traceback.format_exc()}', True)
+
 
 class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
     def __init__(self):
         super().__init__()
-    def notify(self, args) -> None:
-        try:
-            args = adsk.core.CommandCreatedEventArgs.cast(args)
-            
-            cmd = args.command
-            onDestroy = CommandDestroyHandler()
-            cmd.destroy.add(onDestroy)
-            _handlers.append(onDestroy)
 
-            showGemstonesInfo()
-            
+    def notify(self, args: adsk.core.CommandCreatedEventArgs) -> None:
+        try:
+            global _gemstonesSelectionInput, _infoTextInput
+
+            cmd = args.command
             inputs = cmd.commandInputs
-            gemstoneText = '\n'.join([f"<b>{diameter:.2f}</b> – {count}<br>" for diameter, count in _gemstonesList]) if _gemstonesList else 'No gemstones found'
-            numRows = max(len(_gemstonesList), 1) + 1
-            inputs.addTextBoxCommandInput('info', 'Info', gemstoneText, numRows, True)
-            
+
+            handlers = [
+                (cmd.preSelect, PreSelectHandler()),
+                (cmd.executePreview, ExecutePreviewHandler()),
+                (cmd.destroy, CommandDestroyHandler()),
+            ]
+            for event, handler in handlers:
+                event.add(handler)
+                _handlers.append(handler)
+
+            _gemstonesSelectionInput = inputs.addSelectionInput(
+                'selectGemstones', 'Select Gemstones',
+                'Select gemstones to show info (leave empty to show all)'
+            )
+            _gemstonesSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Bodies)
+            _gemstonesSelectionInput.setSelectionLimits(0)
+
+            inputs.addSeparatorCommandInput('separatorAfterSelection')
+
+            _infoTextInput = inputs.addTextBoxCommandInput('info', 'Info', '', 1, True)
+
+            updateGemstonesDisplay()
+
         except:
-            showMessage('Failed:\n{}'.format(traceback.format_exc()), True)
-            
+            showMessage(f'Failed:\n{traceback.format_exc()}', True)
+
+
+class ExecutePreviewHandler(adsk.core.CommandEventHandler):
+    def __init__(self):
+        super().__init__()
+
+    def notify(self, args: adsk.core.CommandEventArgs) -> None:
+        try:
+            updateGemstonesDisplay()
+        except:
+            showMessage(f'ExecutePreviewHandler Failed:\n{traceback.format_exc()}', True)
+
+
+class PreSelectHandler(adsk.core.SelectionEventHandler):
+    def __init__(self):
+        super().__init__()
+
+    def notify(self, args: adsk.core.SelectionEventArgs) -> None:
+        try:
+            entity = args.selection.entity
+
+            if entity.objectType != adsk.fusion.BRepBody.classType():
+                return
+
+            body: adsk.fusion.BRepBody = entity
+
+            if body.assemblyContext and body.assemblyContext.isReferencedComponent:
+                args.isSelectable = False
+                return
+
+            if not isGemstone(body):
+                args.isSelectable = False
+
+        except:
+            showMessage(f'PreSelectHandler Failed:\n{traceback.format_exc()}', True)
+
+
 class CommandDestroyHandler(adsk.core.CommandEventHandler):
     def __init__(self):
         super().__init__()
-    def notify(self, args) -> None:
+
+    def notify(self, args: adsk.core.CommandEventArgs) -> None:
         try:
-            global _cgGroup
-            if _cgGroup:
-                _cgGroup.deleteMe()
-                _cgGroup = None
-                
-            _handlers.pop()
-            
+            global _gemstonesSelectionInput, _infoTextInput
+
+            clearCustomGraphics()
+
+            _gemstonesSelectionInput = None
+            _infoTextInput = None
+
         except:
-            showMessage('Failed:\n{}'.format(traceback.format_exc()), True)
+            showMessage(f'Failed:\n{traceback.format_exc()}', True)
 
 
-def showGemstonesInfo() -> None:
-    """Search for gemstone bodies and display their diameter as overlay text.
+def collectGemstoneInfos() -> list[Gemstones.GemstoneInfo]:
+    """Collect gemstone infos from selection or all visible gemstones."""
+    global _gemstonesSelectionInput, _app
 
-    Bodies are detected as gemstones by reading the JSON stored under the
-    attribute key (`strings.PREFIX`, `strings.PROPERTIES`). For each detected
-    gemstone the function computes a position slightly offset along the
-    gemstone's normal and adds a Custom Graphics text label showing the
-    diameter.
-    """
+    if _gemstonesSelectionInput and _gemstonesSelectionInput.selectionCount > 0:
+        return [
+            Gemstones.GemstoneInfo(adsk.fusion.BRepBody.cast(
+                _gemstonesSelectionInput.selection(i).entity
+            ))
+            for i in range(_gemstonesSelectionInput.selectionCount)
+            if isGemstone(_gemstonesSelectionInput.selection(i).entity)
+        ]
 
-    global _cgGroup, _app, _gemstonesList
-    
     design = adsk.fusion.Design.cast(_app.activeProduct)
-
-    if not _cgGroup: _cgGroup = design.rootComponent.customGraphicsGroups.add()
-
-    def is_gemstone(body: adsk.fusion.BRepBody) -> bool:
-        attr = body.attributes.itemByName(strings.PREFIX, strings.PROPERTIES)
-        if attr:
-            try:
-                props = json.loads(attr.value)
-                if props.get(strings.ENTITY) == strings.GEMSTONE:
-                    return True
-            except:
-                pass
-        return False
+    if not design:
+        return []
 
     gemstoneInfos: list[Gemstones.GemstoneInfo] = []
-    if design:
-        root = design.rootComponent
-        for body in root.bRepBodies:
-            if body.isLightBulbOn and is_gemstone(body):
-                gemInfo = Gemstones.GemstoneInfo(body)
-                gemstoneInfos.append(gemInfo)
-        
-        for occ in root.allOccurrences:
-            if occ.isLightBulbOn:
-                for body in occ.bRepBodies:
-                    if body.isLightBulbOn and is_gemstone(body):
-                        gemInfo = Gemstones.GemstoneInfo(body)
-                        gemstoneInfos.append(gemInfo)
-    
+    root = design.rootComponent
+
+    for body in root.bRepBodies:
+        if body.isLightBulbOn and isGemstone(body):
+            gemstoneInfos.append(Gemstones.GemstoneInfo(body))
+
+    for occ in root.allOccurrences:
+        if occ.isLightBulbOn:
+            for body in occ.bRepBodies:
+                if body.isLightBulbOn and isGemstone(body):
+                    gemstoneInfos.append(Gemstones.GemstoneInfo(body))
+
+    return gemstoneInfos
+
+
+def formatGemstonesText(gemstoneInfos: list[Gemstones.GemstoneInfo]) -> tuple[str, int]:
+    """Format gemstones info as text for display.
+
+    Returns:
+        Tuple of (formatted text, number of rows).
+    """
+    if not gemstoneInfos:
+        return 'No gemstones found', 2
+
     gemstoneDict: dict[float, int] = {}
     for gemInfo in gemstoneInfos:
         diameterMm = round(gemInfo.diameter * 10, 2)
         gemstoneDict[diameterMm] = gemstoneDict.get(diameterMm, 0) + 1
-    
-    sorted_items = sorted(gemstoneDict.items(), key=lambda x: x[0])
-    _gemstonesList = [(diameter, count) for diameter, count in sorted_items]
-    
+
+    sortedItems = sorted(gemstoneDict.items(), key=lambda x: x[0])
+    text = ''.join([f"<b>{diameter:.2f}</b> – {count}<br>" for diameter, count in sortedItems])
+
+    return text, len(sortedItems) + 1
+
+
+def updateGemstonesDisplay() -> None:
+    """Update gemstones data, info display, and custom graphics."""
+    global _infoTextInput
+
+    gemstoneInfos = collectGemstoneInfos()
+
+    text, numRows = formatGemstonesText(gemstoneInfos)
+    if _infoTextInput:
+        _infoTextInput.formattedText = text
+        _infoTextInput.numRows = numRows
+
+    updateCustomGraphics(gemstoneInfos)
+
+
+def clearCustomGraphics() -> None:
+    """Clear all custom graphics groups from the design."""
+    global _app
+
+    design = adsk.fusion.Design.cast(_app.activeProduct)
+    if not design:
+        return
+
+    groups = design.rootComponent.customGraphicsGroups
+    for i in range(groups.count - 1, -1, -1):
+        try:
+            groups.item(i).deleteMe()
+        except:
+            pass
+
+
+def updateCustomGraphics(gemstoneInfos: list[Gemstones.GemstoneInfo]) -> None:
+    """Update custom graphics overlay for gemstones."""
+    global _app
+
+    design = adsk.fusion.Design.cast(_app.activeProduct)
+    if not design:
+        return
+
+    clearCustomGraphics()
+
     if not gemstoneInfos:
         return
 
-    try:
-        for gemInfo in gemstoneInfos:
-            centroid = gemInfo.centroid.copy()
-            
-            text = f"{gemInfo.diameter * 10:.2f}" # in mm
+    cgGroup = design.rootComponent.customGraphicsGroups.add()
+    solidColor = adsk.fusion.CustomGraphicsSolidColorEffect.create(
+        adsk.core.Color.create(0, 0, 0, 255)
+    )
 
-            normalOffset = gemInfo.getNormalizedNormal()
-            normalOffset.scaleBy(gemInfo.radius)
-            centroid.translateBy(normalOffset)
-            
-            transform = adsk.core.Matrix3D.create()
-            transform.translation = centroid.asVector()
-            
-            cgText = _cgGroup.addText(text, 'Arial', 0.03, transform)
-                        
-            cgText.billBoarding = adsk.fusion.CustomGraphicsBillBoard.create(None)
-            
-            solidColor = adsk.fusion.CustomGraphicsSolidColorEffect.create(adsk.core.Color.create(0, 0, 0, 255))
-            cgText.color = solidColor
-            
-    except Exception as e:
-        showMessage(f'Error processing gemstone: {str(e)}\n', False)
+    for gemInfo in gemstoneInfos:
+        centroid = gemInfo.centroid.copy()
+
+        normalOffset = gemInfo.getNormalizedNormal()
+        normalOffset.scaleBy(gemInfo.radius)
+        centroid.translateBy(normalOffset)
+
+        transform = adsk.core.Matrix3D.create()
+        transform.translation = centroid.asVector()
+
+        cgText = cgGroup.addText(f"{gemInfo.diameter * 10:.2f}", 'Arial', 0.03, transform)
+        cgText.billBoarding = adsk.fusion.CustomGraphicsBillBoard.create(None)
+        cgText.color = solidColor
 
