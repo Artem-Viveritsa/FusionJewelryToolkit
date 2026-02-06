@@ -482,14 +482,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                 return
 
             startOffset = _startOffsetValueInput.value
-            if startOffset < 0:
-                eventArgs.areInputsValid = False
-                return
-
             endOffset = _endOffsetValueInput.value
-            if endOffset < 0:
-                eventArgs.areInputsValid = False
-                return
 
             sizeStep = _sizeStepValueInput.value
             if sizeStep < 0 or sizeStep > 0.1:

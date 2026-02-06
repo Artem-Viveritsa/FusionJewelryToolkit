@@ -575,14 +575,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                 return
 
             startOffset = _startOffsetValueInput.value
-            if startOffset < 0:
-                eventArgs.areInputsValid = False
-                return
-
             endOffset = _endOffsetValueInput.value
-            if endOffset < 0:
-                eventArgs.areInputsValid = False
-                return
 
             startSize = _startSizeValueInput.value
             if startSize < minimumGemstoneSize:

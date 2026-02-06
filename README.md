@@ -17,10 +17,9 @@ Command creation and editing work correctly only with **Hybrid Design Type**. Pa
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
 ## What's new
-- **Enhanced GemstonesInfo:** Interactive command dialog with gemstone selection and detailed size summaries now integrated in the command UI.
-- **Refactored gemstone validation:** Introduced `isGemstone()` helper function for consistent gemstone body identification across multiple commands.
-- **Improved code maintainability:** Reduced code duplication in `CuttersForGemstones`, `ProngsBetweenGemstones`, and `ChannelsBetweenGemstones` by using centralized gemstone validation.
-- **Gemstone geometry analysis:** Helper supports both attribute-based detection and geometry analysis for fallback gemstone identification.
+- **Negative offset support:** `GemstonesOnFaceAtCurve` and `GemstonesOnFaceBetweenCurves` now support negative offsets with curve/polyline extrapolation along tangent directions.
+- **Curve extrapolation:** Gemstones can be placed beyond curve endpoints following the tangent direction, enabling flexible distribution patterns.
+- **Size consistency:** For two-curve mode, gemstones placed beyond polyline bounds maintain the size of the nearest edge gemstone.
 - See [full changelog](CHANGELOG.md) for complete version history.
 
 ---

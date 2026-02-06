@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.6] - 2026-02-06
+
+### Added
+- Negative offset support for `GemstonesOnFaceAtCurve` and `GemstonesOnFaceBetweenCurves` commands. Curve extrapolation allows gemstone placement beyond curve endpoints along the tangent direction for flexible gemstone distribution.
+
+### Changed
+- `Curves.py`: Implemented curve extrapolation for `calculatePointsAndSizesAlongCurve()` using tangent vectors at curve endpoints. Negative offsets now extend placement area without clipping at curve boundaries.
+- `Curves.py`: Implemented polyline extrapolation for `calculatePointsAndSizesBetweenCurves()` with size consistency. Gemstones placed outside polyline bounds maintain the size of the nearest edge gemstone on the curves.
+- Removed validation restrictions preventing negative offset values in both gemstone placement commands.
+
 ## [0.9.5] - 2025-12-19
 
 ### Added
