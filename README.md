@@ -17,6 +17,7 @@ Command creation and editing work correctly only with **Hybrid Design Type**. Pa
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
 ## What's new
+- **Overlap prevention:** Gemstone placement along curves and between curves now prevents the last gemstone from being placed if it's too close to the first one, avoiding overlapping.
 - **Negative offset support:** `GemstonesOnFaceAtCurve` and `GemstonesOnFaceBetweenCurves` now support negative offsets with curve/polyline extrapolation along tangent directions.
 - **Curve extrapolation:** Gemstones can be placed beyond curve endpoints following the tangent direction, enabling flexible distribution patterns.
 - **Size consistency:** For two-curve mode, gemstones placed beyond polyline bounds maintain the size of the nearest edge gemstone.

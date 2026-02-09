@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.7] - 2026-02-09
+
+### Fixed
+- `Curves.py`: Added check to remove the last gemstone point if the distance between the first and last gemstone centers is less than `gemstoneOverlapMergeThreshold` to prevent overlapping or too close placement in `calculatePointsAndSizesAlongCurve()` and `calculatePointsAndSizesBetweenCurves()`.
+
 ## [0.9.6] - 2026-02-06
 
 ### Added

@@ -1,7 +1,7 @@
 import adsk.core, adsk.fusion, traceback
 
 from .showMessage import showMessage
-from ..constants import measureManager, minimumGemstoneSize
+from ..constants import measureManager, minimumGemstoneSize, gemstoneOverlapMergeThreshold
 from .Points import averagePosition
 
 
@@ -182,6 +182,12 @@ def calculatePointsAndSizesAlongCurve(curve: adsk.core.Curve3D, startOffset: flo
             point = getPointAtCalculationPosition(centerPositions[i])
             if point is not None:
                 result.append((point, gemstoneSizes[i]))
+        
+        if len(result) > 1:
+            firstPoint = result[0][0]
+            lastPoint = result[-1][0]
+            if firstPoint.distanceTo(lastPoint) < gemstoneOverlapMergeThreshold:
+                result.pop()
         
         return result
     
@@ -473,6 +479,12 @@ def calculatePointsAndSizesBetweenCurves(
                         currentPos += currentRadius + uniformGap + nextRadius
                 
                 result = newResult
+        
+        if len(result) > 1:
+            firstPoint = result[0][0]
+            lastPoint = result[-1][0]
+            if firstPoint.distanceTo(lastPoint) < gemstoneOverlapMergeThreshold:
+                result.pop()
         
         return result
     

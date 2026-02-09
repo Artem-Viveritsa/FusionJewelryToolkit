@@ -13,3 +13,4 @@ ASSETS_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets
 materialLibrary = adsk.core.Application.get().materialLibraries.load(ASSETS_FOLDER + 'Jewelry Material Library.adsklib')
 
 minimumGemstoneSize = 0.05
+gemstoneOverlapMergeThreshold = 0.01
