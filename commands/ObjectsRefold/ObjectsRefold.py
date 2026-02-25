@@ -664,54 +664,13 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         return False
 
 
-def copyAttributes(customFeature: adsk.fusion.CustomFeature):
-    """
-    Copy attributes from source bodies to result bodies in the custom feature.
-    
-    Args:
-        customFeature: The custom feature containing the bodies to update.
-    """
-    try:
-        baseFeature: adsk.fusion.BaseFeature = None
-        for feature in customFeature.features:
-            if feature.objectType == adsk.fusion.BaseFeature.classType():
-                baseFeature = feature
-                break
-        if baseFeature is None:
-            return
-        
-        sourceBodies: list[adsk.fusion.BRepBody] = []
-        i = 0
-        while True:
-            faceDep = customFeature.dependencies.itemById(f'firstBodyFace{i}')
-            if faceDep is None:
-                break
-            firstBodyFace = faceDep.entity
-            if firstBodyFace is None or firstBodyFace.body is None:
-                break
-            sourceBodies.append(firstBodyFace.body)
-            i += 1
-        
-        if len(sourceBodies) == 0:
-            return
-        
-        for i in range(min(len(sourceBodies), baseFeature.bodies.count)):
-            sourceBody = sourceBodies[i]
-            targetBody = baseFeature.bodies.item(i)
-            
-            Bodies.copyAttributes(sourceBody, targetBody)
-    
-    except:
-        showMessage(f'copyAttributes: {traceback.format_exc()}\n', True)
-
-
 def rollBack():
     """Roll back the timeline to the state before editing."""
     global _restoreTimelineObject, _isRolledForEdit, _editedCustomFeature
 
     if _isRolledForEdit:
         _editedCustomFeature.timelineObject.rollTo(False)
-        copyAttributes(_editedCustomFeature)
+        Bodies.copyBodyAttributes(_editedCustomFeature)
         _restoreTimelineObject.rollTo(False)
         _isRolledForEdit = False
 

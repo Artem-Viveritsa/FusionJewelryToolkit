@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.0] - 2026-02-25
+
+### Added
+- **`PatternAlongPathOnSurface`**: New command to distribute any BRep bodies along a curve on a surface. Bodies are positioned and oriented based on a reference base point and base surface, with two placement modes:
+  - **On Surface** — body positions are projected onto the target surface.
+  - **On Curve** — bodies are placed directly on the curve without surface projection.
+- `Curves.py`: New `calculatePointsAlongCurve()` helper for computing evenly-spaced positions and tangent vectors along a curve, with support for start/end offsets, flip direction, uniform distribution, and count limiting with centering.
+- `strings.py`: Added `PATTERN_ALONG_PATH_ON_SURFACE` identifier, `PATTERN_BODY` and `APPLIED_TRANSFORM` attribute keys, `PatternPlacementMode` enum, and `PatternAlongPathStrings` configuration class.
+- `constants.py`: Added `patternAlongPathDefaultSpacingCm`, `patternAlongPathPlacementOnSurfaceIndex`, and `patternAlongPathPlacementOnCurveIndex` constants.
+- `Bodies.py`: New `copyBodyAttributes()` helper that copies attributes, appearance, material, and name from source bodies to all output bodies of a custom feature, with cyclic mapping to correctly handle patterns (multiple output bodies per source body).
+
+### Changed
+- `ProngsBetweenGemstones`: Updated default values — Prong Size Ratio: `0.35 → 0.4`, Prong Height Ratio: `0.3 → 0.25`, Width Between Prongs Ratio: `0.65 → 0.6`.
+- `ChannelsBetweenGemstones`: Changed default Channel Ratio from `0.35` to `0.4`.
+- `ObjectsRefold`: Removed local `copyAttributes()` in favour of the shared `Bodies.copyBodyAttributes()` helper; cyclic mapping now correctly preserves attributes when refolded body count differs from source body count.
+
+### Fixed
+- `ChannelsBetweenGemstones`: Added a small endpoint overlap (0.005 cm) to channel segments to prevent visible gaps at gemstone boundaries caused by floating-point precision.
+- `Gemstones.py`: Fixed crash in `isGemstone()` when `body.faces.count` raises an exception (e.g. on invalid or partially-loaded bodies).
+
 ## [0.9.7] - 2026-02-09
 
 ### Fixed

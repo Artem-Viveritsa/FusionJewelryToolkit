@@ -1,8 +1,8 @@
 # Fusion 360 Jewelry Toolkit
 
-A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in adds specialized commands for gemstone placement, prong creation, channels, cutters, and surface manipulation.
+A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in adds specialized commands for gemstone placement, prong creation, channels, cutters, body patterning along paths, and surface manipulation.
 
-[![Gemstones icon](commands/GemstonesOnFaceAtPoints/resources/32x32@2x.png)](#gemstonesonfaceatpoints--place-round-gemstones-on-a-face-at-specified-points) [![Gemstones icon](commands/GemstonesOnFaceAtCircles/resources/32x32@2x.png)](#gemstonesonfaceatcircles--place-round-gemstones-on-a-face-at-sketch-circles) [![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)](#gemstonesonfaceatcurve--place-gemstones-along-a-curve-with-variable-sizes) [![Gemstones icon](commands/GemstonesOnFaceBetweenCurves/resources/32x32@2x.png)](#gemstonesonfacebetweencurves--place-gemstones-between-two-curves) [![Prongs icon](commands/ProngsOnFaceAtPoints/resources/32x32@2x.png)](#prongsonfaceatpoints--generate-prongs-on-a-face-at-specified-points) [![ProngsBetweenGemstones icon](commands/ProngsBetweenGemstones/resources/32x32@2x.png)](#prongsbetweengemstones--create-prongs-between-gemstones) [![ChannelsBetweenGemstones icon](commands/ChannelsBetweenGemstones/resources/32x32@2x.png)](#channelsbetweengemstones--create-channels-between-gemstones) [![CuttersForGemstones icon](commands/CuttersForGemstones/resources/32x32@2x.png)](#cuttersforgemstones--create-cutter-bodies-for-gemstone-seating) [![SurfaceUnfold icon](commands/SurfaceUnfold/resources/32x32@2x.png)](#surfaceunfold--unfold-curved-surfaces-to-flat-2d-sketches-early-preview) [![ObjectsRefold icon](commands/ObjectsRefold/resources/32x32@2x.png)](#objectsrefold--refold-flat-patterns-onto-curved-surfaces-early-preview) [![Gemstones Info icon](commands/GemstonesInfo/resources/32x32@2x.png)](#gemstonesinfo--show-detected-gemstone-diameters-on-model-early-preview)
+[![Gemstones icon](commands/GemstonesOnFaceAtPoints/resources/32x32@2x.png)](#gemstonesonfaceatpoints--place-round-gemstones-on-a-face-at-specified-points) [![Gemstones icon](commands/GemstonesOnFaceAtCircles/resources/32x32@2x.png)](#gemstonesonfaceatcircles--place-round-gemstones-on-a-face-at-sketch-circles) [![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)](#gemstonesonfaceatcurve--place-gemstones-along-a-curve-with-variable-sizes) [![Gemstones icon](commands/GemstonesOnFaceBetweenCurves/resources/32x32@2x.png)](#gemstonesonfacebetweencurves--place-gemstones-between-two-curves) [![Prongs icon](commands/ProngsOnFaceAtPoints/resources/32x32@2x.png)](#prongsonfaceatpoints--generate-prongs-on-a-face-at-specified-points) [![ProngsBetweenGemstones icon](commands/ProngsBetweenGemstones/resources/32x32@2x.png)](#prongsbetweengemstones--create-prongs-between-gemstones) [![ChannelsBetweenGemstones icon](commands/ChannelsBetweenGemstones/resources/32x32@2x.png)](#channelsbetweengemstones--create-channels-between-gemstones) [![CuttersForGemstones icon](commands/CuttersForGemstones/resources/32x32@2x.png)](#cuttersforgemstones--create-cutter-bodies-for-gemstone-seating) [![PatternAlongPathOnSurface icon](commands/PatternAlongPathOnSurface/resources/32x32@2x.png)](#patternalongpathonsurface--distribute-bodies-along-a-curve-on-a-surface) [![SurfaceUnfold icon](commands/SurfaceUnfold/resources/32x32@2x.png)](#surfaceunfold--unfold-curved-surfaces-to-flat-2d-sketches-early-preview) [![ObjectsRefold icon](commands/ObjectsRefold/resources/32x32@2x.png)](#objectsrefold--refold-flat-patterns-onto-curved-surfaces-early-preview) [![Gemstones Info icon](commands/GemstonesInfo/resources/32x32@2x.png)](#gemstonesinfo--show-detected-gemstone-diameters-on-model-early-preview)
 
 ## ⚠️ Important
 Command creation and editing work correctly only with **Hybrid Design Type**. Part and Assembly design types may have limitations. Ensure you're using Hybrid Design for full functionality of all commands.
@@ -17,10 +17,9 @@ Command creation and editing work correctly only with **Hybrid Design Type**. Pa
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
 ## What's new
-- **Overlap prevention:** Gemstone placement along curves and between curves now prevents the last gemstone from being placed if it's too close to the first one, avoiding overlapping.
-- **Negative offset support:** `GemstonesOnFaceAtCurve` and `GemstonesOnFaceBetweenCurves` now support negative offsets with curve/polyline extrapolation along tangent directions.
-- **Curve extrapolation:** Gemstones can be placed beyond curve endpoints following the tangent direction, enabling flexible distribution patterns.
-- **Size consistency:** For two-curve mode, gemstones placed beyond polyline bounds maintain the size of the nearest edge gemstone.
+- **Pattern Along Path:** New `PatternAlongPathOnSurface` command distributes any BRep bodies along a curve, with optional projection onto a target surface and linear rotation interpolation from start to end.
+- **Improved prong/channel defaults:** Default ratio values for `ProngsBetweenGemstones` and `ChannelsBetweenGemstones` have been tuned for better out-of-the-box results.
+- **Channel gap fix:** Channel segments now include a tiny overlap at endpoints to eliminate floating-point gaps at gemstone boundaries.
 - See [full changelog](CHANGELOG.md) for complete version history.
 
 ---
@@ -105,9 +104,9 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 - **Description:** Creates prongs at the midpoint between nearby gemstones based on distance constraint.
 - **Selection:** At least 2 gemstones.
 - **Key parameters:**
-  - **Prong Size Ratio** — Prong size relative to average gemstone diameter. Default: `0.35`. Range: `0.1–0.5`.
-  - **Prong Height Ratio** — Prong height relative to average gemstone diameter. Default: `0.3`. Range: `0.1–1.0`.
-  - **Width Between Prongs Ratio** — Spacing between prong pair. Default: `0.65`. Range: `0.1–1.0`.
+  - **Prong Size Ratio** — Prong size relative to average gemstone diameter. Default: `0.4`. Range: `0.1–0.5`.
+  - **Prong Height Ratio** — Prong height relative to average gemstone diameter. Default: `0.25`. Range: `0.1–1.0`.
+  - **Width Between Prongs Ratio** — Spacing between prong pair. Default: `0.6`. Range: `0.1–1.0`.
   - **Max Gap** — Maximum gap between gemstones for prong creation. Default: `0.5 mm`.
   - **Weld Distance** — Distance for merging nearby prongs. Default: `0.3 mm`.
 
@@ -118,7 +117,7 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 - **Description:** Creates a network of channels connecting nearby gemstones based on distance constraint.
 - **Selection:** At least 2 gemstones.
 - **Key parameters:**
-  - **Channel Ratio** — Channel width relative to gemstone size. Default: `0.5`. Range: `0.2–0.8`.
+  - **Channel Ratio** — Channel width relative to gemstone size. Default: `0.4`. Range: `0.2–0.8`.
   - **Max Gap** — Maximum gap between gemstones for channel creation. Default: `0.5 mm`.
 
 ---
@@ -138,6 +137,26 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
   - When you edit an existing CuttersForGemstones operation, the add-in currently creates a new body instead of modifying the original. This behavior preserves the ability to change parameters (height, depth, scale, etc.) after the initial creation.
   - Do not manually edit cutter bodies with other modeling tools. If you modify a generated body and later change CuttersForGemstones parameters, the resulting geometry and dependency links can become unpredictable.
   - To update cutters, change parameters using the CuttersForGemstones command (so the operation regenerates correctly), then use Boolean operations to subtract the cutters from target bodies.
+
+---
+
+![PatternAlongPathOnSurface icon](commands/PatternAlongPathOnSurface/resources/32x32@2x.png)
+## PatternAlongPathOnSurface — Distribute bodies along a curve on a surface
+- **Description:** Distributes one or more BRep bodies along a selected curve, orienting each copy using a reference base point and base surface. Supports two placement modes: positions projected onto a target surface, or placed directly on the curve. Rotation angle can be linearly interpolated from start to end of the path.
+- **Selection:** 1 or more bodies (solid or surface), 1 base point (sketch point, vertex, or construction point), 1 base surface or construction plane, 1 curve (sketch curve or edge), and optionally 1 target surface or construction plane.
+- **Key parameters:**
+  - **Placement Mode** — Where to place bodies: `On Surface` (positions projected onto target surface) or `On Curve` (placed directly on the curve). Default: `On Surface`.
+  - **Flip Direction** — Flip placement direction. Starts distributing from the opposite end of the curve. Default: `false`.
+  - **Uniform Distribution** — Adjust spacing to fill the entire available length without gaps at the ends. Default: `false`.
+  - **Start Offset** — Distance from the curve start to the first element. Default: `0 mm`.
+  - **End Offset** — Distance from the curve end to the last element. Default: `0 mm`.
+  - **Start Rotate** — Rotation angle around the surface normal for the first element. Default: `0°`.
+  - **End Rotate** — Rotation angle around the surface normal for the last element. Intermediate elements are linearly interpolated. Default: `0°`.
+  - **Count** — Maximum number of elements to place. Set to `0` for unlimited (fill the entire curve). With uniform distribution, fewer elements are centered within the available length. Default: `0`.
+  - **Spacing** — Distance between base points of adjacent elements along the curve. Default: `5 mm`.
+  - **Flip Face Normal** — Flip the surface normal direction used for orientation. Default: `false`.
+  - **Absolute Depth Offset** — Additional depth offset along the surface normal in absolute units. Default: `0 mm`.
+  - **Relative Depth Offset** — Depth offset as a fraction of the spacing distance. Default: `0`.
 
 ---
 

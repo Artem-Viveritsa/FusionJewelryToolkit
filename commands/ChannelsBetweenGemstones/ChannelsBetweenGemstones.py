@@ -131,7 +131,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             inputs.addSeparatorCommandInput('separatorAfterGemstones')
 
-            ratio = adsk.core.ValueInput.createByReal(0.35)
+            ratio = adsk.core.ValueInput.createByReal(0.4)
             _ratioValueInput = inputs.addValueInput(ratioInputDef.id, ratioInputDef.name, '', ratio)
             _ratioValueInput.tooltip = ratioInputDef.tooltip
 
@@ -554,7 +554,19 @@ def createChannelSegment(info1: GemstoneInfo, info2: GemstoneInfo, ratio: float 
         
         radius1 = info1.radius * ratio
         radius2 = info2.radius * ratio
-        
+
+        OVERLAP = 0.005  
+        axisVec = adsk.core.Vector3D.create(
+            centroid2.x - centroid1.x,
+            centroid2.y - centroid1.y,
+            centroid2.z - centroid1.z
+        )
+        length = axisVec.length
+        if length > 0:
+            axisVec.normalize()
+            centroid1.translateBy(adsk.core.Vector3D.create(-axisVec.x * OVERLAP, -axisVec.y * OVERLAP, -axisVec.z * OVERLAP))
+            centroid2.translateBy(adsk.core.Vector3D.create(axisVec.x * OVERLAP, axisVec.y * OVERLAP, axisVec.z * OVERLAP))
+
         channel = temporaryBRep.createCylinderOrCone(centroid1, radius1, centroid2, radius2)
         
         return channel

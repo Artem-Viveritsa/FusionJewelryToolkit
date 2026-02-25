@@ -153,15 +153,15 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             inputs.addSeparatorCommandInput('separatorAfterGemstones')
 
-            sizeRatio = adsk.core.ValueInput.createByReal(0.35)
+            sizeRatio = adsk.core.ValueInput.createByReal(0.4)
             _sizeRatioValueInput = inputs.addValueInput(sizeRatioInputDef.id, sizeRatioInputDef.name, '', sizeRatio)
             _sizeRatioValueInput.tooltip = sizeRatioInputDef.tooltip
 
-            heightRatio = adsk.core.ValueInput.createByReal(0.3)
+            heightRatio = adsk.core.ValueInput.createByReal(0.25)
             _heightRatioValueInput = inputs.addValueInput(heightRatioInputDef.id, heightRatioInputDef.name, '', heightRatio)
             _heightRatioValueInput.tooltip = heightRatioInputDef.tooltip
 
-            widthBetweenProngsRatio = adsk.core.ValueInput.createByReal(0.65)
+            widthBetweenProngsRatio = adsk.core.ValueInput.createByReal(0.6)
             _widthBetweenProngsRatioValueInput = inputs.addValueInput(widthBetweenProngsRatioInputDef.id, widthBetweenProngsRatioInputDef.name, '', widthBetweenProngsRatio)
             _widthBetweenProngsRatioValueInput.tooltip = widthBetweenProngsRatioInputDef.tooltip
 

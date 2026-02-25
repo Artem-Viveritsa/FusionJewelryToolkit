@@ -14,6 +14,8 @@ from .commands.GemstonesInfo import GemstonesInfo
 from .commands.SurfaceUnfold import SurfaceUnfold
 from .commands.ObjectsRefold import ObjectsRefold
 
+from .commands.PatternAlongPathOnSurface import PatternAlongPathOnSurface
+
 commands = [
     GemstonesOnFaceAtPoints,
     GemstonesOnFaceAtCircles,
@@ -28,6 +30,8 @@ commands = [
     
     SurfaceUnfold,
     ObjectsRefold,
+
+    PatternAlongPathOnSurface,
 
     GemstonesInfo,
     ]

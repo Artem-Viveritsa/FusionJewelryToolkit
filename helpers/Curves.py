@@ -217,6 +217,113 @@ def getCurve3D(entity: adsk.core.Base) -> adsk.core.Curve3D | None:
     return None
 
 
+def calculatePointsAlongCurve(curve: adsk.core.Curve3D, spacing: float, startOffset: float, endOffset: float,
+                              flipDirection: bool, uniformDistribution: bool = False, count: int = 0) -> list[tuple[adsk.core.Point3D, adsk.core.Vector3D]]:
+    """Calculate evenly-spaced points and tangent vectors along a curve.
+
+    Args:
+        curve: The curve along which to distribute points.
+        spacing: Distance between consecutive points.
+        startOffset: Offset from the start of the curve.
+        endOffset: Offset from the end of the curve.
+        flipDirection: If True, reverses the placement direction.
+        uniformDistribution: If True, adjusts spacing to fill the entire available length.
+        count: Maximum number of elements to place. 0 means unlimited.
+            With uniform distribution, if count is less than what would naturally fit,
+            the elements are centered within the available length using the original spacing.
+
+    Returns:
+        A list of tuples (Point3D, Vector3D) representing positions and tangent vectors along the curve.
+    """
+    try:
+        result: list[tuple[adsk.core.Point3D, adsk.core.Vector3D]] = []
+
+        curveEvaluator = curve.evaluator
+
+        success, startParameter, endParameter = curveEvaluator.getParameterExtents()
+        if not success:
+            return result
+
+        success, totalCurveLength = curveEvaluator.getLengthAtParameter(startParameter, endParameter)
+        if not success:
+            return result
+
+        effectiveStartPosition = startOffset
+        effectiveEndPosition = totalCurveLength - endOffset
+        availableLength = effectiveEndPosition - effectiveStartPosition
+
+        if availableLength <= 0 or spacing <= 0:
+            return result
+
+        numberOfPositions = max(1, int(availableLength / spacing) + 1)
+
+        if count > 0 and count < numberOfPositions:
+            if uniformDistribution:
+                # Center the limited group within the available length using original spacing
+                occupiedLength = spacing * (count - 1)
+                centeringOffset = (availableLength - occupiedLength) / 2
+                effectiveStartPosition += centeringOffset
+                effectiveEndPosition = effectiveStartPosition + occupiedLength
+            numberOfPositions = count
+            actualSpacing = spacing
+        elif uniformDistribution and numberOfPositions > 1:
+            actualSpacing = availableLength / (numberOfPositions - 1)
+        else:
+            actualSpacing = spacing
+
+        _, curveStartPoint = curveEvaluator.getPointAtParameter(startParameter)
+        _, curveEndPoint = curveEvaluator.getPointAtParameter(endParameter)
+        _, curveStartTangent = curveEvaluator.getTangent(startParameter)
+        _, curveEndTangent = curveEvaluator.getTangent(endParameter)
+        curveStartTangent.normalize()
+        curveEndTangent.normalize()
+
+        for i in range(numberOfPositions):
+            positionAlongCurve = effectiveStartPosition + i * actualSpacing
+
+            if positionAlongCurve > effectiveEndPosition + 1e-5:
+                break
+
+            actualPosition = totalCurveLength - positionAlongCurve if flipDirection else positionAlongCurve
+
+            if actualPosition < 0:
+                overshoot = -actualPosition
+                point = adsk.core.Point3D.create(
+                    curveStartPoint.x - curveStartTangent.x * overshoot,
+                    curveStartPoint.y - curveStartTangent.y * overshoot,
+                    curveStartPoint.z - curveStartTangent.z * overshoot
+                )
+                tangent = curveStartTangent.copy()
+            elif actualPosition > totalCurveLength:
+                overshoot = actualPosition - totalCurveLength
+                point = adsk.core.Point3D.create(
+                    curveEndPoint.x + curveEndTangent.x * overshoot,
+                    curveEndPoint.y + curveEndTangent.y * overshoot,
+                    curveEndPoint.z + curveEndTangent.z * overshoot
+                )
+                tangent = curveEndTangent.copy()
+            else:
+                success, param = curveEvaluator.getParameterAtLength(startParameter, actualPosition)
+                if not success:
+                    continue
+                success, point = curveEvaluator.getPointAtParameter(param)
+                if not success:
+                    continue
+                _, tangent = curveEvaluator.getTangent(param)
+                tangent.normalize()
+
+            if flipDirection:
+                tangent.scaleBy(-1)
+
+            result.append((point, tangent))
+
+        return result
+
+    except:
+        showMessage(f'calculatePointsAlongCurve: {traceback.format_exc()}\n', True)
+        return []
+
+
 def calculatePointsAndSizesBetweenCurves(
     curve1Geometry: adsk.core.Curve3D, 
     curve2Geometry: adsk.core.Curve3D, 

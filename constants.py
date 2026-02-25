@@ -14,3 +14,7 @@ materialLibrary = adsk.core.Application.get().materialLibraries.load(ASSETS_FOLD
 
 minimumGemstoneSize = 0.05
 gemstoneOverlapMergeThreshold = 0.01
+
+patternAlongPathDefaultSpacingCm = 0.5
+patternAlongPathPlacementOnSurfaceIndex = 0
+patternAlongPathPlacementOnCurveIndex = 1

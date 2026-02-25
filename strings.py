@@ -23,6 +23,8 @@ PRONGS_BETWEEN_GEMSTONES = 'ProngsBetweenGemstones'
 
 CHANNELS_BETWEEN_GEMSTONES = 'ChannelsBetweenGemstones'
 
+PATTERN_ALONG_PATH_ON_SURFACE = 'PatternAlongPathOnSurface'
+
 ENTITY = 'entity'
 
 GEMSTONE = 'gemstone'
@@ -57,6 +59,9 @@ class CutterStrings:
 Cutter = CutterStrings()
 
 CHANNEL = 'channel'
+PATTERN_BODY = 'patternBody'
+
+APPLIED_TRANSFORM = 'appliedTransform'
 
 class UnfoldAlgorithm(Enum):
     Mesh = 0
@@ -65,6 +70,11 @@ class UnfoldAlgorithm(Enum):
 class UnfoldSourceType(Enum):
     Face = 0
     Mesh = 1
+
+
+class PatternPlacementMode(Enum):
+    OnSurface = 0
+    OnCurve = 1
     
 class UnfoldStrings:
     name = 'unfold'
@@ -100,6 +110,14 @@ class ObjectsRefoldStrings:
     selectBodiesInputId = 'selectBodies'
 
 ObjectsRefold = ObjectsRefoldStrings()
+
+
+class PatternAlongPathStrings:
+    placementModeInputId = 'placementMode'
+    placementModes = ['On Surface', 'On Curve']
+
+
+PatternAlongPath = PatternAlongPathStrings()
 
 class InputDef:
     def __init__(self, id: str, name: str, tooltip: str):

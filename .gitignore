@@ -8,6 +8,7 @@ __pycache__/
 .vscode/
 .idea/
 *.sublime-workspace
+.editorconfig
 .env
 
 # macOS
@@ -18,3 +19,4 @@ __pycache__/
 
 Temp/
 scripts/
+TASKS.md

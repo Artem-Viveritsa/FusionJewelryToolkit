@@ -26,7 +26,10 @@ def isGemstone(body: adsk.fusion.BRepBody, forceGeometryCheck: bool = True) -> b
         True if the body is identified as a gemstone, False otherwise.
     """
     if body is None: return False
-    if body.faces.count != 58: return False
+    try:
+        if body.faces.count != 58: return False
+    except:
+        return False
     
     attr = body.attributes.itemByName(strings.PREFIX, strings.PROPERTIES)
     if attr:
