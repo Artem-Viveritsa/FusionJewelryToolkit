@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.1] - 2026-03-25
+
+### Changed
+- `GemstonesOnFaceAtCurve`: Added support for selecting multiple faces or construction planes. Each gemstone is now created and updated on the closest selected support surface, while older features with a single stored face dependency remain editable.
+- `ChannelsBetweenGemstones`: Channel generation now uses shared channel constants and adds junction spheres where a gemstone connects to multiple channel segments for smoother intersections.
+- `GemstonesInfo`: The summary text in the command dialog now includes the total number of detected gemstones in addition to the per-size counts.
+
+### Fixed
+- `ChannelsBetweenGemstones`: Adjusted the segment inset direction so channel endpoints overlap correctly and avoid visible breaks near gemstones.
+
 ## [0.10.0] - 2026-02-25
 
 ### Added

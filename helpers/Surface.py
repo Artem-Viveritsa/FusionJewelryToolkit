@@ -10,6 +10,34 @@ from .Points import point3dToStr, strToPoint3d, averagePosition, findClosestPoin
 from .Vectors import vector3dToStr, strToVector3d, averageVector
 
 
+def getClosestFace(faces: list[adsk.fusion.BRepFace], point: adsk.core.Point3D) -> adsk.fusion.BRepFace:
+    """Return the face closest to the given point using measureManager.
+
+    Args:
+        faces: List of BRepFace or ConstructionPlane entities.
+        point: The 3D point to measure distance from.
+
+    Returns:
+        The face entity closest to the point.
+    """
+    if len(faces) == 1:
+        return faces[0]
+
+    closestFace = faces[0]
+    minDistance = float('inf')
+
+    for face in faces:
+        try:
+            result = constants.measureManager.measureMinimumDistance(point, face)
+            if result.value < minDistance:
+                minDistance = result.value
+                closestFace = face
+        except:
+            continue
+
+    return closestFace
+
+
 def getDataFromPointAndFace(face: adsk.fusion.BRepFace | adsk.fusion.ConstructionPlane, point: adsk.core.Point3D) -> tuple[adsk.core.Point3D, adsk.core.Vector3D, adsk.core.Vector3D, adsk.core.Vector3D]:
     """Get the surface point and orientation vectors (normal, length direction, width direction) at a given point on a face or construction plane.
 

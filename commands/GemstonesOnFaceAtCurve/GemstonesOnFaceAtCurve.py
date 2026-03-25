@@ -1,11 +1,11 @@
 import os
 import adsk.core, adsk.fusion, traceback
 
-from ... import strings
-from ...constants import minimumGemstoneSize
+from ... import strings, constants
 from ...helpers.showMessage import showMessage
 from ...helpers.Gemstones import createGemstone, updateGemstone, setGemstoneAttributes, updateGemstoneFeature, diamondMaterial
 from ...helpers.Curves import calculatePointsAndSizesAlongCurve, getCurve3D
+from ...helpers.Surface import getClosestFace
 
 _app: adsk.core.Application = None
 _ui: adsk.core.UserInterface = None
@@ -43,8 +43,8 @@ editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Gemstones', 'Edits
 
 selectFaceInputDef = strings.InputDef(
     'selectFace',
-    'Select Face or Plane',
-    'Select the face or construction plane where the gemstones will be placed.'
+    'Select Faces or Planes',
+    'Select one or more faces or construction planes where the gemstones will be placed.\nThe closest face to each gemstone point will be used.'
     )
 
 selectCurveInputDef = strings.InputDef(
@@ -145,6 +145,7 @@ nonlinearPositionInputDef = strings.InputDef(
 
 RESOURCES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', '')
 
+
 def run(panel: adsk.core.ToolbarPanel):
     """Initialize the gemstones command by setting up command definitions and UI elements."""
     try:
@@ -233,7 +234,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
             _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.ConstructionPlanes)
             _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
-            _faceSelectionInput.setSelectionLimits(1, 1)
+            _faceSelectionInput.setSelectionLimits(1, 0)
 
             inputs.addSeparatorCommandInput('separatorAfterCurve')
 
@@ -364,7 +365,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
             _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.ConstructionPlanes)
             _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
-            _faceSelectionInput.setSelectionLimits(1, 1)
+            _faceSelectionInput.setSelectionLimits(1, 0)
             
             inputs.addSeparatorCommandInput('separatorAfterCurve')
 
@@ -557,7 +558,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
         try:
             eventArgs = adsk.core.ValidateInputsEventArgs.cast(args)
 
-            if _faceSelectionInput.selectionCount != 1 or _curveSelectionInput.selectionCount != 1:
+            if _faceSelectionInput.selectionCount < 1 or _curveSelectionInput.selectionCount != 1:
                 eventArgs.areInputsValid = False
                 return
 
@@ -578,12 +579,12 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
             endOffset = _endOffsetValueInput.value
 
             startSize = _startSizeValueInput.value
-            if startSize < minimumGemstoneSize:
+            if startSize < constants.minimumGemstoneSize:
                 eventArgs.areInputsValid = False
                 return
 
             endSize = _endSizeValueInput.value
-            if endSize < minimumGemstoneSize:
+            if endSize < constants.minimumGemstoneSize:
                 eventArgs.areInputsValid = False
                 return
 
@@ -598,7 +599,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                 return
             
             nonlinearSize = _nonlinearSizeValueInput.value
-            if nonlinearSize < minimumGemstoneSize:
+            if nonlinearSize < constants.minimumGemstoneSize:
                 eventArgs.areInputsValid = False
                 return
 
@@ -617,7 +618,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
         super().__init__()
     def notify(self, args):
         try:
-            face = _faceSelectionInput.selection(0).entity
+            faces = getSelectedFaces(_faceSelectionInput)
             curveEntity = _curveSelectionInput.selection(0).entity
             
             curve = getCurve3D(curveEntity)
@@ -644,16 +645,18 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             if len(pointsAndSizes) == 0:
                 return
 
+            firstFace = faces[0]
             component: adsk.fusion.Component = None
-            if face.objectType == adsk.fusion.ConstructionPlane.classType():
-                component = face.component
+            if firstFace.objectType == adsk.fusion.ConstructionPlane.classType():
+                component = firstFace.component
             else:
-                component = face.body.parentComponent
+                component = firstFace.body.parentComponent
 
             baseFeature = component.features.baseFeatures.add()
             baseFeature.startEdit()
 
             for point, size in pointsAndSizes:
+                face = getClosestFace(faces, point)
                 gemstone = createGemstone(face, point, size, flip, absoluteDepthOffset, relativeDepthOffset, flipFaceNormal)
                 if gemstone is not None:
                     body = component.bRepBodies.add(gemstone, baseFeature)
@@ -677,12 +680,14 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             eventArgs = adsk.core.CommandEventArgs.cast(args)        
 
             comp: adsk.fusion.Component = None
-            face = _faceSelectionInput.selection(0).entity
+            faces = getSelectedFaces(_faceSelectionInput)
             curveEntity = _curveSelectionInput.selection(0).entity
-            if face.objectType == adsk.fusion.ConstructionPlane.classType():
-                comp = face.component
+
+            firstFace = faces[0]
+            if firstFace.objectType == adsk.fusion.ConstructionPlane.classType():
+                comp = firstFace.component
             else:
-                comp = face.body.parentComponent
+                comp = firstFace.body.parentComponent
 
             curve = getCurve3D(curveEntity)
             if curve is None:
@@ -702,6 +707,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             baseFeature.startEdit()
 
             for point, size in pointsAndSizes:
+                face = getClosestFace(faces, point)
                 gemstone = createGemstone(face, point, size, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value, _flipFaceNormalValueInput.value)
                 if gemstone is None:
                     eventArgs.executeFailed = True
@@ -773,7 +779,8 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             customFeatureInput.addCustomParameter(nonlinearPositionInputDef.id, nonlinearPositionInputDef.name, nonlinearPositionInput,
                                               '', True)
 
-            customFeatureInput.addDependency('face', face)
+            for i, faceEntity in enumerate(faces):
+                customFeatureInput.addDependency(f'face{i}', faceEntity)
             customFeatureInput.addDependency('curve', curveEntity)
 
             customFeatureInput.setStartAndEndFeatures(baseFeature, baseFeature)
@@ -815,8 +822,9 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
             if curve is not None:
                 _curveSelectionInput.addSelection(curve)
 
-            face = _editedCustomFeature.dependencies.itemById('face').entity
-            _faceSelectionInput.addSelection(face)
+            faces = getFaceDependencies(_editedCustomFeature)
+            for face in faces:
+                _faceSelectionInput.addSelection(face)
                 
         except:
             showMessage(f'EditActivateHandler: {traceback.format_exc()}\n', True)
@@ -845,11 +853,12 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
         try:
             eventArgs = adsk.core.CommandEventArgs.cast(args)    
 
-            faceEntity = _faceSelectionInput.selection(0).entity
+            faces = getSelectedFaces(_faceSelectionInput)
             curveEntity = _curveSelectionInput.selection(0).entity
 
             _editedCustomFeature.dependencies.deleteAll()
-            _editedCustomFeature.dependencies.add('face', faceEntity)
+            for i, faceEntity in enumerate(faces):
+                _editedCustomFeature.dependencies.add(f'face{i}', faceEntity)
             _editedCustomFeature.dependencies.add('curve', curveEntity)
 
             _editedCustomFeature.parameters.itemById(flipDirectionInputDef.id).expression = str(_flipDirectionValueInput.value).lower()
@@ -892,6 +901,46 @@ class ComputeCustomFeature(adsk.fusion.CustomFeatureEventHandler):
             showMessage(f'ComputeCustomFeature: {traceback.format_exc()}\n', True)
 
 
+def getSelectedFaces(selectionInput: adsk.core.SelectionCommandInput) -> list[adsk.fusion.BRepFace]:
+    """Collect all selected face entities from a selection input.
+
+    Args:
+        selectionInput: The selection command input containing faces.
+
+    Returns:
+        List of selected face entities.
+    """
+    return [selectionInput.selection(i).entity for i in range(selectionInput.selectionCount)]
+
+
+def getFaceDependencies(customFeature: adsk.fusion.CustomFeature) -> list[adsk.fusion.BRepFace]:
+    """Retrieve face dependencies from a custom feature with backward compatibility.
+
+    Tries indexed format (face0, face1, ...) first, then falls back to single 'face' dependency.
+
+    Args:
+        customFeature: The custom feature to read dependencies from.
+
+    Returns:
+        List of face entities.
+    """
+    faces = []
+    i = 0
+    while True:
+        dep = customFeature.dependencies.itemById(f'face{i}')
+        if dep is None or dep.entity is None:
+            break
+        faces.append(dep.entity)
+        i += 1
+
+    if len(faces) == 0:
+        dep = customFeature.dependencies.itemById('face')
+        if dep is not None and dep.entity is not None:
+            faces.append(dep.entity)
+
+    return faces
+
+
 def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
     """Update the bodies of an existing custom gemstones feature.
 
@@ -909,8 +958,8 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
                 baseFeature = feature
         if baseFeature is None: return False
 
-        faceEntity: adsk.fusion.BRepFace = customFeature.dependencies.itemById('face').entity
-        if faceEntity is None: return False
+        faces = getFaceDependencies(customFeature)
+        if len(faces) == 0: return False
 
         curveEntity: adsk.fusion.SketchCurve = customFeature.dependencies.itemById('curve').entity
         if curveEntity is None: return False
@@ -967,10 +1016,11 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         pointsAndSizes = calculatePointsAndSizesAlongCurve(curveGeometry, startOffset, endOffset, startSize, endSize, sizeStep, targetGap, flipDirection, uniformDistribution, nonlinear, nonlinearSize, nonlinearPosition)
         if len(pointsAndSizes) == 0: return True
 
-        if faceEntity.objectType == adsk.fusion.ConstructionPlane.classType():
-            component = faceEntity.component
+        firstFace = faces[0]
+        if firstFace.objectType == adsk.fusion.ConstructionPlane.classType():
+            component = firstFace.component
         else:
-            component = faceEntity.body.parentComponent
+            component = firstFace.body.parentComponent
 
         baseFeature.startEdit()
         
@@ -978,6 +1028,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         success = True
         for i in range(len(pointsAndSizes)):
             point, size = pointsAndSizes[i]
+            faceEntity = getClosestFace(faces, point)
 
             if i < baseFeature.bodies.count:
                 currentBody = baseFeature.bodies.item(i)

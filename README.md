@@ -17,9 +17,9 @@ Command creation and editing work correctly only with **Hybrid Design Type**. Pa
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
 ## What's new
-- **Pattern Along Path:** New `PatternAlongPathOnSurface` command distributes any BRep bodies along a curve, with optional projection onto a target surface and linear rotation interpolation from start to end.
-- **Improved prong/channel defaults:** Default ratio values for `ProngsBetweenGemstones` and `ChannelsBetweenGemstones` have been tuned for better out-of-the-box results.
-- **Channel gap fix:** Channel segments now include a tiny overlap at endpoints to eliminate floating-point gaps at gemstone boundaries.
+- **Gemstones Along Curve:** `GemstonesOnFaceAtCurve` now supports selecting multiple faces or construction planes and places each gemstone on the closest selected support.
+- **Improved channel junctions:** `ChannelsBetweenGemstones` now builds cleaner intersections for branching connections and uses a shared inset value to avoid visible gaps.
+- **Gemstone summary totals:** `GemstonesInfo` now shows the total gemstone count in the dialog summary in addition to the per-size breakdown.
 - See [full changelog](CHANGELOG.md) for complete version history.
 
 ---
@@ -51,8 +51,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 
 ![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)
 ## GemstonesOnFaceAtCurve — Place gemstones along a curve with variable sizes
-- **Description:** Creates round-cut gemstone bodies along a selected curve (sketch curve or model edge) on a chosen face or construction plane. Gemstone sizes can gradually change from start to end.
-- **Selection:** 1 face or construction plane and 1 curve (sketch curve or edge).
+- **Description:** Creates round-cut gemstone bodies along a selected curve (sketch curve or model edge) on one or more selected faces or construction planes. Gemstone sizes can gradually change from start to end, and each gemstone is attached to the closest selected support.
+- **Selection:** 1 or more faces or construction planes, and 1 curve (sketch curve or edge).
 - **Key parameters:**
   - **Start Offset** — Distance from the curve start to the first gemstone. Default: `0 mm`.
   - **End Offset** — Distance from the curve end to the last gemstone. Default: `0 mm`.
@@ -114,7 +114,7 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 
 ![ChannelsBetweenGemstones icon](commands/ChannelsBetweenGemstones/resources/32x32@2x.png)
 ## ChannelsBetweenGemstones — Create channels between gemstones
-- **Description:** Creates a network of channels connecting nearby gemstones based on distance constraint.
+- **Description:** Creates a network of channels connecting nearby gemstones based on distance constraint. Intersections between multiple channel branches are blended with additional junction volume for cleaner results.
 - **Selection:** At least 2 gemstones.
 - **Key parameters:**
   - **Channel Ratio** — Channel width relative to gemstone size. Default: `0.4`. Range: `0.2–0.8`.
@@ -191,5 +191,5 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 ## GemstonesInfo — Show detected gemstone diameters on-model (Early Preview)
 - **Description:** Detects gemstone bodies created by the add-in and overlays their diameters as on-model text labels to help with quick inspection and verification. The command dialog also displays a summary list of all gemstone sizes with their total counts, sorted from smallest to largest.
 - **Selection:** No explicit selection required — the command scans the model for bodies marked as gemstones (including occurrences) and displays overlay text for each detected gemstone.
-- **Behavior:** Uses attribute metadata attached to gemstone bodies to detect them, computes centroid and normal, and places text slightly offset along the gemstone normal (diameter shown in mm). The text is displayed using billboarding for better visibility from all angles. The summary list in the dialog shows each unique diameter with the number of gemstones of that size.
+- **Behavior:** Uses attribute metadata attached to gemstone bodies to detect them, computes centroid and normal, and places text slightly offset along the gemstone normal (diameter shown in mm). The text is displayed using billboarding for better visibility from all angles. The summary list in the dialog shows each unique diameter with the number of gemstones of that size, plus the overall gemstone total.
 - **Limitations:** This feature is in early preview and may have limitations or unexpected behavior; user feedback is appreciated.

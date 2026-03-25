@@ -1,6 +1,7 @@
 import os
 import adsk.core, adsk.fusion, traceback
 
+from ... import constants
 from ... import strings
 from ...helpers.showMessage import showMessage
 from ...helpers.Gemstones import GemstoneInfo, extractGemstonesInfo, findValidConnections, isGemstone
@@ -555,7 +556,7 @@ def createChannelSegment(info1: GemstoneInfo, info2: GemstoneInfo, ratio: float 
         radius1 = info1.radius * ratio
         radius2 = info2.radius * ratio
 
-        OVERLAP = 0.005  
+        inset = constants.channelInset
         axisVec = adsk.core.Vector3D.create(
             centroid2.x - centroid1.x,
             centroid2.y - centroid1.y,
@@ -564,8 +565,8 @@ def createChannelSegment(info1: GemstoneInfo, info2: GemstoneInfo, ratio: float 
         length = axisVec.length
         if length > 0:
             axisVec.normalize()
-            centroid1.translateBy(adsk.core.Vector3D.create(-axisVec.x * OVERLAP, -axisVec.y * OVERLAP, -axisVec.z * OVERLAP))
-            centroid2.translateBy(adsk.core.Vector3D.create(axisVec.x * OVERLAP, axisVec.y * OVERLAP, axisVec.z * OVERLAP))
+            centroid1.translateBy(adsk.core.Vector3D.create(axisVec.x * inset, axisVec.y * inset, axisVec.z * inset))
+            centroid2.translateBy(adsk.core.Vector3D.create(-axisVec.x * inset, -axisVec.y * inset, -axisVec.z * inset))
 
         channel = temporaryBRep.createCylinderOrCone(centroid1, radius1, centroid2, radius2)
         
@@ -609,14 +610,40 @@ def createBody(gemstones: list[adsk.fusion.BRepBody], ratio: float = 0.5, maxGap
         
         temporaryBRep: adsk.fusion.TemporaryBRepManager = adsk.fusion.TemporaryBRepManager.get()
         
+        connectionCount: dict[int, int] = {}
+        for info1, info2 in connections:
+            connectionCount[id(info1)] = connectionCount.get(id(info1), 0) + 1
+            connectionCount[id(info2)] = connectionCount.get(id(info2), 0) + 1
+        
         channel = None
         
-        # Create channel segments for all valid connections
+        for info in gemstoneInfos:
+            if connectionCount.get(id(info), 0) < 2:
+                continue
+
+            centroid = info.centroid.copy()
+            normal = info.getNormalizedNormal()
+            if normal is not None:
+                totalDepthOffset = info.getTotalDepthOffset()
+                normal.scaleBy(-totalDepthOffset)
+                centroid.translateBy(normal)
+
+            sphereRadius = info.radius * ratio * constants.channelJunctionSphereScale
+            sphere = temporaryBRep.createSphere(centroid, sphereRadius)
+            if sphere is None:
+                continue
+
+            if channel is None:
+                channel = sphere
+            else:
+                temporaryBRep.booleanOperation(channel, sphere, adsk.fusion.BooleanTypes.UnionBooleanType)
+        
         for info1, info2 in connections:
             segment = createChannelSegment(info1, info2, ratio)
             if segment is None: continue
             if channel is None: channel = segment
             else: temporaryBRep.booleanOperation(channel, segment, adsk.fusion.BooleanTypes.UnionBooleanType)
+
         return channel
     
     except:

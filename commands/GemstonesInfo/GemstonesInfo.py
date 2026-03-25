@@ -194,9 +194,11 @@ def formatGemstonesText(gemstoneInfos: list[Gemstones.GemstoneInfo]) -> tuple[st
         gemstoneDict[diameterMm] = gemstoneDict.get(diameterMm, 0) + 1
 
     sortedItems = sorted(gemstoneDict.items(), key=lambda x: x[0])
+    total = sum(count for _, count in sortedItems)
     text = ''.join([f"<b>{diameter:.2f}</b> – {count}<br>" for diameter, count in sortedItems])
+    text += f"<br><b>Total: {total}</b>"
 
-    return text, len(sortedItems) + 1
+    return text, len(sortedItems) + 3
 
 
 def updateGemstonesDisplay() -> None:
