@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.0] - 2026-03-27
+
+### Added
+- `FFD` (Early Preview): New command to create editable free-form deformed copies of solid bodies using a 3D control lattice. Supports viewport control-point picking, per-point XYZ offsets, lattice resolutions from `2x2x2` to `5x5x5`, preview graphics, and resetting all offsets.
+- `Taper` (Early Preview): New command to create editable tapered copies of solid bodies along a selected straight edge, construction axis, or sketch line with a configurable pivot point and taper angle.
+- `Deformations.py`: Added a shared NURBS-based deformation engine for rebuilding temporary bodies for `FFD` and `Taper`.
+- `CustomFeatures.py`: Added a shared helper for retrieving the base feature owned by a Fusion custom feature.
+
+### Changed
+- `FusionJewelryToolkit.py`: Registered `FFD` and `Taper` in the add-in command list so they appear in the toolbar panel.
+- `constants.py`: Added deformation defaults, validation limits, preview styling, NURBS conversion options, and FFD lattice settings.
+- `strings.py`: Added command identifiers, dependency ids, attribute keys, reset dialog strings, and output naming templates for `FFD` and `Taper`.
+- `Bodies.py`: Added `convertBodyToNurbs()` to centralize body conversion before geometric deformation.
+
+### Fixed
+- `Vectors.py`: Added `getAxisDirection()` to consistently extract normalized axis directions from construction axes, straight BRep edges, and sketch lines, preventing invalid taper axis selections.
+- `showMessage.py`: Added a reusable Yes/No confirmation dialog helper so destructive UI actions like FFD reset require explicit confirmation.
+- `Bodies.py`: Added a guard for empty bodies before NURBS conversion to avoid failures when a deformation command receives invalid source geometry.
+
 ## [0.10.1] - 2026-03-25
 
 ### Changed

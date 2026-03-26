@@ -1,6 +1,15 @@
 import adsk.core, adsk.fusion, traceback
 
+from .. import constants
 from .showMessage import showMessage
+
+
+def convertBodyToNurbs(body: adsk.fusion.BRepBody) -> adsk.fusion.BRepBody | None:
+    """Convert a body to an all-NURBS temporary body."""
+    if body.faces.count == 0:
+        return None
+
+    return body.convert(constants.Deformations.bodyNurbsConversionOptions)
 
 
 def placeBody(body: adsk.fusion.BRepBody, newOriginPoint: adsk.core.Point3D, 

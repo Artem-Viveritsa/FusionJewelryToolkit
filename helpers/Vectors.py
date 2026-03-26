@@ -1,4 +1,5 @@
 import adsk.core
+import adsk.fusion
 
 
 def vector3dToStr(vector: adsk.core.Vector3D) -> str:
@@ -71,3 +72,38 @@ def averageVector(vectors: list[adsk.core.Vector3D], normalize: bool = False) ->
         return result
     else:
         return None
+
+
+def getAxisDirection(entity: adsk.core.Base) -> adsk.core.Vector3D | None:
+    """Extract a unit direction vector from a selected axis entity.
+
+    Supports construction axes, linear BRep edges, and sketch lines.
+
+    Args:
+        entity: The selected entity.
+
+    Returns:
+        The unit direction vector or None.
+    """
+    constructionAxis = adsk.fusion.ConstructionAxis.cast(entity)
+    if constructionAxis is not None:
+        direction = constructionAxis.geometry.direction.copy()
+        direction.normalize()
+        return direction
+
+    edge = adsk.fusion.BRepEdge.cast(entity)
+    if edge is not None:
+        line = adsk.core.Line3D.cast(edge.geometry)
+        if line is not None:
+            direction = line.startPoint.vectorTo(line.endPoint)
+            direction.normalize()
+            return direction
+
+    sketchLine = adsk.fusion.SketchLine.cast(entity)
+    if sketchLine is not None:
+        worldLine = sketchLine.worldGeometry
+        direction = worldLine.startPoint.vectorTo(worldLine.endPoint)
+        direction.normalize()
+        return direction
+
+    return None

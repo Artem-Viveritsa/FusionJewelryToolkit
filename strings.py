@@ -119,6 +119,44 @@ class PatternAlongPathStrings:
 
 PatternAlongPath = PatternAlongPathStrings()
 
+
+class TaperStrings:
+    name = 'taper'
+    taperCommandId = 'Taper'
+    selectBodyInputId = 'selectBody'
+    selectAxisInputId = 'selectAxis'
+    selectPivotPointInputId = 'selectPivotPoint'
+    angleInputId = 'taperAngle'
+    sourceBodyFaceDependencyId = 'firstBodyFace'
+    axisDependencyId = 'axisDependency'
+    pivotPointDependencyId = 'pivotPointDependency'
+    bodyNameTemplate = '{bodyName} (Taper)'
+
+Taper = TaperStrings()
+
+
+class FFDStrings:
+    name = 'ffd'
+    ffdCommandId = 'FFD'
+    selectBodyInputId = 'ffdSelectBody'
+    offsetXInputId = 'ffdOffsetX'
+    offsetYInputId = 'ffdOffsetY'
+    offsetZInputId = 'ffdOffsetZ'
+    resolutionXInputId = 'ffdResolutionX'
+    resolutionYInputId = 'ffdResolutionY'
+    resolutionZInputId = 'ffdResolutionZ'
+    resetButtonInputId = 'ffdResetAll'
+    sourceBodyFaceDependencyId = 'firstBodyFace'
+    offsetsAttributeGroup = 'FFD'
+    offsetsAttributeName = 'offsets'
+    gridSizeAttributeName = 'gridSizes'
+    bodyNameTemplate = '{bodyName} (FFD)'
+    resetConfirmationTitle = 'Reset FFD'
+    resetConfirmationMessage = 'Reset all control points to zero?'
+
+FFD = FFDStrings()
+
+
 class InputDef:
     def __init__(self, id: str, name: str, tooltip: str):
         self.id: str = id

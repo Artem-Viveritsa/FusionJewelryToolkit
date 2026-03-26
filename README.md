@@ -1,8 +1,8 @@
 # Fusion 360 Jewelry Toolkit
 
-A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in adds specialized commands for gemstone placement, prong creation, channels, cutters, body patterning along paths, and surface manipulation.
+A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in adds specialized commands for gemstone placement, prong creation, channels, cutters, body patterning along paths, free-form deformation, tapering, and surface manipulation.
 
-[![Gemstones icon](commands/GemstonesOnFaceAtPoints/resources/32x32@2x.png)](#gemstonesonfaceatpoints--place-round-gemstones-on-a-face-at-specified-points) [![Gemstones icon](commands/GemstonesOnFaceAtCircles/resources/32x32@2x.png)](#gemstonesonfaceatcircles--place-round-gemstones-on-a-face-at-sketch-circles) [![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)](#gemstonesonfaceatcurve--place-gemstones-along-a-curve-with-variable-sizes) [![Gemstones icon](commands/GemstonesOnFaceBetweenCurves/resources/32x32@2x.png)](#gemstonesonfacebetweencurves--place-gemstones-between-two-curves) [![Prongs icon](commands/ProngsOnFaceAtPoints/resources/32x32@2x.png)](#prongsonfaceatpoints--generate-prongs-on-a-face-at-specified-points) [![ProngsBetweenGemstones icon](commands/ProngsBetweenGemstones/resources/32x32@2x.png)](#prongsbetweengemstones--create-prongs-between-gemstones) [![ChannelsBetweenGemstones icon](commands/ChannelsBetweenGemstones/resources/32x32@2x.png)](#channelsbetweengemstones--create-channels-between-gemstones) [![CuttersForGemstones icon](commands/CuttersForGemstones/resources/32x32@2x.png)](#cuttersforgemstones--create-cutter-bodies-for-gemstone-seating) [![PatternAlongPathOnSurface icon](commands/PatternAlongPathOnSurface/resources/32x32@2x.png)](#patternalongpathonsurface--distribute-bodies-along-a-curve-on-a-surface) [![SurfaceUnfold icon](commands/SurfaceUnfold/resources/32x32@2x.png)](#surfaceunfold--unfold-curved-surfaces-to-flat-2d-sketches-early-preview) [![ObjectsRefold icon](commands/ObjectsRefold/resources/32x32@2x.png)](#objectsrefold--refold-flat-patterns-onto-curved-surfaces-early-preview) [![Gemstones Info icon](commands/GemstonesInfo/resources/32x32@2x.png)](#gemstonesinfo--show-detected-gemstone-diameters-on-model-early-preview)
+[![Gemstones icon](commands/GemstonesOnFaceAtPoints/resources/32x32@2x.png)](#gemstonesonfaceatpoints--place-round-gemstones-on-a-face-at-specified-points) [![Gemstones icon](commands/GemstonesOnFaceAtCircles/resources/32x32@2x.png)](#gemstonesonfaceatcircles--place-round-gemstones-on-a-face-at-sketch-circles) [![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)](#gemstonesonfaceatcurve--place-gemstones-along-a-curve-with-variable-sizes) [![Gemstones icon](commands/GemstonesOnFaceBetweenCurves/resources/32x32@2x.png)](#gemstonesonfacebetweencurves--place-gemstones-between-two-curves) [![Prongs icon](commands/ProngsOnFaceAtPoints/resources/32x32@2x.png)](#prongsonfaceatpoints--generate-prongs-on-a-face-at-specified-points) [![ProngsBetweenGemstones icon](commands/ProngsBetweenGemstones/resources/32x32@2x.png)](#prongsbetweengemstones--create-prongs-between-gemstones) [![ChannelsBetweenGemstones icon](commands/ChannelsBetweenGemstones/resources/32x32@2x.png)](#channelsbetweengemstones--create-channels-between-gemstones) [![CuttersForGemstones icon](commands/CuttersForGemstones/resources/32x32@2x.png)](#cuttersforgemstones--create-cutter-bodies-for-gemstone-seating) [![PatternAlongPathOnSurface icon](commands/PatternAlongPathOnSurface/resources/32x32@2x.png)](#patternalongpathonsurface--distribute-bodies-along-a-curve-on-a-surface) [![FFD icon](commands/FFD/resources/32x32@2x.png)](#ffd--free-form-deform-a-solid-body-with-a-control-lattice-early-preview) [![Taper icon](commands/Taper/resources/32x32@2x.png)](#taper--create-a-tapered-copy-of-a-solid-body-along-an-axis-early-preview) [![SurfaceUnfold icon](commands/SurfaceUnfold/resources/32x32@2x.png)](#surfaceunfold--unfold-curved-surfaces-to-flat-2d-sketches-early-preview) [![ObjectsRefold icon](commands/ObjectsRefold/resources/32x32@2x.png)](#objectsrefold--refold-flat-patterns-onto-curved-surfaces-early-preview) [![Gemstones Info icon](commands/GemstonesInfo/resources/32x32@2x.png)](#gemstonesinfo--show-detected-gemstone-diameters-on-model-early-preview)
 
 ## ⚠️ Important
 Command creation and editing work correctly only with **Hybrid Design Type**. Part and Assembly design types may have limitations. Ensure you're using Hybrid Design for full functionality of all commands.
@@ -17,9 +17,10 @@ Command creation and editing work correctly only with **Hybrid Design Type**. Pa
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
 ## What's new
-- **Gemstones Along Curve:** `GemstonesOnFaceAtCurve` now supports selecting multiple faces or construction planes and places each gemstone on the closest selected support.
-- **Improved channel junctions:** `ChannelsBetweenGemstones` now builds cleaner intersections for branching connections and uses a shared inset value to avoid visible gaps.
-- **Gemstone summary totals:** `GemstonesInfo` now shows the total gemstone count in the dialog summary in addition to the per-size breakdown.
+- **FFD (Early Preview):** New command for free-form deformation of a solid body using an editable 3D control lattice with per-point XYZ offsets.
+- **Taper (Early Preview):** New command for creating an editable tapered copy of a solid body along a selected axis with a configurable pivot point and angle.
+- **Shared deformation infrastructure:** Added reusable NURBS-based body deformation helpers and custom feature base-feature lookup for the new deformation workflows.
+- **Improved command UX and validation:** Added reset confirmation for FFD and shared axis-direction extraction for construction axes, linear edges, and sketch lines.
 - See [full changelog](CHANGELOG.md) for complete version history.
 
 ---
@@ -157,6 +158,34 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
   - **Flip Face Normal** — Flip the surface normal direction used for orientation. Default: `false`.
   - **Absolute Depth Offset** — Additional depth offset along the surface normal in absolute units. Default: `0 mm`.
   - **Relative Depth Offset** — Depth offset as a fraction of the spacing distance. Default: `0`.
+
+---
+
+![FFD icon](commands/FFD/resources/32x32@2x.png)
+## FFD — Free-form deform a solid body with a control lattice (Early Preview)
+- **Description:** Creates an editable free-form deformed copy of a solid body using a 3D Bernstein control lattice built over the source body's bounding box. Control points can be selected directly in the viewport and moved along X, Y, and Z.
+- **Selection:** 1 solid body.
+- **Key parameters:**
+  - **Resolution X** — Number of control points along the X axis. Default: `3`. Range: `2–5`.
+  - **Resolution Y** — Number of control points along the Y axis. Default: `3`. Range: `2–5`.
+  - **Resolution Z** — Number of control points along the Z axis. Default: `3`. Range: `2–5`.
+  - **Offset X** — X-axis displacement of the currently selected control point. Default: `0 mm`.
+  - **Offset Y** — Y-axis displacement of the currently selected control point. Default: `0 mm`.
+  - **Offset Z** — Z-axis displacement of the currently selected control point. Default: `0 mm`.
+  - **Reset All** — Resets all control point offsets to zero after confirmation.
+- **Behavior:** The command previews the control lattice in the viewport, highlights the selected control point, and stores offsets and grid size in an editable custom feature.
+- **Limitations:** This feature is in early preview and may have limitations or unexpected behavior on complex geometry.
+
+---
+
+![Taper icon](commands/Taper/resources/32x32@2x.png)
+## Taper — Create a tapered copy of a solid body along an axis (Early Preview)
+- **Description:** Creates an editable tapered copy of a solid body by scaling cross-sections along a selected axis. The selected pivot point defines the neutral section where the scale stays unchanged.
+- **Selection:** 1 solid body, 1 straight edge or construction axis or sketch line, and 1 pivot point (vertex, construction point, or sketch point).
+- **Key parameters:**
+  - **Angle** — Taper angle. Default: `10°`. Range: `-45° to 45°`.
+- **Behavior:** Cross-sections before the pivot point along the selected axis expand, and cross-sections after it contract. The command shows a tapered bounding-box preview in the viewport and stores the result as an editable custom feature.
+- **Limitations:** This feature is in early preview and may have limitations or unexpected behavior on complex geometry.
 
 ---
 

@@ -16,6 +16,9 @@ from .commands.ObjectsRefold import ObjectsRefold
 
 from .commands.PatternAlongPathOnSurface import PatternAlongPathOnSurface
 
+from .commands.FFD import FFD
+from .commands.Taper import Taper
+
 commands = [
     GemstonesOnFaceAtPoints,
     GemstonesOnFaceAtCircles,
@@ -32,6 +35,9 @@ commands = [
     ObjectsRefold,
 
     PatternAlongPathOnSurface,
+
+    FFD,
+    Taper,
 
     GemstonesInfo,
     ]
