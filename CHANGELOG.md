@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.1] - 2026-04-02
+
+### Added
+- `GemstonesOnFaceAtCurve`: Added support for connected curve chains and a `Snap to Corners` option that guarantees gemstone placement at angular chain junctions.
+- `GemstonesOnFaceBetweenCurves`: Added support for two connected rail chains, a `Snap to Corners` option for corner-aware placement, and `Min Stone Size` / `Max Stone Size` limits for clamping automatically computed gemstone diameters.
+
+### Changed
+- `GemstonesOnFaceBetweenCurves`: Expanded support selection from a single face or plane to multiple faces or construction planes, with each gemstone attached to the closest selected support.
+- `helpers/Curves.py`: Reworked curve processing around ordered curve-chain evaluation so segmented paths and rails are handled as continuous placement guides.
+- `strings.py`: Refactored command string definitions into grouped command-specific structures used across the updated gemstone commands.
+
+### Fixed
+- `helpers/Curves.py`: Improved overlap merging for curve-based placement by increasing the gemstone merge threshold and consolidating overlapping placements more reliably on segmented paths.
+- `GemstonesOnFaceAtCurve` and `GemstonesOnFaceBetweenCurves`: Added backward-compatible dependency loading so older custom features based on single-curve inputs remain editable after the chain-selection update.
+
 ## [0.11.0] - 2026-03-27
 
 ### Added

@@ -26,27 +26,23 @@ _maxGapValueInput: adsk.core.ValueCommandInput = None
 
 RESOURCES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', '')
 
-COMMAND_ID = strings.PREFIX + strings.CHANNELS_BETWEEN_GEMSTONES
-CREATE_COMMAND_ID = COMMAND_ID + 'Create'
-EDIT_COMMAND_ID = COMMAND_ID + 'Edit'
-
-createCommandInputDef = strings.InputDef(CREATE_COMMAND_ID, 'Create Channels Between Gemstones', 'Creates a network of channels connecting nearby gemstones based on distance constraint.')
-editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Channels Between Gemstones', 'Edits the parameters of existing channels between gemstones.')
+createCommandInputDef = strings.InputDef(strings.ChannelsBetweenGemstones.createCommandId, 'Create Channels Between Gemstones', 'Creates a network of channels connecting nearby gemstones based on distance constraint.')
+editCommandInputDef = strings.InputDef(strings.ChannelsBetweenGemstones.editCommandId, 'Edit Channels Between Gemstones', 'Edits the parameters of existing channels between gemstones.')
 
 selectGemstonesInputDef = strings.InputDef(
-    'selectGemstones',
+    strings.ChannelsBetweenGemstones.selectGemstonesInputId,
     'Select Gemstones',
     'Select at least 2 gemstones to create a channel.'
     )
 
 ratioInputDef = strings.InputDef(
-    'ratio', 
+    strings.ChannelsBetweenGemstones.ratioInputId, 
     'Channel Ratio', 
     "Channel width relative to gemstone size.\nFrom 0.2 to 0.8 of gemstone diameter (0.5 = half diameter)."
     )
 
 maxGapInputDef = strings.InputDef(
-    'maxGap', 
+    strings.ChannelsBetweenGemstones.maxGapInputId, 
     'Max Gap', 
     "Maximum gap between gemstones for channel creation.\nChannels connect gemstones closer than this distance (0.5 mm default)."
     )
@@ -79,8 +75,8 @@ def run(panel: adsk.core.ToolbarPanel):
         editCommandDefinition.commandCreated.add(editCommandCreated)
         _handlers.append(editCommandCreated)
 
-        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(COMMAND_ID, strings.CHANNELS_BETWEEN_GEMSTONES, RESOURCES_FOLDER)
-        _customFeatureDefinition.editCommandId = EDIT_COMMAND_ID
+        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(strings.ChannelsBetweenGemstones.commandId, strings.ChannelsBetweenGemstones.id, RESOURCES_FOLDER)
+        _customFeatureDefinition.editCommandId = strings.ChannelsBetweenGemstones.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -92,15 +88,15 @@ def run(panel: adsk.core.ToolbarPanel):
 def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the channels between gemstones command by removing UI elements and handlers."""
     try:
-        control = panel.controls.itemById(CREATE_COMMAND_ID)
+        control = panel.controls.itemById(strings.ChannelsBetweenGemstones.createCommandId)
         if control:
             control.deleteMe()
             
-        commandDefinition = _ui.commandDefinitions.itemById(CREATE_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.ChannelsBetweenGemstones.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(EDIT_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.ChannelsBetweenGemstones.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
     except:
@@ -724,8 +720,8 @@ def handleNewBody(body: adsk.fusion.BRepBody):
     Args:
         body: The new channel body to handle.
     """
-    body.name = strings.CHANNEL
-    body.attributes.add(strings.PREFIX, strings.ENTITY, strings.CHANNEL)
+    body.name = strings.ChannelsBetweenGemstones.channelEntity
+    body.attributes.add(strings.PREFIX, strings.ENTITY, strings.ChannelsBetweenGemstones.channelEntity)
 
 def updateAttributes():
     """Update the attributes of all channel bodies in the edited custom feature."""

@@ -27,12 +27,8 @@ _isRolledForEdit: bool = False
 
 _handlers = []
 
-COMMAND_ID = strings.PREFIX + strings.Unfold.surfaceUnfoldCommandId
-CREATE_COMMAND_ID = COMMAND_ID + 'Create'
-EDIT_COMMAND_ID = COMMAND_ID + 'Edit'
-
-createCommandInputDef = strings.InputDef(CREATE_COMMAND_ID, 'Surface Unfold', 'Unfolds a NURBS surface or mesh to a sketch.')
-editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Surface Unfold', 'Edits the parameters of the unfold feature.')
+createCommandInputDef = strings.InputDef(strings.Unfold.createCommandId, 'Surface Unfold', 'Unfolds a NURBS surface or mesh to a sketch.')
+editCommandInputDef = strings.InputDef(strings.Unfold.editCommandId, 'Edit Surface Unfold', 'Edits the parameters of the unfold feature.')
 
 selectSourceInputDef = strings.InputDef(
     strings.Unfold.selectSourceInputId,
@@ -119,8 +115,8 @@ def run(panel: adsk.core.ToolbarPanel):
         _handlers.append(editCommandCreated)
 
         global _customFeatureDefinition
-        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(COMMAND_ID, strings.Unfold.surfaceUnfoldCommandId, RESOURCES_FOLDER)
-        _customFeatureDefinition.editCommandId = EDIT_COMMAND_ID
+        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(strings.Unfold.commandId, strings.Unfold.id, RESOURCES_FOLDER)
+        _customFeatureDefinition.editCommandId = strings.Unfold.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -132,15 +128,15 @@ def run(panel: adsk.core.ToolbarPanel):
 def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the surface unfold command by removing UI elements and handlers."""
     try:
-        control = panel.controls.itemById(CREATE_COMMAND_ID)
+        control = panel.controls.itemById(strings.Unfold.createCommandId)
         if control:
             control.deleteMe()
             
-        commandDefinition = _ui.commandDefinitions.itemById(CREATE_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.Unfold.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(EDIT_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.Unfold.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
     except:

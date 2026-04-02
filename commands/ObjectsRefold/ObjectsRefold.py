@@ -25,12 +25,8 @@ _bodiesSelectionInput: adsk.core.SelectionCommandInput = None
 
 RESOURCES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', '')
 
-COMMAND_ID = strings.PREFIX + strings.ObjectsRefold.objectsRefoldCommandId
-CREATE_COMMAND_ID = COMMAND_ID + 'Create'
-EDIT_COMMAND_ID = COMMAND_ID + 'Edit'
-
-createCommandInputDef = strings.InputDef(CREATE_COMMAND_ID, 'Objects Refold', 'Transfers bodies from unfolded sketch plane to the original surface.')
-editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Objects Refold', 'Edits the parameters of the objects refold feature.')
+createCommandInputDef = strings.InputDef(strings.ObjectsRefold.createCommandId, 'Objects Refold', 'Transfers bodies from unfolded sketch plane to the original surface.')
+editCommandInputDef = strings.InputDef(strings.ObjectsRefold.editCommandId, 'Edit Objects Refold', 'Edits the parameters of the objects refold feature.')
 
 selectSketchInputDef = strings.InputDef(
     strings.ObjectsRefold.selectSketchInputId,
@@ -73,8 +69,8 @@ def run(panel: adsk.core.ToolbarPanel):
         editCommandDefinition.commandCreated.add(editCommandCreated)
         _handlers.append(editCommandCreated)
 
-        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(COMMAND_ID, strings.ObjectsRefold.objectsRefoldCommandId, RESOURCES_FOLDER)
-        _customFeatureDefinition.editCommandId = EDIT_COMMAND_ID
+        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(strings.ObjectsRefold.commandId, strings.ObjectsRefold.id, RESOURCES_FOLDER)
+        _customFeatureDefinition.editCommandId = strings.ObjectsRefold.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -86,15 +82,15 @@ def run(panel: adsk.core.ToolbarPanel):
 def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the cutters command by removing UI elements and handlers."""
     try:
-        control = panel.controls.itemById(CREATE_COMMAND_ID)
+        control = panel.controls.itemById(strings.ObjectsRefold.createCommandId)
         if control:
             control.deleteMe()
             
-        commandDefinition = _ui.commandDefinitions.itemById(CREATE_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.ObjectsRefold.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(EDIT_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.ObjectsRefold.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
     except:
@@ -118,7 +114,7 @@ def getSurfaceUnfoldFeatureFromSketch(sketch: adsk.fusion.Sketch) -> adsk.fusion
         component = nativeSketch.parentComponent
         
         for feature in component.features.customFeatures:
-            if feature.name.startswith(strings.Unfold.surfaceUnfoldCommandId):
+            if feature.name.startswith(strings.Unfold.id):
                 for subFeature in feature.features:
                     if subFeature.objectType == adsk.fusion.BaseFeature.classType():
                         baseFeature = adsk.fusion.BaseFeature.cast(subFeature)

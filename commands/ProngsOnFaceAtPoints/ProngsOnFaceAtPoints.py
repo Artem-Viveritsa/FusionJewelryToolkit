@@ -28,33 +28,29 @@ _heightValueInput: adsk.core.ValueCommandInput = None
 
 RESOURCES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', '')
 
-COMMAND_ID = strings.PREFIX + strings.PRONGS_ON_FACE_AT_POINTS
-CREATE_COMMAND_ID = COMMAND_ID + 'Create'
-EDIT_COMMAND_ID = COMMAND_ID + 'Edit'
-
-createCommandInputDef = strings.InputDef(CREATE_COMMAND_ID, 'Create Prongs at Points', 'Creates prongs at selected points on a face.')
-editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Prongs', 'Edits the parameters of existing prongs.')
+createCommandInputDef = strings.InputDef(strings.ProngsAtPoints.createCommandId, 'Create Prongs at Points', 'Creates prongs at selected points on a face.')
+editCommandInputDef = strings.InputDef(strings.ProngsAtPoints.editCommandId, 'Edit Prongs', 'Edits the parameters of existing prongs.')
 
 selectFaceInputDef = strings.InputDef(
-    'selectFace',
+    strings.ProngsAtPoints.selectFaceInputId,
     'Select Face or Plane',
     'Select the face or construction plane where the prongs will be placed.'
     )
 
 selectPointsInputDef = strings.InputDef(
-    'selectPoint',
+    strings.ProngsAtPoints.selectPointsInputId,
     'Select Points',
     'Select the points on the face for the prong centers.'
     )
 
 sizeInputDef = strings.InputDef(
-    'size', 
+    strings.ProngsAtPoints.sizeInputId, 
     'Size', 
     "Prong base diameter.\nDetermines the width of the prong at its base."
     )
 
 heightInputDef = strings.InputDef(
-    'height', 
+    strings.ProngsAtPoints.heightInputId, 
     'Height', 
     "Prong height above the surface.\nControls how tall the prong extends."
     )
@@ -93,8 +89,8 @@ def run(panel: adsk.core.ToolbarPanel):
         editCommandDefinition.commandCreated.add(editCommandCreated)
         _handlers.append(editCommandCreated)
 
-        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(COMMAND_ID, strings.PRONGS_ON_FACE_AT_POINTS, RESOURCES_FOLDER)
-        _customFeatureDefinition.editCommandId = EDIT_COMMAND_ID
+        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(strings.ProngsAtPoints.commandId, strings.ProngsAtPoints.id, RESOURCES_FOLDER)
+        _customFeatureDefinition.editCommandId = strings.ProngsAtPoints.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -112,15 +108,15 @@ def stop(panel: adsk.core.ToolbarPanel):
         panel: The toolbar panel to remove the command from
     """
     try:
-        control = panel.controls.itemById(CREATE_COMMAND_ID)
+        control = panel.controls.itemById(strings.ProngsAtPoints.createCommandId)
         if control:
             control.deleteMe()
             
-        commandDefinition = _ui.commandDefinitions.itemById(CREATE_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.ProngsAtPoints.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(EDIT_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.ProngsAtPoints.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
     except:

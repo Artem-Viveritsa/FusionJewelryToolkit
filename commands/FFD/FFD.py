@@ -44,10 +44,8 @@ _gridSizeX: int = constants.FFDConst.defaultGridSize
 _gridSizeY: int = constants.FFDConst.defaultGridSize
 _gridSizeZ: int = constants.FFDConst.defaultGridSize
 
-COMMAND_ID, CREATE_COMMAND_ID, EDIT_COMMAND_ID = strings.getCommandIds(strings.FFD.ffdCommandId)
-
-createCommandInputDef = strings.InputDef(CREATE_COMMAND_ID, 'FFD', 'Creates a free-form deformed copy of a solid body.')
-editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit FFD', 'Edits the parameters of the FFD feature.')
+createCommandInputDef = strings.InputDef(strings.FFD.createCommandId, 'FFD', 'Creates a free-form deformed copy of a solid body.')
+editCommandInputDef = strings.InputDef(strings.FFD.editCommandId, 'Edit FFD', 'Edits the parameters of the FFD feature.')
 
 selectBodyInputDef = strings.InputDef(
     strings.FFD.selectBodyInputId,
@@ -134,11 +132,11 @@ def run(panel: adsk.core.ToolbarPanel) -> None:
         _handlers.append(editCommandCreated)
 
         _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(
-            COMMAND_ID,
+            strings.FFD.commandId,
             createCommandInputDef.name,
             RESOURCES_FOLDER
         )
-        _customFeatureDefinition.editCommandId = EDIT_COMMAND_ID
+        _customFeatureDefinition.editCommandId = strings.FFD.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -151,15 +149,15 @@ def run(panel: adsk.core.ToolbarPanel) -> None:
 def stop(panel: adsk.core.ToolbarPanel) -> None:
     """Clean up the FFD command UI elements."""
     try:
-        control = panel.controls.itemById(CREATE_COMMAND_ID)
+        control = panel.controls.itemById(strings.FFD.createCommandId)
         if control:
             control.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(CREATE_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.FFD.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(EDIT_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.FFD.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 

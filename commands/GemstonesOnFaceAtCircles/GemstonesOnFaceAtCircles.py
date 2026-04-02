@@ -24,45 +24,41 @@ _isRolledForEdit: bool = False
 
 _handlers = []
 
-COMMAND_ID = strings.PREFIX + strings.GEMSTONES_ON_FACE_AT_CIRCLES
-CREATE_COMMAND_ID = COMMAND_ID + 'Create'
-EDIT_COMMAND_ID = COMMAND_ID + 'Edit'
-
-createCommandInputDef = strings.InputDef(CREATE_COMMAND_ID, 'Gemstones at Circles', 'Creates gemstones at selected sketch circles on a face. The gemstone size matches the circle diameter.')
-editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Gemstones', 'Edits the parameters of existing gemstones created from circles.')
+createCommandInputDef = strings.InputDef(strings.GemstonesAtCircles.createCommandId, 'Gemstones at Circles', 'Creates gemstones at selected sketch circles on a face. The gemstone size matches the circle diameter.')
+editCommandInputDef = strings.InputDef(strings.GemstonesAtCircles.editCommandId, 'Edit Gemstones', 'Edits the parameters of existing gemstones created from circles.')
 
 selectFaceInputDef = strings.InputDef(
-    'selectFace',
+    strings.GemstonesAtCircles.selectFaceInputId,
     'Select Face or Plane',
     'Select the face or construction plane where the gemstones will be placed.'
     )
 
 selectCirclesInputDef = strings.InputDef(
-    'selectCircles',
+    strings.GemstonesAtCircles.selectCirclesInputId,
     'Select Circles',
     'Select sketch circles. The gemstone will be centered at each circle center with diameter matching the circle diameter.'
     )
 
 flipInputDef = strings.InputDef(
-    'flip', 
+    strings.GemstonesAtCircles.flipInputId, 
     'Flip Gemstones', 
     "Flip gemstone orientation.\nReverses the direction the gemstone faces relative to the surface."
     )
 
 flipFaceNormalInputDef = strings.InputDef(
-    'flipFaceNormal',
+    strings.GemstonesAtCircles.flipFaceNormalInputId,
     'Flip Face Normal',
     "Flip gemstone relative to face normal.\nRotates the gemstone 180 degrees around the face normal."
     )
 
 absoluteDepthOffsetInputDef = strings.InputDef(
-    'absoluteDepthOffset', 
+    strings.GemstonesAtCircles.absoluteDepthOffsetInputId, 
     'Absolute Depth Offset', 
     "Additional depth offset in absolute units.\nAdds a fixed depth to the gemstone beyond the relative offset."
     )
 
 relativeDepthOffsetInputDef = strings.InputDef(
-    'relativeDepthOffset', 
+    strings.GemstonesAtCircles.relativeDepthOffsetInputId, 
     'Relative Depth Offset', 
     "Depth offset as a fraction of gemstone size.\nControls how deep the gemstone sits (0.1 = 10% of diameter)."
     )
@@ -98,8 +94,8 @@ def run(panel: adsk.core.ToolbarPanel):
         _handlers.append(editCommandCreated)
 
         global _customFeatureDefinition
-        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(COMMAND_ID, strings.GEMSTONES_ON_FACE_AT_CIRCLES, RESOURCES_FOLDER)
-        _customFeatureDefinition.editCommandId = EDIT_COMMAND_ID
+        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(strings.GemstonesAtCircles.commandId, strings.GemstonesAtCircles.id, RESOURCES_FOLDER)
+        _customFeatureDefinition.editCommandId = strings.GemstonesAtCircles.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -111,15 +107,15 @@ def run(panel: adsk.core.ToolbarPanel):
 def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the gemstones command by removing UI elements and handlers."""
     try:
-        control = panel.controls.itemById(CREATE_COMMAND_ID)
+        control = panel.controls.itemById(strings.GemstonesAtCircles.createCommandId)
         if control:
             control.deleteMe()
             
-        commandDefinition = _ui.commandDefinitions.itemById(CREATE_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.GemstonesAtCircles.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(EDIT_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.GemstonesAtCircles.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
     except:

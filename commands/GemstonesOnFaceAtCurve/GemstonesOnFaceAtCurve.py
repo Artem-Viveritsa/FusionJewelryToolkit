@@ -4,7 +4,7 @@ import adsk.core, adsk.fusion, traceback
 from ... import strings, constants
 from ...helpers.showMessage import showMessage
 from ...helpers.Gemstones import createGemstone, updateGemstone, setGemstoneAttributes, updateGemstoneFeature, diamondMaterial
-from ...helpers.Curves import calculatePointsAndSizesAlongCurve, getCurve3D
+from ...helpers.Curves import calculatePointsAndSizesAlongCurveChain, getCurve3D, getCurveEndpoints, canConnectToChain
 from ...helpers.Surface import getClosestFace
 
 _app: adsk.core.Application = None
@@ -24,6 +24,7 @@ _flipValueInput: adsk.core.BoolValueCommandInput = None
 _flipFaceNormalValueInput: adsk.core.BoolValueCommandInput = None
 _flipDirectionValueInput: adsk.core.BoolValueCommandInput = None
 _uniformDistributionValueInput: adsk.core.BoolValueCommandInput = None
+_snapToCornersValueInput: adsk.core.BoolValueCommandInput = None
 _absoluteDepthOffsetValueInput: adsk.core.ValueCommandInput = None
 _relativeDepthOffsetValueInput: adsk.core.ValueCommandInput = None
 _nonlinearValueInput: adsk.core.BoolValueCommandInput = None
@@ -36,109 +37,113 @@ _isRolledForEdit: bool = False
 
 _handlers = []
 
-COMMAND_ID, CREATE_COMMAND_ID, EDIT_COMMAND_ID = strings.getCommandIds(strings.GEMSTONES_ON_FACE_AT_CURVE)
-
-createCommandInputDef = strings.InputDef(CREATE_COMMAND_ID, 'Gemstones at Curves', 'Creates gemstones at selected curves on a face.')
-editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Gemstones', 'Edits the parameters of existing gemstones.')
+createCommandInputDef = strings.InputDef(strings.GemstonesAtCurve.createCommandId, 'Gemstones at Curves', 'Creates gemstones at selected curves on a face.')
+editCommandInputDef = strings.InputDef(strings.GemstonesAtCurve.editCommandId, 'Edit Gemstones', 'Edits the parameters of existing gemstones.')
 
 selectFaceInputDef = strings.InputDef(
-    'selectFace',
+    strings.GemstonesAtCurve.selectFaceInputId,
     'Select Faces or Planes',
     'Select one or more faces or construction planes where the gemstones will be placed.\nThe closest face to each gemstone point will be used.'
     )
 
 selectCurveInputDef = strings.InputDef(
-    'selectCurve',
-    'Curve',
-    'Select a sketch curve or edge along which gemstones will be placed.'
+    strings.GemstonesAtCurve.selectCurveInputId,
+    'Curves',
+    'Select one or more sketch curves or edges forming a connected chain.\nGemstones will be placed along the entire chain.'
     )
 
 startOffsetInputDef = strings.InputDef(
-    'startOffset',
+    strings.GemstonesAtCurve.startOffsetInputId,
     'Start Offset',
     "Offset from the start of the curve.\nDistance from the beginning of the curve to the first gemstone."
     )
 
 endOffsetInputDef = strings.InputDef(
-    'endOffset',
+    strings.GemstonesAtCurve.endOffsetInputId,
     'End Offset',
     "Offset from the end of the curve.\nDistance from the end of the curve to the last gemstone."
     )
 
 startSizeInputDef = strings.InputDef(
-    'startSize',
+    strings.GemstonesAtCurve.startSizeInputId,
     'Start Size',
     "Gemstone diameter at the start.\nDetermines the size of the first gemstone."
     )
 
 endSizeInputDef = strings.InputDef(
-    'endSize',
+    strings.GemstonesAtCurve.endSizeInputId,
     'End Size',
     "Gemstone diameter at the end.\nDetermines the size of the last gemstone."
     )
 
 sizeStepInputDef = strings.InputDef(
-    'sizeStep',
+    strings.GemstonesAtCurve.sizeStepInputId,
     'Size Step',
     "Size discretization step.\nGemstone sizes will be rounded to multiples of this value."
     )
 
 targetGapInputDef = strings.InputDef(
-    'targetGap',
+    strings.GemstonesAtCurve.targetGapInputId,
     'Target Gap',
     "Target gap between gemstones.\nTarget distance between adjacent gemstones along the curve."
     )
 
 flipInputDef = strings.InputDef(
-    'flip', 
+    strings.GemstonesAtCurve.flipInputId, 
     'Flip Gemstones', 
     "Flip gemstone orientation.\nReverses the direction the gemstone faces relative to the surface."
     )
 
 flipFaceNormalInputDef = strings.InputDef(
-    'flipFaceNormal',
+    strings.GemstonesAtCurve.flipFaceNormalInputId,
     'Flip Face Normal',
     "Flip gemstone relative to face normal.\nRotates the gemstone 180 degrees around the face normal."
     )
 
 flipDirectionInputDef = strings.InputDef(
-    'flipDirection',
+    strings.GemstonesAtCurve.flipDirectionInputId,
     'Flip Direction',
     "Flip gemstone placement direction.\nStarts placing gemstones from the opposite end of the curve."
     )
 
 uniformDistributionInputDef = strings.InputDef(
-    'uniformDistribution',
+    strings.GemstonesAtCurve.uniformDistributionInputId,
     'Uniform Distribution',
     "Distribute gemstones uniformly along the curve.\nEnsures gemstones fill the entire available length\nfrom start offset to end offset without gaps at the ends."
     )
 
+snapToCornersInputDef = strings.InputDef(
+    strings.GemstonesAtCurve.snapToCornersInputId,
+    'Snap to Corners',
+    "Place gemstones at chain corner points.\nEnsures gemstones are positioned where curves meet at an angle.\nSmooth junctions are not treated as corners."
+    )
+
 absoluteDepthOffsetInputDef = strings.InputDef(
-    'absoluteDepthOffset', 
+    strings.GemstonesAtCurve.absoluteDepthOffsetInputId, 
     'Absolute Depth Offset', 
     "Additional depth offset in absolute units.\nAdds a fixed depth to the gemstone beyond the relative offset."
     )
 
 relativeDepthOffsetInputDef = strings.InputDef(
-    'relativeDepthOffset', 
+    strings.GemstonesAtCurve.relativeDepthOffsetInputId, 
     'Relative Depth Offset', 
     "Depth offset as a fraction of gemstone size.\nControls how deep the gemstone sits (0.1 = 10% of diameter)."
     )
 
 nonlinearInputDef = strings.InputDef(
-    'nonlinear',
+    strings.GemstonesAtCurve.nonlinearInputId,
     'Nonlinear',
     "Use nonlinear size interpolation."
     )
 
 nonlinearSizeInputDef = strings.InputDef(
-    'nonlinearSize',
+    strings.GemstonesAtCurve.nonlinearSizeInputId,
     'Nonlinear Size',
     "Size of the gemstone at the nonlinear position."
     )
 
 nonlinearPositionInputDef = strings.InputDef(
-    'nonlinearPosition',
+    strings.GemstonesAtCurve.nonlinearPositionInputId,
     'Nonlinear Position',
     "Position of the nonlinearity peak (0.0 to 1.0)."
     )
@@ -174,8 +179,8 @@ def run(panel: adsk.core.ToolbarPanel):
         _handlers.append(editCommandCreated)
 
         global _customFeatureDefinition
-        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(COMMAND_ID, strings.GEMSTONES_ON_FACE_AT_CURVE, RESOURCES_FOLDER)
-        _customFeatureDefinition.editCommandId = EDIT_COMMAND_ID
+        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(strings.GemstonesAtCurve.commandId, strings.GemstonesAtCurve.id, RESOURCES_FOLDER)
+        _customFeatureDefinition.editCommandId = strings.GemstonesAtCurve.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -187,15 +192,15 @@ def run(panel: adsk.core.ToolbarPanel):
 def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the gemstones command by removing UI elements and handlers."""
     try:
-        control = panel.controls.itemById(CREATE_COMMAND_ID)
+        control = panel.controls.itemById(strings.GemstonesAtCurve.createCommandId)
         if control:
             control.deleteMe()
             
-        commandDefinition = _ui.commandDefinitions.itemById(CREATE_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.GemstonesAtCurve.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(EDIT_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.GemstonesAtCurve.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
     except:
@@ -221,6 +226,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             global _faceSelectionInput, _curveSelectionInput, _startOffsetValueInput, _endOffsetValueInput
             global _startSizeValueInput, _endSizeValueInput, _sizeStepValueInput, _targetGapValueInput
             global _flipValueInput, _flipFaceNormalValueInput, _flipDirectionValueInput, _uniformDistributionValueInput
+            global _snapToCornersValueInput
             global _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
             global _nonlinearValueInput, _nonlinearSizeValueInput, _nonlinearPositionValueInput
 
@@ -228,7 +234,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _curveSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
             _curveSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
             _curveSelectionInput.tooltip = selectCurveInputDef.tooltip
-            _curveSelectionInput.setSelectionLimits(1, 1)
+            _curveSelectionInput.setSelectionLimits(1, 0)
 
             _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
             _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
@@ -245,6 +251,10 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             uniformDistribution = False
             _uniformDistributionValueInput = inputs.addBoolValueInput(uniformDistributionInputDef.id, uniformDistributionInputDef.name, True, '', uniformDistribution)
             _uniformDistributionValueInput.tooltip = uniformDistributionInputDef.tooltip
+
+            snapToCorners = False
+            _snapToCornersValueInput = inputs.addBoolValueInput(snapToCornersInputDef.id, snapToCornersInputDef.name, True, '', snapToCorners)
+            _snapToCornersValueInput.tooltip = snapToCornersInputDef.tooltip
             
             startOffset = adsk.core.ValueInput.createByReal(0.0)
             _startOffsetValueInput = inputs.addValueInput(startOffsetInputDef.id, startOffsetInputDef.name, defaultLengthUnits, startOffset)
@@ -351,7 +361,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             global _startOffsetValueInput, _endOffsetValueInput, _startSizeValueInput, _endSizeValueInput
             global _sizeStepValueInput, _targetGapValueInput, _flipValueInput, _flipFaceNormalValueInput, _flipDirectionValueInput
-            global _uniformDistributionValueInput
+            global _uniformDistributionValueInput, _snapToCornersValueInput
             global _absoluteDepthOffsetValueInput, _relativeDepthOffsetValueInput
             global _nonlinearValueInput, _nonlinearSizeValueInput, _nonlinearPositionValueInput
 
@@ -359,7 +369,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _curveSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.SketchCurves)
             _curveSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
             _curveSelectionInput.tooltip = selectCurveInputDef.tooltip
-            _curveSelectionInput.setSelectionLimits(1, 1)
+            _curveSelectionInput.setSelectionLimits(1, 0)
 
             _faceSelectionInput = inputs.addSelectionInput(selectFaceInputDef.id, selectFaceInputDef.name, selectFaceInputDef.tooltip)
             _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
@@ -386,6 +396,14 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 uniformDistribution = False
             _uniformDistributionValueInput = inputs.addBoolValueInput(uniformDistributionInputDef.id, uniformDistributionInputDef.name, True, '', uniformDistribution)
             _uniformDistributionValueInput.tooltip = uniformDistributionInputDef.tooltip
+
+            try:
+                snapToCornersParam = params.itemById(snapToCornersInputDef.id)
+                snapToCorners = snapToCornersParam.expression.lower() == 'true'
+            except:
+                snapToCorners = False
+            _snapToCornersValueInput = inputs.addBoolValueInput(snapToCornersInputDef.id, snapToCornersInputDef.name, True, '', snapToCorners)
+            _snapToCornersValueInput.tooltip = snapToCornersInputDef.tooltip
 
             try:
                 startOffsetParam = params.itemById(startOffsetInputDef.id)
@@ -545,6 +563,17 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
                 if entity.geometry is None:
                     eventArgs.isSelectable = False
                     return
+
+            if entityType in [adsk.fusion.SketchCurve.classType(), adsk.fusion.BRepEdge.classType(),
+                              adsk.fusion.SketchLine.classType(), adsk.fusion.SketchArc.classType(),
+                              adsk.fusion.SketchFittedSpline.classType(), adsk.fusion.SketchFixedSpline.classType(),
+                              adsk.fusion.SketchConicCurve.classType(), adsk.fusion.SketchEllipse.classType(),
+                              adsk.fusion.SketchEllipticalArc.classType(), adsk.fusion.SketchCircle.classType()]:
+                if _curveSelectionInput.selectionCount > 0:
+                    existingEntities = [_curveSelectionInput.selection(i).entity for i in range(_curveSelectionInput.selectionCount)]
+                    if not canConnectToChain(existingEntities, entity):
+                        eventArgs.isSelectable = False
+                        return
             
         except:
             showMessage(f'PreSelectHandler: {traceback.format_exc()}\n', True)
@@ -558,7 +587,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
         try:
             eventArgs = adsk.core.ValidateInputsEventArgs.cast(args)
 
-            if _faceSelectionInput.selectionCount < 1 or _curveSelectionInput.selectionCount != 1:
+            if _faceSelectionInput.selectionCount < 1 or _curveSelectionInput.selectionCount < 1:
                 eventArgs.areInputsValid = False
                 return
 
@@ -567,6 +596,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                          _sizeStepValueInput.isValidExpression, _targetGapValueInput.isValidExpression,
                          _flipValueInput.isValid, _flipFaceNormalValueInput.isValid, _flipDirectionValueInput.isValid,
                          _uniformDistributionValueInput.isValid,
+                         _snapToCornersValueInput.isValid,
                          _absoluteDepthOffsetValueInput.isValidExpression,
                          _relativeDepthOffsetValueInput.isValidExpression,
                          _nonlinearValueInput.isValid,
@@ -619,11 +649,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
     def notify(self, args):
         try:
             faces = getSelectedFaces(_faceSelectionInput)
-            curveEntity = _curveSelectionInput.selection(0).entity
-            
-            curve = getCurve3D(curveEntity)
-            if curve is None:
-                return
+            curveEntities = [_curveSelectionInput.selection(i).entity for i in range(_curveSelectionInput.selectionCount)]
             
             startOffset = _startOffsetValueInput.value
             endOffset = _endOffsetValueInput.value
@@ -635,13 +661,14 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             flipFaceNormal = _flipFaceNormalValueInput.value
             flipDirection = _flipDirectionValueInput.value
             uniformDistribution = _uniformDistributionValueInput.value
+            snapToCorners = _snapToCornersValueInput.value
             absoluteDepthOffset = _absoluteDepthOffsetValueInput.value
             relativeDepthOffset = _relativeDepthOffsetValueInput.value
             nonlinear = _nonlinearValueInput.value
             nonlinearSize = _nonlinearSizeValueInput.value
             nonlinearPosition = _nonlinearPositionValueInput.value
 
-            pointsAndSizes = calculatePointsAndSizesAlongCurve(curve, startOffset, endOffset, startSize, endSize, sizeStep, targetGap, flipDirection, uniformDistribution, nonlinear, nonlinearSize, nonlinearPosition)
+            pointsAndSizes = calculatePointsAndSizesAlongCurveChain(curveEntities, startOffset, endOffset, startSize, endSize, sizeStep, targetGap, flipDirection, uniformDistribution, snapToCorners, nonlinear, nonlinearSize, nonlinearPosition)
             if len(pointsAndSizes) == 0:
                 return
 
@@ -681,7 +708,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
 
             comp: adsk.fusion.Component = None
             faces = getSelectedFaces(_faceSelectionInput)
-            curveEntity = _curveSelectionInput.selection(0).entity
+            curveEntities = [_curveSelectionInput.selection(i).entity for i in range(_curveSelectionInput.selectionCount)]
 
             firstFace = faces[0]
             if firstFace.objectType == adsk.fusion.ConstructionPlane.classType():
@@ -689,15 +716,11 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             else:
                 comp = firstFace.body.parentComponent
 
-            curve = getCurve3D(curveEntity)
-            if curve is None:
-                eventArgs.executeFailed = True
-                return
-
-            pointsAndSizes = calculatePointsAndSizesAlongCurve(curve, _startOffsetValueInput.value, _endOffsetValueInput.value,
+            pointsAndSizes = calculatePointsAndSizesAlongCurveChain(curveEntities, _startOffsetValueInput.value, _endOffsetValueInput.value,
                                                                _startSizeValueInput.value, _endSizeValueInput.value,
                                                                _sizeStepValueInput.value, _targetGapValueInput.value,
                                                                _flipDirectionValueInput.value, _uniformDistributionValueInput.value,
+                                                               _snapToCornersValueInput.value,
                                                                _nonlinearValueInput.value, _nonlinearSizeValueInput.value, _nonlinearPositionValueInput.value)
             if len(pointsAndSizes) == 0:
                 eventArgs.executeFailed = True
@@ -760,6 +783,9 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             uniformDistributionInput = adsk.core.ValueInput.createByString(str(_uniformDistributionValueInput.value).lower())
             customFeatureInput.addCustomParameter(uniformDistributionInputDef.id, uniformDistributionInputDef.name, uniformDistributionInput, '', True)
 
+            snapToCornersInput = adsk.core.ValueInput.createByString(str(_snapToCornersValueInput.value).lower())
+            customFeatureInput.addCustomParameter(snapToCornersInputDef.id, snapToCornersInputDef.name, snapToCornersInput, '', True)
+
             absoluteDepthOffsetInput = adsk.core.ValueInput.createByString(_absoluteDepthOffsetValueInput.expression)
             customFeatureInput.addCustomParameter(absoluteDepthOffsetInputDef.id, absoluteDepthOffsetInputDef.name, absoluteDepthOffsetInput,
                                               defLengthUnits, True)
@@ -781,7 +807,8 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
 
             for i, faceEntity in enumerate(faces):
                 customFeatureInput.addDependency(f'face{i}', faceEntity)
-            customFeatureInput.addDependency('curve', curveEntity)
+            for i, curveEntity in enumerate(curveEntities):
+                customFeatureInput.addDependency(f'curve{i}', curveEntity)
 
             customFeatureInput.setStartAndEndFeatures(baseFeature, baseFeature)
             comp.features.customFeatures.add(customFeatureInput)
@@ -818,9 +845,9 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
             command = eventArgs.command
             command.beginStep()
 
-            curve = _editedCustomFeature.dependencies.itemById('curve').entity
-            if curve is not None:
-                _curveSelectionInput.addSelection(curve)
+            curveEntities = getCurveDependencies(_editedCustomFeature)
+            for curveEntity in curveEntities:
+                _curveSelectionInput.addSelection(curveEntity)
 
             faces = getFaceDependencies(_editedCustomFeature)
             for face in faces:
@@ -854,15 +881,20 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             eventArgs = adsk.core.CommandEventArgs.cast(args)    
 
             faces = getSelectedFaces(_faceSelectionInput)
-            curveEntity = _curveSelectionInput.selection(0).entity
+            curveEntities = [_curveSelectionInput.selection(i).entity for i in range(_curveSelectionInput.selectionCount)]
 
             _editedCustomFeature.dependencies.deleteAll()
             for i, faceEntity in enumerate(faces):
                 _editedCustomFeature.dependencies.add(f'face{i}', faceEntity)
-            _editedCustomFeature.dependencies.add('curve', curveEntity)
+            for i, curveEntity in enumerate(curveEntities):
+                _editedCustomFeature.dependencies.add(f'curve{i}', curveEntity)
 
             _editedCustomFeature.parameters.itemById(flipDirectionInputDef.id).expression = str(_flipDirectionValueInput.value).lower()
             _editedCustomFeature.parameters.itemById(uniformDistributionInputDef.id).expression = str(_uniformDistributionValueInput.value).lower()
+            try:
+                _editedCustomFeature.parameters.itemById(snapToCornersInputDef.id).expression = str(_snapToCornersValueInput.value).lower()
+            except:
+                pass
             _editedCustomFeature.parameters.itemById(startOffsetInputDef.id).expression = _startOffsetValueInput.expression
             _editedCustomFeature.parameters.itemById(endOffsetInputDef.id).expression = _endOffsetValueInput.expression
             _editedCustomFeature.parameters.itemById(startSizeInputDef.id).expression = _startSizeValueInput.expression
@@ -941,6 +973,34 @@ def getFaceDependencies(customFeature: adsk.fusion.CustomFeature) -> list[adsk.f
     return faces
 
 
+def getCurveDependencies(customFeature: adsk.fusion.CustomFeature) -> list:
+    """Retrieve curve dependencies from a custom feature with backward compatibility.
+
+    Tries indexed format (curve0, curve1, ...) first, then falls back to single 'curve' dependency.
+
+    Args:
+        customFeature: The custom feature to read dependencies from.
+
+    Returns:
+        List of curve entities.
+    """
+    curves = []
+    i = 0
+    while True:
+        dep = customFeature.dependencies.itemById(f'curve{i}')
+        if dep is None or dep.entity is None:
+            break
+        curves.append(dep.entity)
+        i += 1
+
+    if len(curves) == 0:
+        dep = customFeature.dependencies.itemById('curve')
+        if dep is not None and dep.entity is not None:
+            curves.append(dep.entity)
+
+    return curves
+
+
 def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
     """Update the bodies of an existing custom gemstones feature.
 
@@ -961,8 +1021,8 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         faces = getFaceDependencies(customFeature)
         if len(faces) == 0: return False
 
-        curveEntity: adsk.fusion.SketchCurve = customFeature.dependencies.itemById('curve').entity
-        if curveEntity is None: return False
+        curveEntities = getCurveDependencies(customFeature)
+        if len(curveEntities) == 0: return False
 
         
         startOffset = customFeature.parameters.itemById(startOffsetInputDef.id).value
@@ -985,6 +1045,11 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
             uniformDistribution = customFeature.parameters.itemById(uniformDistributionInputDef.id).expression.lower() == 'true'
         except:
             uniformDistribution = False
+
+        try:
+            snapToCorners = customFeature.parameters.itemById(snapToCornersInputDef.id).expression.lower() == 'true'
+        except:
+            snapToCorners = False
         
         absoluteDepthOffset = customFeature.parameters.itemById(absoluteDepthOffsetInputDef.id).value
         relativeDepthOffset = customFeature.parameters.itemById(relativeDepthOffsetInputDef.id).value
@@ -1009,11 +1074,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         except:
             nonlinearPosition = 0.5
 
-        curveGeometry = getCurve3D(curveEntity)
-        if curveGeometry is None:
-            return True
-
-        pointsAndSizes = calculatePointsAndSizesAlongCurve(curveGeometry, startOffset, endOffset, startSize, endSize, sizeStep, targetGap, flipDirection, uniformDistribution, nonlinear, nonlinearSize, nonlinearPosition)
+        pointsAndSizes = calculatePointsAndSizesAlongCurveChain(curveEntities, startOffset, endOffset, startSize, endSize, sizeStep, targetGap, flipDirection, uniformDistribution, snapToCorners, nonlinear, nonlinearSize, nonlinearPosition)
         if len(pointsAndSizes) == 0: return True
 
         firstFace = faces[0]

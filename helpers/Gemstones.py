@@ -163,7 +163,7 @@ class GemstoneInfo:
         """Extract flip, absoluteDepthOffset, and relativeDepthOffset from the parent feature."""
         try:
             for feature in self.body.parentComponent.features.customFeatures:
-                if feature.name.startswith(strings.GEMSTONES_ON_FACE_AT_POINTS):
+                if feature.name.startswith(strings.GemstonesAtPoints.id):
                     for subFeature in feature.features:
                         if subFeature.objectType == adsk.fusion.BaseFeature.classType():
                             baseFeature = adsk.fusion.BaseFeature.cast(subFeature)

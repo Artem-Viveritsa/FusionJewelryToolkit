@@ -33,10 +33,8 @@ _hiddenSourceBody: Optional[adsk.fusion.BRepBody] = None
 
 _handlers: list[object] = []
 
-COMMAND_ID, CREATE_COMMAND_ID, EDIT_COMMAND_ID = strings.getCommandIds(strings.Taper.taperCommandId)
-
-createCommandInputDef = strings.InputDef(CREATE_COMMAND_ID, 'Taper', 'Creates a tapered copy of a solid body.')
-editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Taper', 'Edits the parameters of the taper feature.')
+createCommandInputDef = strings.InputDef(strings.Taper.createCommandId, 'Taper', 'Creates a tapered copy of a solid body.')
+editCommandInputDef = strings.InputDef(strings.Taper.editCommandId, 'Edit Taper', 'Edits the parameters of the taper feature.')
 
 selectBodyInputDef = strings.InputDef(
     strings.Taper.selectBodyInputId,
@@ -99,11 +97,11 @@ def run(panel: adsk.core.ToolbarPanel) -> None:
         _handlers.append(editCommandCreated)
 
         _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(
-            COMMAND_ID,
+            strings.Taper.commandId,
             createCommandInputDef.name,
             RESOURCES_FOLDER
         )
-        _customFeatureDefinition.editCommandId = EDIT_COMMAND_ID
+        _customFeatureDefinition.editCommandId = strings.Taper.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -116,15 +114,15 @@ def run(panel: adsk.core.ToolbarPanel) -> None:
 def stop(panel: adsk.core.ToolbarPanel) -> None:
     """Clean up the taper command UI elements."""
     try:
-        control = panel.controls.itemById(CREATE_COMMAND_ID)
+        control = panel.controls.itemById(strings.Taper.createCommandId)
         if control:
             control.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(CREATE_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.Taper.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(EDIT_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.Taper.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 

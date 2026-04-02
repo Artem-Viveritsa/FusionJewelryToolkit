@@ -41,37 +41,35 @@ PRESERVE_BODIES: bool = False
 
 _handlers = []
 
-COMMAND_ID, CREATE_COMMAND_ID, EDIT_COMMAND_ID = strings.getCommandIds(strings.PATTERN_ALONG_PATH_ON_SURFACE)
-
-createCommandInputDef = strings.InputDef(CREATE_COMMAND_ID, 'Pattern Along Path', 'Distributes bodies along a curve on a surface.')
-editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Pattern', 'Edits the parameters of existing pattern.')
+createCommandInputDef = strings.InputDef(strings.PatternAlongPath.createCommandId, 'Pattern Along Path', 'Distributes bodies along a curve on a surface.')
+editCommandInputDef = strings.InputDef(strings.PatternAlongPath.editCommandId, 'Edit Pattern', 'Edits the parameters of existing pattern.')
 
 selectBodiesInputDef = strings.InputDef(
-    'selectBodies',
+    strings.PatternAlongPath.selectBodiesInputId,
     'Select Bodies',
     'Select the bodies (solid or surface) to distribute along the curve.'
     )
 
 selectBasePointInputDef = strings.InputDef(
-    'selectBasePoint',
+    strings.PatternAlongPath.selectBasePointInputId,
     'Base Point',
     'Select the base point (origin) of the pattern element.'
     )
 
 selectBaseSurfaceInputDef = strings.InputDef(
-    'selectBaseSurface',
+    strings.PatternAlongPath.selectBaseSurfaceInputId,
     'Base Surface',
     'Select the base surface for the pattern element orientation.'
     )
 
 selectCurveInputDef = strings.InputDef(
-    'selectCurve',
+    strings.PatternAlongPath.selectCurveInputId,
     'Target Curve',
     'Select the curve along which to distribute the bodies.'
     )
 
 selectTargetSurfaceInputDef = strings.InputDef(
-    'selectTargetSurface',
+    strings.PatternAlongPath.selectTargetSurfaceInputId,
     'Target Surface',
     'Select the surface for orienting the bodies.\nIf not selected, the orientation remains unchanged.'
     )
@@ -83,67 +81,67 @@ placementModeInputDef = strings.InputDef(
     )
 
 flipDirectionInputDef = strings.InputDef(
-    'flipDirection',
+    strings.PatternAlongPath.flipDirectionInputId,
     'Flip Direction',
     "Flip placement direction.\nStarts placing elements from the opposite end of the curve."
     )
 
 uniformDistributionInputDef = strings.InputDef(
-    'uniformDistribution',
+    strings.PatternAlongPath.uniformDistributionInputId,
     'Uniform Distribution',
     "Distribute elements uniformly along the curve.\nAdjusts spacing to fill the entire available length."
     )
 
 startOffsetInputDef = strings.InputDef(
-    'startOffset',
+    strings.PatternAlongPath.startOffsetInputId,
     'Start Offset',
     "Offset from the start of the curve.\nDistance from the beginning of the curve to the first element."
     )
 
 endOffsetInputDef = strings.InputDef(
-    'endOffset',
+    strings.PatternAlongPath.endOffsetInputId,
     'End Offset',
     "Offset from the end of the curve.\nDistance from the end of the curve to the last element."
     )
 
 startRotateInputDef = strings.InputDef(
-    'startRotate',
+    strings.PatternAlongPath.startRotateInputId,
     'Start Rotate',
     "Rotation angle for the first element around the surface normal."
     )
 
 endRotateInputDef = strings.InputDef(
-    'endRotate',
+    strings.PatternAlongPath.endRotateInputId,
     'End Rotate',
     "Rotation angle for the last element around the surface normal."
     )
 
 spacingInputDef = strings.InputDef(
-    'spacing',
+    strings.PatternAlongPath.spacingInputId,
     'Spacing',
     "Distance between base points of adjacent elements along the curve."
     )
 
 countInputDef = strings.InputDef(
-    'count',
+    strings.PatternAlongPath.countInputId,
     'Count',
     "Maximum number of elements to place.\nSet to 0 for unlimited (fill the entire curve).\nWith uniform distribution, fewer elements are centered within the available length."
     )
 
 flipFaceNormalInputDef = strings.InputDef(
-    'flipFaceNormal',
+    strings.PatternAlongPath.flipFaceNormalInputId,
     'Flip Face Normal',
     "Flip face normal direction.\nReverses the normal direction used for orientation."
     )
 
 absoluteDepthOffsetInputDef = strings.InputDef(
-    'absoluteDepthOffset',
+    strings.PatternAlongPath.absoluteDepthOffsetInputId,
     'Absolute Depth Offset',
     "Additional depth offset along the surface normal in absolute units."
     )
 
 relativeDepthOffsetInputDef = strings.InputDef(
-    'relativeDepthOffset',
+    strings.PatternAlongPath.relativeDepthOffsetInputId,
     'Relative Depth Offset',
     "Depth offset as a fraction of the spacing distance."
     )
@@ -179,8 +177,8 @@ def run(panel: adsk.core.ToolbarPanel):
         _handlers.append(editCommandCreated)
 
         global _customFeatureDefinition
-        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(COMMAND_ID, strings.PATTERN_ALONG_PATH_ON_SURFACE, RESOURCES_FOLDER)
-        _customFeatureDefinition.editCommandId = EDIT_COMMAND_ID
+        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(strings.PatternAlongPath.commandId, strings.PatternAlongPath.id, RESOURCES_FOLDER)
+        _customFeatureDefinition.editCommandId = strings.PatternAlongPath.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -192,15 +190,15 @@ def run(panel: adsk.core.ToolbarPanel):
 def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the pattern along path command by removing UI elements and handlers."""
     try:
-        control = panel.controls.itemById(CREATE_COMMAND_ID)
+        control = panel.controls.itemById(strings.PatternAlongPath.createCommandId)
         if control:
             control.deleteMe()
             
-        commandDefinition = _ui.commandDefinitions.itemById(CREATE_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.PatternAlongPath.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(EDIT_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.PatternAlongPath.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
     except:
@@ -1145,7 +1143,7 @@ def saveTransformsToFeature(baseFeature: adsk.fusion.BaseFeature, transforms: li
             yAxis.x, yAxis.y, yAxis.z,
             zAxis.x, zAxis.y, zAxis.z
         ])
-    baseFeature.attributes.add(strings.PREFIX, strings.APPLIED_TRANSFORM, json.dumps(allData))
+    baseFeature.attributes.add(strings.PREFIX, strings.PatternAlongPath.appliedTransformAttributeKey, json.dumps(allData))
 
 
 def readTransformsFromFeature(baseFeature: adsk.fusion.BaseFeature) -> list[adsk.core.Matrix3D]:
@@ -1158,7 +1156,7 @@ def readTransformsFromFeature(baseFeature: adsk.fusion.BaseFeature) -> list[adsk
         Ordered list of Matrix3D objects, empty list if not found or on error.
     """
     try:
-        attr = baseFeature.attributes.itemByName(strings.PREFIX, strings.APPLIED_TRANSFORM)
+        attr = baseFeature.attributes.itemByName(strings.PREFIX, strings.PatternAlongPath.appliedTransformAttributeKey)
         if attr is None:
             return []
 

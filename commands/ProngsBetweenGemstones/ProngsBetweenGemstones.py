@@ -29,45 +29,41 @@ _weldDistanceValueInput: adsk.core.ValueCommandInput = None
 
 RESOURCES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', '')
 
-COMMAND_ID = strings.PREFIX + strings.PRONGS_BETWEEN_GEMSTONES
-CREATE_COMMAND_ID = COMMAND_ID + 'Create'
-EDIT_COMMAND_ID = COMMAND_ID + 'Edit'
-
-createCommandInputDef = strings.InputDef(CREATE_COMMAND_ID, 'Create Prongs Between Gemstones', 'Creates prongs at the midpoint between nearby gemstones based on distance constraint.')
-editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Prongs Between Gemstones', 'Edits the parameters of existing prongs between gemstones.')
+createCommandInputDef = strings.InputDef(strings.ProngsBetweenGemstones.createCommandId, 'Create Prongs Between Gemstones', 'Creates prongs at the midpoint between nearby gemstones based on distance constraint.')
+editCommandInputDef = strings.InputDef(strings.ProngsBetweenGemstones.editCommandId, 'Edit Prongs Between Gemstones', 'Edits the parameters of existing prongs between gemstones.')
 
 selectGemstonesInputDef = strings.InputDef(
-    'selectGemstones',
+    strings.ProngsBetweenGemstones.selectGemstonesInputId,
     'Select Gemstones',
     'Select at least 2 gemstones to create prongs between them.'
     )
 
 sizeRatioInputDef = strings.InputDef(
-    'sizeRatio', 
+    strings.ProngsBetweenGemstones.sizeRatioInputId, 
     'Prong Size Ratio', 
     "Prong size relative to average gemstone diameter.\nFrom 0.1 to 0.5 of average diameter (0.3 default)."
     )
 
 heightRatioInputDef = strings.InputDef(
-    'heightRatio', 
+    strings.ProngsBetweenGemstones.heightRatioInputId, 
     'Prong Height Ratio', 
     "Prong height relative to average gemstone diameter.\nFrom 0.1 to 1.0 of average diameter (0.3 default)."
     )
 
 widthBetweenProngsRatioInputDef = strings.InputDef(
-    'widthBetweenProngsRatio', 
+    strings.ProngsBetweenGemstones.widthBetweenProngsRatioInputId, 
     'Width Between Prongs Ratio', 
     "Spacing between prong pair.\nFrom 0.1 to 1.0 of average gemstone diameter (0.5 default)."
     )
 
 maxGapInputDef = strings.InputDef(
-    'maxGap', 
+    strings.ProngsBetweenGemstones.maxGapInputId, 
     'Max Gap', 
     "Maximum gap between gemstones for prong creation.\nProngs connect gemstones closer than this distance (0.5 mm default)."
     )
 
 weldDistanceInputDef = strings.InputDef(
-    'weldDistance', 
+    strings.ProngsBetweenGemstones.weldDistanceInputId, 
     'Weld Distance', 
     "Distance for merging nearby prongs.\nProngs closer than this will combine into one (0.3 mm default)."
     )
@@ -100,8 +96,8 @@ def run(panel: adsk.core.ToolbarPanel):
         editCommandDefinition.commandCreated.add(editCommandCreated)
         _handlers.append(editCommandCreated)
 
-        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(COMMAND_ID, strings.PRONGS_BETWEEN_GEMSTONES, RESOURCES_FOLDER)
-        _customFeatureDefinition.editCommandId = EDIT_COMMAND_ID
+        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(strings.ProngsBetweenGemstones.commandId, strings.ProngsBetweenGemstones.id, RESOURCES_FOLDER)
+        _customFeatureDefinition.editCommandId = strings.ProngsBetweenGemstones.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -113,15 +109,15 @@ def run(panel: adsk.core.ToolbarPanel):
 def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the prongs between gemstones command by removing UI elements and handlers."""
     try:
-        control = panel.controls.itemById(CREATE_COMMAND_ID)
+        control = panel.controls.itemById(strings.ProngsBetweenGemstones.createCommandId)
         if control:
             control.deleteMe()
             
-        commandDefinition = _ui.commandDefinitions.itemById(CREATE_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.ProngsBetweenGemstones.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(EDIT_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.ProngsBetweenGemstones.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
     except:

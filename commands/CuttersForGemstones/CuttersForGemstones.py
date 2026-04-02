@@ -31,12 +31,8 @@ _coneAngleValueInput: adsk.core.ValueCommandInput = None
 
 RESOURCES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', '')
 
-COMMAND_ID = strings.PREFIX + strings.Cutter.cutterForGemstonesCommandId
-CREATE_COMMAND_ID = COMMAND_ID + 'Create'
-EDIT_COMMAND_ID = COMMAND_ID + 'Edit'
-
-createCommandInputDef = strings.InputDef(CREATE_COMMAND_ID, 'Create Cutters for Gemstones', 'Creates cutters for selected gemstones.')
-editCommandInputDef = strings.InputDef(EDIT_COMMAND_ID, 'Edit Cutters', 'Edits the parameters of existing cutters.')
+createCommandInputDef = strings.InputDef(strings.Cutter.createCommandId, 'Create Cutters for Gemstones', 'Creates cutters for selected gemstones.')
+editCommandInputDef = strings.InputDef(strings.Cutter.editCommandId, 'Edit Cutters', 'Edits the parameters of existing cutters.')
 
 selectGemstonesInputDef = strings.InputDef(
     strings.Cutter.selectGemstonesInputId,
@@ -108,8 +104,8 @@ def run(panel: adsk.core.ToolbarPanel):
         editCommandDefinition.commandCreated.add(editCommandCreated)
         _handlers.append(editCommandCreated)
 
-        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(COMMAND_ID, strings.Cutter.cutterForGemstonesCommandId, RESOURCES_FOLDER)
-        _customFeatureDefinition.editCommandId = EDIT_COMMAND_ID
+        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(strings.Cutter.commandId, strings.Cutter.id, RESOURCES_FOLDER)
+        _customFeatureDefinition.editCommandId = strings.Cutter.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -121,15 +117,15 @@ def run(panel: adsk.core.ToolbarPanel):
 def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the cutters command by removing UI elements and handlers."""
     try:
-        control = panel.controls.itemById(CREATE_COMMAND_ID)
+        control = panel.controls.itemById(strings.Cutter.createCommandId)
         if control:
             control.deleteMe()
             
-        commandDefinition = _ui.commandDefinitions.itemById(CREATE_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.Cutter.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(EDIT_COMMAND_ID)
+        commandDefinition = _ui.commandDefinitions.itemById(strings.Cutter.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
     except:

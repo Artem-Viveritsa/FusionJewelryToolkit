@@ -1,4 +1,4 @@
-import os, adsk.core, adsk.fusion
+import os, math, adsk.core, adsk.fusion
 
 app = adsk.core.Application.get()
 measureManager = app.measureManager
@@ -13,7 +13,15 @@ ASSETS_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets
 materialLibrary = adsk.core.Application.get().materialLibraries.load(ASSETS_FOLDER + 'Jewelry Material Library.adsklib')
 
 minimumGemstoneSize = 0.05
-gemstoneOverlapMergeThreshold = 0.01
+gemstoneOverlapMergeThreshold = 0.05
+cornerAngleThresholdDegrees = 10
+cornerAngleThresholdRadians = math.radians(cornerAngleThresholdDegrees)
+chainConnectionTolerance = 0.001
+
+defaultMinStoneSizeCm = 0.07
+defaultMaxStoneSizeCm = 0.2
+minStoneSizeLimitCm = 0.05
+maxStoneSizeLimitCm = 1.0
 
 channelInset = 0.005
 channelJunctionSphereScale = 1.1

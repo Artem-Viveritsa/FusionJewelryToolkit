@@ -17,10 +17,11 @@ Command creation and editing work correctly only with **Hybrid Design Type**. Pa
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
 ## What's new
-- **FFD (Early Preview):** New command for free-form deformation of a solid body using an editable 3D control lattice with per-point XYZ offsets.
-- **Taper (Early Preview):** New command for creating an editable tapered copy of a solid body along a selected axis with a configurable pivot point and angle.
-- **Shared deformation infrastructure:** Added reusable NURBS-based body deformation helpers and custom feature base-feature lookup for the new deformation workflows.
-- **Improved command UX and validation:** Added reset confirmation for FFD and shared axis-direction extraction for construction axes, linear edges, and sketch lines.
+- **FFD (Early Preview):** Free-form body deformation with an editable control lattice remains available for late-stage shape adjustments.
+- **Taper (Early Preview):** Editable taper deformation remains available for late-stage body reshaping along a selected axis.
+- **GemstonesOnFaceAtCurve:** Now supports connected curve chains and a new **Snap to Corners** option to force stone placement at chain corners.
+- **GemstonesOnFaceBetweenCurves:** Rails can now be built from connected curve chains instead of only two single curves.
+- **GemstonesOnFaceBetweenCurves:** Added **Min Stone Size** and **Max Stone Size**, plus corner-aware placement and stronger overlap merging for more stable distribution on segmented rails.
 - See [full changelog](CHANGELOG.md) for complete version history.
 
 ---
@@ -52,8 +53,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 
 ![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)
 ## GemstonesOnFaceAtCurve — Place gemstones along a curve with variable sizes
-- **Description:** Creates round-cut gemstone bodies along a selected curve (sketch curve or model edge) on one or more selected faces or construction planes. Gemstone sizes can gradually change from start to end, and each gemstone is attached to the closest selected support.
-- **Selection:** 1 or more faces or construction planes, and 1 curve (sketch curve or edge).
+- **Description:** Creates round-cut gemstone bodies along a selected connected curve chain (sketch curves or model edges) on one or more selected faces or construction planes. Gemstone sizes can gradually change from start to end, and each gemstone is attached to the closest selected support.
+- **Selection:** 1 or more faces or construction planes, and 1 or more connected curves (sketch curves or edges) forming a single chain.
 - **Key parameters:**
   - **Start Offset** — Distance from the curve start to the first gemstone. Default: `0 mm`.
   - **End Offset** — Distance from the curve end to the last gemstone. Default: `0 mm`.
@@ -63,6 +64,7 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
   - **Size Step** — Size discretization step. Gemstone sizes are rounded to multiples of this value. Default: `0.05 mm`. Range: `0–1.0 mm`.
   - **Target Gap** — Target distance between adjacent gemstones along the curve. Default: `0.1 mm`.
   - **Uniform Distribution** — Distribute gemstones uniformly along the curve. Ensures gemstones fill the entire available length from start offset to end offset without gaps at the ends. Default: `false`.
+  - **Snap to Corners** — Ensures gemstones are placed at curve-chain corner points where connected segments meet at an angle. Smooth junctions are ignored. Default: `false`.
   - **Flip Gemstones** — Flip gemstone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
   - **Flip Face Normal** — Flip gemstone relative to face normal. Rotates the gemstone 180 degrees around the face normal. Default: `false`.
   - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
@@ -72,16 +74,19 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 
 ![Gemstones icon](commands/GemstonesOnFaceBetweenCurves/resources/32x32@2x.png)
 ## GemstonesOnFaceBetweenCurves — Place gemstones between two curves
-- **Description:** Creates round-cut gemstone bodies along a path between two selected curves (sketch curves or model edges) on a chosen face or construction plane. Gemstone sizes are automatically determined by the distance between the two curves.
-- **Selection:** 1 face or construction plane and 2 curves (sketch curves or edges). The curves should be approximately the same length for best results.
+- **Description:** Creates round-cut gemstone bodies along a path between two selected curve chains (sketch curves or model edges) on one or more selected faces or construction planes. Gemstone sizes are automatically determined by the distance between the two rails and can be clamped to a minimum and maximum size.
+- **Selection:** 1 or more faces or construction planes, plus 2 connected curve chains (Rail 1 and Rail 2) made from sketch curves or model edges. The two rail chains should be approximately the same length for best results.
 - **Key parameters:**
   - **Start Offset** — Distance from the start of the curves to the first gemstone. Default: `0 mm`.
   - **End Offset** — Distance from the end of the curves to the last gemstone. Default: `0 mm`.
   - **Flip Direction** — Flip gemstone placement direction. Starts placing gemstones from the opposite end of the curves. Default: `false`.
   - **Uniform Distribution** — Distribute gemstones uniformly along the curves. Ensures gemstones fill the entire available length from start offset to end offset without gaps at the ends. Default: `false`.
+  - **Snap to Corners** — Ensures gemstones are placed at matching corner regions of the rail chains where connected segments meet at an angle. Smooth junctions are ignored. Default: `false`.
   - **Size Ratio** — Multiplier for gemstone size based on curve distance. Default: `1.0`. Range: `0.5–2.0`.
   - **Size Step** — Size discretization step. Gemstone sizes are rounded to multiples of this value. Default: `0.05 mm`. Range: `0–1.0 mm`.
   - **Target Gap** — Target distance between adjacent gemstones along the curve path. Default: `0.1 mm`.
+  - **Min Stone Size** — Lower clamp for automatically calculated gemstone diameters. Default: `0.7 mm`. Minimum: `0.5 mm`.
+  - **Max Stone Size** — Upper clamp for automatically calculated gemstone diameters. Default: `2.0 mm`. Maximum: `10.0 mm`.
   - **Flip Gemstones** — Flip gemstone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
   - **Flip Face Normal** — Flip gemstone relative to face normal. Rotates the gemstone 180 degrees around the face normal. Default: `false`.
   - **Absolute Depth Offset** — Additional depth offset in absolute units. Adds a fixed depth to the gemstone beyond the relative offset. Default: `0 mm`.
@@ -174,7 +179,10 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
   - **Offset Z** — Z-axis displacement of the currently selected control point. Default: `0 mm`.
   - **Reset All** — Resets all control point offsets to zero after confirmation.
 - **Behavior:** The command previews the control lattice in the viewport, highlights the selected control point, and stores offsets and grid size in an editable custom feature.
-- **Limitations:** This feature is in early preview and may have limitations or unexpected behavior on complex geometry.
+- **Limitations and recommendations:**
+  - Apply this modifier as late as possible in the modeling process.
+  - Avoid editing the bodies created by this modifier with later operations that depend on their faces or surfaces.
+  - In the current Fusion API, the body cannot be edited in place, so each update recreates the deformed result as a new body. Downstream face- and surface-based dependencies can therefore be lost.
 
 ---
 
@@ -185,7 +193,10 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 - **Key parameters:**
   - **Angle** — Taper angle. Default: `10°`. Range: `-45° to 45°`.
 - **Behavior:** Cross-sections before the pivot point along the selected axis expand, and cross-sections after it contract. The command shows a tapered bounding-box preview in the viewport and stores the result as an editable custom feature.
-- **Limitations:** This feature is in early preview and may have limitations or unexpected behavior on complex geometry.
+- **Limitations and recommendations:**
+  - Apply this modifier as late as possible in the modeling process.
+  - Avoid editing the bodies created by this modifier with later operations that depend on their faces or surfaces.
+  - In the current Fusion API, the body cannot be edited in place, so each update recreates the tapered result as a new body. Downstream face- and surface-based dependencies can therefore be lost.
 
 ---
 
