@@ -49,8 +49,8 @@ cornerAngleThresholdRadians = math.radians(cornerAngleThresholdDegrees)
 chainConnectionTolerance = 0.001
 
 prongChainMaxConnections = 2
-prongChainCurvatureShiftFactor = 0.5
-prongChainCurvatureSizeFactor = 0.2
+prongChainCurvatureShiftFactor = 0.25
+prongChainCurvatureSizeFactor = 0.25
 
 defaultBendAngleDeg = 45
 minBendAngleDeg = -360
