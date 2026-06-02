@@ -2,7 +2,7 @@ import os
 import adsk.core, adsk.fusion, traceback
 
 from ... import constants
-from ... import strings
+
 from ...helpers.showMessage import showMessage
 from ...helpers.Gemstones import GemstoneInfo, extractGemstonesInfo, findValidConnections, isGemstone
 
@@ -26,24 +26,24 @@ _maxGapValueInput: adsk.core.ValueCommandInput = None
 
 RESOURCES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', '')
 
-createCommandInputDef = strings.InputDef(strings.ChannelsBetweenGemstones.createCommandId, 'Create Channels Between Gemstones', 'Creates a network of channels connecting nearby gemstones based on distance constraint.')
-editCommandInputDef = strings.InputDef(strings.ChannelsBetweenGemstones.editCommandId, 'Edit Channels Between Gemstones', 'Edits the parameters of existing channels between gemstones.')
+createCommandInputDef = constants.InputDef(constants.ChannelsBetweenGemstones.createCommandId, 'Create Channels Between Gemstones', 'Creates a network of channels connecting nearby gemstones based on distance constraint.')
+editCommandInputDef = constants.InputDef(constants.ChannelsBetweenGemstones.editCommandId, 'Edit Channels Between Gemstones', 'Edits the parameters of existing channels between gemstones.')
 
-selectGemstonesInputDef = strings.InputDef(
-    strings.ChannelsBetweenGemstones.selectGemstonesInputId,
+selectGemstonesInputDef = constants.InputDef(
+    constants.ChannelsBetweenGemstones.selectGemstonesInputId,
     'Select Gemstones',
     'Select at least 2 gemstones to create a channel.'
     )
 
-ratioInputDef = strings.InputDef(
-    strings.ChannelsBetweenGemstones.ratioInputId, 
-    'Channel Ratio', 
+ratioInputDef = constants.InputDef(
+    constants.ChannelsBetweenGemstones.ratioInputId,
+    'Channel Ratio',
     "Channel width relative to gemstone size.\nFrom 0.2 to 0.8 of gemstone diameter (0.5 = half diameter)."
     )
 
-maxGapInputDef = strings.InputDef(
-    strings.ChannelsBetweenGemstones.maxGapInputId, 
-    'Max Gap', 
+maxGapInputDef = constants.InputDef(
+    constants.ChannelsBetweenGemstones.maxGapInputId,
+    'Max Gap',
     "Maximum gap between gemstones for channel creation.\nChannels connect gemstones closer than this distance (0.5 mm default)."
     )
 
@@ -55,17 +55,17 @@ def run(panel: adsk.core.ToolbarPanel):
         _app = adsk.core.Application.get()
         _ui  = _app.userInterface
 
-        createCommandDefinition = _ui.commandDefinitions.addButtonDefinition(createCommandInputDef.id, 
-                                                                createCommandInputDef.name, 
-                                                                createCommandInputDef.tooltip, 
+        createCommandDefinition = _ui.commandDefinitions.addButtonDefinition(createCommandInputDef.id,
+                                                                createCommandInputDef.name,
+                                                                createCommandInputDef.tooltip,
                                                                 RESOURCES_FOLDER)
-        control = panel.controls.addCommand(createCommandDefinition, '', False)     
+        control = panel.controls.addCommand(createCommandDefinition, '', False)
         control.isPromoted = True
 
-        editCommandDefinition = _ui.commandDefinitions.addButtonDefinition(editCommandInputDef.id, 
-                                                            editCommandInputDef.name, 
-                                                            editCommandInputDef.tooltip, 
-                                                            RESOURCES_FOLDER)        
+        editCommandDefinition = _ui.commandDefinitions.addButtonDefinition(editCommandInputDef.id,
+                                                            editCommandInputDef.name,
+                                                            editCommandInputDef.tooltip,
+                                                            RESOURCES_FOLDER)
 
         createCommandCreated = CreateCommandCreatedHandler()
         createCommandDefinition.commandCreated.add(createCommandCreated)
@@ -75,8 +75,8 @@ def run(panel: adsk.core.ToolbarPanel):
         editCommandDefinition.commandCreated.add(editCommandCreated)
         _handlers.append(editCommandCreated)
 
-        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(strings.ChannelsBetweenGemstones.commandId, strings.ChannelsBetweenGemstones.id, RESOURCES_FOLDER)
-        _customFeatureDefinition.editCommandId = strings.ChannelsBetweenGemstones.editCommandId
+        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(constants.ChannelsBetweenGemstones.commandId, constants.ChannelsBetweenGemstones.id, RESOURCES_FOLDER)
+        _customFeatureDefinition.editCommandId = constants.ChannelsBetweenGemstones.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -88,15 +88,15 @@ def run(panel: adsk.core.ToolbarPanel):
 def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the channels between gemstones command by removing UI elements and handlers."""
     try:
-        control = panel.controls.itemById(strings.ChannelsBetweenGemstones.createCommandId)
+        control = panel.controls.itemById(constants.ChannelsBetweenGemstones.createCommandId)
         if control:
             control.deleteMe()
-            
-        commandDefinition = _ui.commandDefinitions.itemById(strings.ChannelsBetweenGemstones.createCommandId)
+
+        commandDefinition = _ui.commandDefinitions.itemById(constants.ChannelsBetweenGemstones.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(strings.ChannelsBetweenGemstones.editCommandId)
+        commandDefinition = _ui.commandDefinitions.itemById(constants.ChannelsBetweenGemstones.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
     except:
@@ -105,8 +105,8 @@ def stop(panel: adsk.core.ToolbarPanel):
 
 class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
     """Event handler for creating the command dialog for new channels between gemstones.
-    
-    This handler sets up all necessary input controls including selections for gemstones 
+
+    This handler sets up all necessary input controls including selections for gemstones
     and value inputs for ratio and max gap, and connects event handlers for validation,
     preview, and execution.
     """
@@ -115,7 +115,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
     def notify(self, args):
         try:
             global _gemstonesSelectionInput, _ratioValueInput, _maxGapValueInput
-            
+
             eventArgs = adsk.core.CommandCreatedEventArgs.cast(args)
             command = eventArgs.command
             inputs = command.commandInputs
@@ -150,7 +150,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             onExecute = CreateExecuteHandler()
             command.execute.add(onExecute)
-            _handlers.append(onExecute)  
+            _handlers.append(onExecute)
 
         except:
             showMessage(f'CreateCommandCreatedHandler: {traceback.format_exc()}\n', True)
@@ -158,9 +158,9 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
 class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
     """Event handler for creating the command dialog for editing existing channels.
-    
-    This handler retrieves the selected custom feature, populates inputs with existing parameter 
-    values and dependencies, and connects event handlers for editing operations including 
+
+    This handler retrieves the selected custom feature, populates inputs with existing parameter
+    values and dependencies, and connects event handlers for editing operations including
     activation, validation, preview, and execution.
     """
     def __init__(self):
@@ -168,7 +168,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
     def notify(self, args):
         try:
             global _editedCustomFeature, _gemstonesSelectionInput, _ratioValueInput, _maxGapValueInput
-            
+
             eventArgs = adsk.core.CommandCreatedEventArgs.cast(args)
             command = eventArgs.command
             inputs = command.commandInputs
@@ -217,7 +217,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             onExecute = EditExecuteHandler()
             command.execute.add(onExecute)
-            _handlers.append(onExecute)  
+            _handlers.append(onExecute)
 
             onInputChanged = EditInputChangedHandler()
             command.inputChanged.add(onInputChanged)
@@ -229,7 +229,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
 class PreSelectHandler(adsk.core.SelectionEventHandler):
     """Event handler for controlling user selection during command execution.
-    
+
     This handler checks to ensure the gemstones are valid bodies and not external references.
     """
     def __init__(self):
@@ -252,7 +252,7 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
                 if not isGemstone(preSelectBody):
                     eventArgs.isSelectable = False
                     return
-                                
+
         except:
             showMessage(f'PreSelectHandler: {traceback.format_exc()}\n', True)
 
@@ -295,7 +295,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
             if not (_maxGapValueInput.value >= 0.0 and _maxGapValueInput.value <= 0.1):
                 eventArgs.areInputsValid = False
                 return
-            
+
         except:
             showMessage(f'ValidateInputsHandler: {traceback.format_exc()}\n', True)
 
@@ -318,7 +318,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
 
             ratio = _ratioValueInput.value
             maxGap = _maxGapValueInput.value
-            
+
             # Create the complete channel body
             channel = createBody(gemstones, ratio, maxGap)
             if channel is None: return
@@ -364,7 +364,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             baseFeature.finishEdit()
 
             design: adsk.fusion.Design = _app.activeProduct
-            
+
             customFeatureInput = component.features.customFeatures.createInput(_customFeatureDefinition)
 
             # Add all dependencies first using the first face to establish the feature's geometric relationships.
@@ -383,7 +383,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
 
             design: adsk.fusion.Design = _app.activeProduct
             defaultLengthUnits = design.unitsManager.defaultLengthUnits
-            
+
             maxGap = adsk.core.ValueInput.createByString(_maxGapValueInput.expression)
             customFeatureInput.addCustomParameter(maxGapInputDef.id, maxGapInputDef.name, maxGap, defaultLengthUnits, True)
 
@@ -398,8 +398,8 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
 
 class EditActivateHandler(adsk.core.CommandEventHandler):
     """Event handler for the activation of the edit command for a custom channel feature.
-    
-    This handler rolls back the timeline to the state before the feature, sets up transaction markers 
+
+    This handler rolls back the timeline to the state before the feature, sets up transaction markers
     to preserve changes, and pre-selects the original gemstone dependencies for editing.
     """
     def __init__(self):
@@ -407,11 +407,11 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
     def notify(self, args):
         try:
             global _restoreTimelineObject, _isRolledForEdit, _editedCustomFeature, _gemstonesSelectionInput
-            
+
             eventArgs = adsk.core.CommandEventArgs.cast(args)
 
             if _isRolledForEdit: return
-            
+
             # Save the current timeline position to restore it after editing, ensuring the model state is preserved.
             design: adsk.fusion.Design = _app.activeProduct
             timeline = design.timeline
@@ -462,10 +462,10 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
         super().__init__()
     def notify(self, args):
         global _editedCustomFeature, _isRolledForEdit, _restoreTimelineObject
-        
+
         try:
-            
-            eventArgs = adsk.core.CommandEventArgs.cast(args)    
+
+            eventArgs = adsk.core.CommandEventArgs.cast(args)
 
             gemstoneCount = _gemstonesSelectionInput.selectionCount
             gemstoneEntities = []
@@ -493,7 +493,7 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
 
 class ComputeCustomFeature(adsk.fusion.CustomFeatureEventHandler):
     """Event handler for the recomputation of the custom feature.
-    
+
     This handler updates the channel bodies within the base feature to reflect new values or geometry,
     ensuring the custom feature remains parametric and up-to-date.
     """
@@ -530,29 +530,29 @@ def createChannelSegment(info1: GemstoneInfo, info2: GemstoneInfo, ratio: float 
     """
     try:
         temporaryBRep: adsk.fusion.TemporaryBRepManager = adsk.fusion.TemporaryBRepManager.get()
-        
+
         # Use pre-computed centroids and radii
         centroid1 = info1.centroid.copy()
         centroid2 = info2.centroid.copy()
-        
+
         # Get normalized normal and total offset for first gemstone
         normal1 = info1.getNormalizedNormal()
         if normal1 is not None:
             totalDepthOffset1 = info1.getTotalDepthOffset()
             normal1.scaleBy(-totalDepthOffset1)
             centroid1.translateBy(normal1)
-        
+
         # Get normalized normal and total offset for second gemstone
         normal2 = info2.getNormalizedNormal()
         if normal2 is not None:
             totalDepthOffset2 = info2.getTotalDepthOffset()
             normal2.scaleBy(-totalDepthOffset2)
             centroid2.translateBy(normal2)
-        
+
         radius1 = info1.radius * ratio
         radius2 = info2.radius * ratio
 
-        inset = constants.channelInset
+        inset = constants.ChannelsBetweenGemstones.channelInset
         axisVec = adsk.core.Vector3D.create(
             centroid2.x - centroid1.x,
             centroid2.y - centroid1.y,
@@ -565,9 +565,9 @@ def createChannelSegment(info1: GemstoneInfo, info2: GemstoneInfo, ratio: float 
             centroid2.translateBy(adsk.core.Vector3D.create(-axisVec.x * inset, -axisVec.y * inset, -axisVec.z * inset))
 
         channel = temporaryBRep.createCylinderOrCone(centroid1, radius1, centroid2, radius2)
-        
+
         return channel
-    
+
     except:
         showMessage(f'createChannelSegment: {traceback.format_exc()}\n', True)
         return None
@@ -592,27 +592,27 @@ def createBody(gemstones: list[adsk.fusion.BRepBody], ratio: float = 0.5, maxGap
     try:
         if not gemstones or len(gemstones) < 2:
             return None
-        
+
         # Extract geometric information from all gemstones once
         gemstoneInfos = extractGemstonesInfo(gemstones)
         if gemstoneInfos is None or len(gemstoneInfos) < 2:
             return None
-        
+
         # Find all valid connections based on distance constraint
         connections = findValidConnections(gemstoneInfos, maxGap)
-        
+
         if not connections:
             return None
-        
+
         temporaryBRep: adsk.fusion.TemporaryBRepManager = adsk.fusion.TemporaryBRepManager.get()
-        
+
         connectionCount: dict[int, int] = {}
         for info1, info2 in connections:
             connectionCount[id(info1)] = connectionCount.get(id(info1), 0) + 1
             connectionCount[id(info2)] = connectionCount.get(id(info2), 0) + 1
-        
+
         channel = None
-        
+
         for info in gemstoneInfos:
             if connectionCount.get(id(info), 0) < 2:
                 continue
@@ -624,7 +624,7 @@ def createBody(gemstones: list[adsk.fusion.BRepBody], ratio: float = 0.5, maxGap
                 normal.scaleBy(-totalDepthOffset)
                 centroid.translateBy(normal)
 
-            sphereRadius = info.radius * ratio * constants.channelJunctionSphereScale
+            sphereRadius = info.radius * ratio * constants.ChannelsBetweenGemstones.channelJunctionSphereScale
             sphere = temporaryBRep.createSphere(centroid, sphereRadius)
             if sphere is None:
                 continue
@@ -633,7 +633,7 @@ def createBody(gemstones: list[adsk.fusion.BRepBody], ratio: float = 0.5, maxGap
                 channel = sphere
             else:
                 temporaryBRep.booleanOperation(channel, sphere, adsk.fusion.BooleanTypes.UnionBooleanType)
-        
+
         for info1, info2 in connections:
             segment = createChannelSegment(info1, info2, ratio)
             if segment is None: continue
@@ -641,11 +641,11 @@ def createBody(gemstones: list[adsk.fusion.BRepBody], ratio: float = 0.5, maxGap
             else: temporaryBRep.booleanOperation(channel, segment, adsk.fusion.BooleanTypes.UnionBooleanType)
 
         return channel
-    
+
     except:
         showMessage(f'createBody: {traceback.format_exc()}\n', True)
         return None
-    
+
 
 def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
     """Update the bodies of an existing custom channels feature.
@@ -692,7 +692,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         component = customFeature.parentComponent
 
         baseFeature.startEdit()
-        
+
         # Update or create the channel body
         if baseFeature.bodies.count > 0:
             currentBody = baseFeature.bodies.item(0)
@@ -707,12 +707,12 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         baseFeature.finishEdit()
 
         return True
-    
+
     except:
         baseFeature.finishEdit()
         showMessage(f'UpdateFeature: {traceback.format_exc()}\n', True)
         return False
-    
+
 
 def handleNewBody(body: adsk.fusion.BRepBody):
     """Handle the creation of a new channel body by setting its name and attributes.
@@ -720,8 +720,8 @@ def handleNewBody(body: adsk.fusion.BRepBody):
     Args:
         body: The new channel body to handle.
     """
-    body.name = strings.ChannelsBetweenGemstones.channelEntity
-    body.attributes.add(strings.PREFIX, strings.ENTITY, strings.ChannelsBetweenGemstones.channelEntity)
+    body.name = constants.ChannelsBetweenGemstones.channelEntity
+    body.attributes.add(constants.PREFIX, constants.ENTITY, constants.ChannelsBetweenGemstones.channelEntity)
 
 def updateAttributes():
     """Update the attributes of all channel bodies in the edited custom feature."""
@@ -734,7 +734,7 @@ def updateAttributes():
 def rollBack():
     """Roll back the timeline to the state before editing."""
     global _restoreTimelineObject, _isRolledForEdit, _editedCustomFeature
-    
+
     if _isRolledForEdit:
         _editedCustomFeature.timelineObject.rollTo(False)
         updateAttributes()

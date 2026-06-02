@@ -16,6 +16,58 @@ def findClosestPointIndex(targetPoint: adsk.core.Point3D, points: list[adsk.core
     return closestIndex
 
 
+def minDistanceToPoints(point: adsk.core.Point3D, points: list[adsk.core.Point3D]) -> float:
+    """Calculate the minimum distance from a point to a list of points.
+
+    Args:
+        point: The query point.
+        points: The target points.
+
+    Returns:
+        The minimum distance, or infinity when the list is empty.
+    """
+    if not points:
+        return float('inf')
+
+    minimumDistance = float('inf')
+
+    for targetPoint in points:
+        distance = point.distanceTo(targetPoint)
+        if distance < minimumDistance:
+            minimumDistance = distance
+
+    return minimumDistance
+
+
+def closestPointAndDistance(
+    point: adsk.core.Point3D,
+    points: list[adsk.core.Point3D]
+) -> tuple[adsk.core.Point3D | None, float]:
+    """Find the closest point in a list and return it with the distance.
+
+    Args:
+        point: The query point.
+        points: The target points.
+
+    Returns:
+        Tuple of (closestPoint, minimumDistance). Returns (None, infinity)
+        when the list is empty.
+    """
+    if not points:
+        return None, float('inf')
+
+    closestPoint = None
+    minimumDistance = float('inf')
+
+    for targetPoint in points:
+        distance = point.distanceTo(targetPoint)
+        if distance < minimumDistance:
+            minimumDistance = distance
+            closestPoint = targetPoint
+
+    return closestPoint, minimumDistance
+
+
 def triangleArea(ax: float, ay: float, bx: float, by: float, cx: float, cy: float) -> float:
     """Calculate the area of a triangle given three points."""
     return abs((bx - ax) * (cy - ay) - (cx - ax) * (by - ay)) / 2
@@ -190,6 +242,98 @@ def strToPoint3d(pointStr: str) -> adsk.core.Point3D | None:
         return adsk.core.Point3D.create(x, y, z)
     except (ValueError, IndexError):
         return None
+
+
+def getPolygonCentroid(points: list[adsk.core.Point3D]) -> adsk.core.Point3D:
+    """Calculate the area-weighted centroid of a polygon defined by 3D points.
+
+    Projects points onto a local 2D plane, sorts them by angle to form a polygon,
+    then applies the standard polygon centroid formula (shoelace). Falls back to
+    the arithmetic mean if the polygon is degenerate.
+
+    Args:
+        points: List of 3D points forming the polygon vertices (order does not matter).
+
+    Returns:
+        The centroid point.
+    """
+    count = len(points)
+    if count == 0:
+        return adsk.core.Point3D.create(0, 0, 0)
+    if count == 1:
+        return points[0].copy()
+    if count == 2:
+        return adsk.core.Point3D.create(
+            (points[0].x + points[1].x) * 0.5,
+            (points[0].y + points[1].y) * 0.5,
+            (points[0].z + points[1].z) * 0.5,
+        )
+
+    meanX = sum(p.x for p in points) / count
+    meanY = sum(p.y for p in points) / count
+    meanZ = sum(p.z for p in points) / count
+
+    dx0 = points[0].x - meanX
+    dy0 = points[0].y - meanY
+    dz0 = points[0].z - meanZ
+    uLen = math.sqrt(dx0 * dx0 + dy0 * dy0 + dz0 * dz0)
+
+    if uLen < 1e-10:
+        return adsk.core.Point3D.create(meanX, meanY, meanZ)
+
+    ux, uy, uz = dx0 / uLen, dy0 / uLen, dz0 / uLen
+
+    vx, vy, vz = 0.0, 0.0, 0.0
+    for p in points[1:]:
+        dx = p.x - meanX
+        dy = p.y - meanY
+        dz = p.z - meanZ
+        cx = uy * dz - uz * dy
+        cy = uz * dx - ux * dz
+        cz = ux * dy - uy * dx
+        cLen = math.sqrt(cx * cx + cy * cy + cz * cz)
+        if cLen > 1e-10:
+            vx, vy, vz = cx / cLen, cy / cLen, cz / cLen
+            break
+
+    if vx == 0.0 and vy == 0.0 and vz == 0.0:
+        return adsk.core.Point3D.create(meanX, meanY, meanZ)
+
+    pts2D = []
+    for p in points:
+        dx = p.x - meanX
+        dy = p.y - meanY
+        dz = p.z - meanZ
+        pts2D.append((dx * ux + dy * uy + dz * uz, dx * vx + dy * vy + dz * vz))
+
+    pts2D.sort(key=lambda p: math.atan2(p[1], p[0]))
+
+    n = len(pts2D)
+    area = 0.0
+    cx2D = 0.0
+    cy2D = 0.0
+
+    for i in range(n):
+        xi, yi = pts2D[i]
+        xj, yj = pts2D[(i + 1) % n]
+        cross = xi * yj - xj * yi
+        area += cross
+        cx2D += (xi + xj) * cross
+        cy2D += (yi + yj) * cross
+
+    area *= 0.5
+
+    if abs(area) < 1e-12:
+        return adsk.core.Point3D.create(meanX, meanY, meanZ)
+
+    cx2D /= 6.0 * area
+    cy2D /= 6.0 * area
+
+    return adsk.core.Point3D.create(
+        meanX + cx2D * ux + cy2D * vx,
+        meanY + cx2D * uy + cy2D * vy,
+        meanZ + cx2D * uz + cy2D * vz,
+    )
 
 
 def trianglesOverlap(triangle1Points: tuple[adsk.core.Point2D, adsk.core.Point2D, adsk.core.Point2D], 

@@ -17,19 +17,18 @@ Command creation and editing work correctly only with **Hybrid Design Type**. Pa
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
 ## What's new
-- **FFD (Early Preview):** Free-form body deformation with an editable control lattice remains available for late-stage shape adjustments.
-- **Taper (Early Preview):** Editable taper deformation remains available for late-stage body reshaping along a selected axis.
-- **GemstonesOnFaceAtCurve:** Now supports connected curve chains and a new **Snap to Corners** option to force stone placement at chain corners.
-- **GemstonesOnFaceBetweenCurves:** Rails can now be built from connected curve chains instead of only two single curves.
-- **GemstonesOnFaceBetweenCurves:** Added **Min Stone Size** and **Max Stone Size**, plus corner-aware placement and stronger overlap merging for more stable distribution on segmented rails.
-- See [full changelog](CHANGELOG.md) for complete version history.
+- **GemstonesOnFaceAtPoints:** Select multiple faces or construction planes and place each gemstone on the closest selected support.
+- **ProngsBetweenGemstones:** New **Uniformity** control blends prong size and height toward consistent values while preserving existing features.
+- **ProngsBetweenGemstones:** Prongs on curved gemstone chains now adapt their position and size to the local bend for cleaner spacing.
+- **SurfaceUnfold:** Mesh-based unfolding now uses the shared remesh pipeline and shows a live tessellation preview while adjusting inputs.
+- Shared mesh foundations were added for unfold and future surface-based workflows while unfinished pave/tessellation commands remain out of the release.
 
 ---
 
 ![Gemstones icon](commands/GemstonesOnFaceAtPoints/resources/32x32@2x.png)
 ## GemstonesOnFaceAtPoints — Place round gemstones on a face at specified points
-- **Description:** Creates round-cut gemstone bodies at selected points on a chosen face or construction plane. Supports sketch points, vertices, and construction points.
-- **Selection:** 1 face or construction plane and one or more points (sketch points, vertices, or construction points). The face/plane may have any curvature or complexity; the points do not need to lie directly on the face/plane.
+- **Description:** Creates round-cut gemstone bodies at selected points on one or more chosen faces or construction planes. Supports sketch points, vertices, and construction points, and uses the closest selected support for each point.
+- **Selection:** 1 or more faces or construction planes and one or more points (sketch points, vertices, or construction points). The faces/planes may have any curvature or complexity; the points do not need to lie directly on them.
 - **Key parameters:**
   - **Size** — Gemstone diameter. Default: `1.5 mm`. Determines the overall size of the gemstone.
   - **Flip Gemstones** — Flip gemstone orientation. Reverses the direction the gemstone faces relative to the surface. Default: `false`.
@@ -112,6 +111,7 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 - **Key parameters:**
   - **Prong Size Ratio** — Prong size relative to average gemstone diameter. Default: `0.4`. Range: `0.1–0.5`.
   - **Prong Height Ratio** — Prong height relative to average gemstone diameter. Default: `0.25`. Range: `0.1–1.0`.
+  - **Uniformity** — Blends prong size and height toward the median values of all generated prongs. Default: `0.5`. Range: `0.0–1.0`.
   - **Width Between Prongs Ratio** — Spacing between prong pair. Default: `0.6`. Range: `0.1–1.0`.
   - **Max Gap** — Maximum gap between gemstones for prong creation. Default: `0.5 mm`.
   - **Weld Distance** — Distance for merging nearby prongs. Default: `0.3 mm`.
@@ -213,7 +213,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
   - **X Offset** — Offset along the X axis of the construction plane. Default: `0 mm`.
   - **Y Offset** — Offset along the Y axis of the construction plane. Default: `0 mm`.
   - **Accuracy** — Unfolding accuracy (0.5 - 10 mm). Minimum allowed is 0.5 mm to avoid excessive computation. Default: `0.5 mm`.
-  - **Algorithm** — Select the unfolding algorithm: NURBS (parametric grid) or Mesh (tessellation). Default: `Mesh`.
+  - **Algorithm** — Select the unfolding algorithm: NURBS (parametric grid) or Mesh (remeshed tessellation). Default: `Mesh`.
+- **Behavior:** The command previews the generated tessellation in the viewport while editing the source, accuracy, or algorithm.
 - **Limitations:** This feature is in early preview and may have limitations with highly complex or distorted surfaces.
 
 ---

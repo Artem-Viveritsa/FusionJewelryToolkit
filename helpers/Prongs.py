@@ -1,9 +1,10 @@
 import adsk.core, adsk.fusion, traceback
 import json
 from collections import defaultdict
+from statistics import median
 
 from .. import constants
-from .. import strings
+
 from .showMessage import showMessage
 from .Gemstones import GemstoneInfo
 from .Bodies import placeBody
@@ -196,7 +197,7 @@ def updateProngFromInfo(body: adsk.fusion.BRepBody, prongInfo: ProngInfo) -> ads
 
 # Helper function to create ProngInfo objects from connections
 def createProngInfosFromConnections(connections: list[tuple[GemstoneInfo, GemstoneInfo]], gemstoneInfos: list[GemstoneInfo], 
-                                     sizeRatio: float, heightRatio: float, widthBetweenProngsRatio: float, weldDistance: float = 0.3) -> list[ProngInfo]:
+                                     sizeRatio: float, heightRatio: float, uniformity: float, widthBetweenProngsRatio: float, weldDistance: float = 0.3) -> list[ProngInfo]:
     """Create a list of ProngInfo objects from gemstone connections.
     
     For each connection between two gemstones, this function creates two ProngInfo objects
@@ -208,6 +209,7 @@ def createProngInfosFromConnections(connections: list[tuple[GemstoneInfo, Gemsto
         gemstoneInfos: List of gemstone information objects.
         sizeRatio: The ratio of the prong size to the average diameter.
         heightRatio: The ratio of the prong height to the average diameter.
+        uniformity: Blends size and height of each prong toward the median values of all generated prongs.
         widthBetweenProngsRatio: The ratio of the distance between two prongs to the average diameter.
         weldDistance: Distance threshold for merging nearby prongs (default 0.03 cm = 3.0 mm).
 
@@ -217,6 +219,11 @@ def createProngInfosFromConnections(connections: list[tuple[GemstoneInfo, Gemsto
     prongInfos = []
     
     try:
+        neighborMap: dict[int, list[GemstoneInfo]] = defaultdict(list)
+        for connectionInfo1, connectionInfo2 in connections:
+            neighborMap[id(connectionInfo1)].append(connectionInfo2)
+            neighborMap[id(connectionInfo2)].append(connectionInfo1)
+
         for info1, info2 in connections:
             # Calculate average diameter and prong dimensions
             avgDiameter = info1.radius + info2.radius
@@ -227,15 +234,38 @@ def createProngInfosFromConnections(connections: list[tuple[GemstoneInfo, Gemsto
             offsetPoints, avgNormal, lengthDirection, widthDirection = calculateProngsPlacement(info1, info2, widthBetweenProngsRatio)
             if offsetPoints is None or avgNormal is None or lengthDirection is None or widthDirection is None:
                 continue
-            
+
+            curvatureRatio = computeChainCurvatureRatio(info1, info2, neighborMap, widthDirection, avgDiameter)
+
+            halfWidth = (avgDiameter * widthBetweenProngsRatio) * 0.5
+
             # Create ProngInfo for each offset position
-            for offsetPoint in offsetPoints:
+            for index, offsetPoint in enumerate(offsetPoints):
+                spreadDirection = -1 if index == 0 else 1
+
+                prongPosition = offsetPoint
+                prongSize = size
+
+                if curvatureRatio != 0.0:
+                    isInner = (spreadDirection * curvatureRatio) > 0
+                    outwardSign = -1.0 if curvatureRatio > 0 else 1.0
+
+                    shiftMagnitude = abs(curvatureRatio) * constants.prongChainCurvatureShiftFactor * halfWidth
+                    shiftVector = widthDirection.copy()
+                    shiftVector.scaleBy(outwardSign * shiftMagnitude)
+                    prongPosition = offsetPoint.copy()
+                    prongPosition.translateBy(shiftVector)
+
+                    sizeDelta = abs(curvatureRatio) * constants.prongChainCurvatureSizeFactor
+                    sizeMultiplier = (1.0 - sizeDelta) if isInner else (1.0 + sizeDelta)
+                    prongSize = size * sizeMultiplier
+
                 prongInfo = ProngInfo(
-                    position=offsetPoint,
+                    position=prongPosition,
                     normal=avgNormal,
                     lengthDirection=lengthDirection,
                     widthDirection=widthDirection,
-                    size=size,
+                    size=prongSize,
                     height=height
                 )
                 prongInfos.append(prongInfo)
@@ -243,12 +273,112 @@ def createProngInfosFromConnections(connections: list[tuple[GemstoneInfo, Gemsto
         # Merge nearby prongs based on weldDistance
         if weldDistance > 0 and len(prongInfos) > 1:
             prongInfos = mergeNearbyProngs(prongInfos, weldDistance)
+
+        if uniformity > 0 and len(prongInfos) > 1:
+            prongInfos = applyUniformity(prongInfos, uniformity)
         
         return prongInfos
     
     except:
         showMessage(f'createProngInfosFromConnections: {traceback.format_exc()}\n', True)
         return []
+
+
+def computeChainCurvatureRatio(info1: GemstoneInfo, info2: GemstoneInfo, neighborMap: dict[int, list[GemstoneInfo]],
+                                widthDirection: adsk.core.Vector3D, avgDiameter: float) -> float:
+    """Compute a signed curvature ratio along widthDirection for a chain segment between two gemstones.
+
+    The function returns a non-zero value only when both gemstones behave as part of a chain
+    (each has at most ``prongChainMaxConnections`` connections). The sign indicates which side
+    of the chord is concave: positive means the inside is along ``+widthDirection``, negative
+    means the inside is along ``-widthDirection``. The magnitude is normalized by the
+    average gemstone diameter and clamped to ``[-1.0, 1.0]``.
+
+    Args:
+        info1: First gemstone of the connection.
+        info2: Second gemstone of the connection.
+        neighborMap: Mapping from gemstone identity to its connected neighbors.
+        widthDirection: Unit vector along which the prong pair is spread.
+        avgDiameter: Sum of gemstone radii used to normalize the offset.
+
+    Returns:
+        Signed curvature ratio in ``[-1.0, 1.0]``; ``0.0`` when curvature should not be applied.
+    """
+    try:
+        if avgDiameter <= 0.0:
+            return 0.0
+
+        firstNeighbors = neighborMap.get(id(info1), [])
+        secondNeighbors = neighborMap.get(id(info2), [])
+
+        if len(firstNeighbors) > constants.prongChainMaxConnections or len(secondNeighbors) > constants.prongChainMaxConnections:
+            return 0.0
+
+        prevNeighbors = [neighbor for neighbor in firstNeighbors if neighbor is not info2]
+        nextNeighbors = [neighbor for neighbor in secondNeighbors if neighbor is not info1]
+
+        extraCentroids: list[adsk.core.Point3D] = []
+        if len(prevNeighbors) == 1:
+            extraCentroids.append(prevNeighbors[0].centroid)
+        if len(nextNeighbors) == 1:
+            extraCentroids.append(nextNeighbors[0].centroid)
+
+        if not extraCentroids:
+            return 0.0
+
+        chordMidpoint = adsk.core.Point3D.create(
+            (info1.centroid.x + info2.centroid.x) * 0.5,
+            (info1.centroid.y + info2.centroid.y) * 0.5,
+            (info1.centroid.z + info2.centroid.z) * 0.5
+        )
+        neighborsCentroid = averagePosition(extraCentroids)
+        curvatureVector = adsk.core.Vector3D.create(
+            neighborsCentroid.x - chordMidpoint.x,
+            neighborsCentroid.y - chordMidpoint.y,
+            neighborsCentroid.z - chordMidpoint.z
+        )
+
+        signedOffset = curvatureVector.dotProduct(widthDirection)
+        ratio = signedOffset / avgDiameter
+        if ratio > 1.0:
+            ratio = 1.0
+        elif ratio < -1.0:
+            ratio = -1.0
+
+        return ratio
+
+    except:
+        showMessage(f'computeChainCurvatureRatio: {traceback.format_exc()}\n', True)
+        return 0.0
+
+
+def applyUniformity(prongInfos: list[ProngInfo], uniformity: float) -> list[ProngInfo]:
+    """Blend prong size and height toward the median values of the generated prongs."""
+    try:
+        if len(prongInfos) <= 1 or uniformity <= 0:
+            return prongInfos
+
+        medianSize = median(info.size for info in prongInfos)
+        medianHeight = median(info.height for info in prongInfos)
+
+        normalizedProngInfos: list[ProngInfo] = []
+        for info in prongInfos:
+            size = info.size + (medianSize - info.size) * uniformity
+            height = info.height + (medianHeight - info.height) * uniformity
+            normalizedProngInfos.append(ProngInfo(
+                position=info.position.copy(),
+                normal=info.normal.copy(),
+                lengthDirection=info.lengthDirection.copy(),
+                widthDirection=info.widthDirection.copy(),
+                size=size,
+                height=height
+            ))
+
+        return normalizedProngInfos
+
+    except:
+        showMessage(f'applyUniformity: {traceback.format_exc()}\n', True)
+        return prongInfos
 
 
 # Helper function to merge nearby prongs
@@ -407,17 +537,17 @@ def setProngAttributes(body: adsk.fusion.BRepBody, size: float = None, height: f
         size: The size of the prong. If None, attribute is not set.
         height: The height of the prong. If None, attribute is not set.
     """
-    body.name = strings.PRONG
+    body.name = constants.PRONG
     
     properties = {
-        strings.ENTITY: strings.PRONG
+        constants.ENTITY: constants.PRONG
     }
     if size is not None:
-        properties[strings.PRONG_SIZE] = size
+        properties[constants.PRONG_SIZE] = size
     if height is not None:
-        properties[strings.PRONG_HEIGHT] = height
+        properties[constants.PRONG_HEIGHT] = height
     
-    body.attributes.add(strings.PREFIX, strings.PROPERTIES, json.dumps(properties))
+    body.attributes.add(constants.PREFIX, constants.PROPERTIES, json.dumps(properties))
 
 
 def updateProngFeature(customFeature: adsk.fusion.CustomFeature):

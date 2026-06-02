@@ -4,7 +4,8 @@ import traceback
 import adsk.core
 import adsk.fusion
 
-from ... import strings
+from ... import constants
+
 from ...helpers import Gemstones
 from ...helpers.Gemstones import isGemstone
 from ...helpers.showMessage import showMessage
@@ -26,10 +27,10 @@ def run(panel: adsk.core.ToolbarPanel) -> None:
         _app = adsk.core.Application.get()
         _ui = _app.userInterface
 
-        cmdDef = _ui.commandDefinitions.itemById(strings.GemstonesInfo.commandId)
+        cmdDef = _ui.commandDefinitions.itemById(constants.GemstonesInfo.commandId)
         if not cmdDef:
             cmdDef = _ui.commandDefinitions.addButtonDefinition(
-                strings.GemstonesInfo.commandId, 'Gemstones Info', 'Show info about gemstones', RESOURCES_FOLDER
+                constants.GemstonesInfo.commandId, 'Gemstones Info', 'Show info about gemstones', RESOURCES_FOLDER
             )
 
         control = panel.controls.addCommand(cmdDef, '', False)
@@ -45,11 +46,11 @@ def run(panel: adsk.core.ToolbarPanel) -> None:
 
 def stop(panel: adsk.core.ToolbarPanel) -> None:
     try:
-        control = panel.controls.itemById(strings.GemstonesInfo.commandId)
+        control = panel.controls.itemById(constants.GemstonesInfo.commandId)
         if control:
             control.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(strings.GemstonesInfo.commandId)
+        commandDefinition = _ui.commandDefinitions.itemById(constants.GemstonesInfo.commandId)
         if commandDefinition:
             commandDefinition.deleteMe()
     except:
@@ -77,7 +78,7 @@ class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 _handlers.append(handler)
 
             _gemstonesSelectionInput = inputs.addSelectionInput(
-                strings.GemstonesInfo.selectGemstonesInputId, 'Select Gemstones',
+                constants.GemstonesInfo.selectGemstonesInputId, 'Select Gemstones',
                 'Select gemstones to show info (leave empty to show all)'
             )
             _gemstonesSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Bodies)
@@ -85,7 +86,7 @@ class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             inputs.addSeparatorCommandInput('separatorAfterSelection')
 
-            _infoTextInput = inputs.addTextBoxCommandInput(strings.GemstonesInfo.infoInputId, 'Info', '', 1, True)
+            _infoTextInput = inputs.addTextBoxCommandInput(constants.GemstonesInfo.infoInputId, 'Info', '', 1, True)
 
             updateGemstonesDisplay()
 

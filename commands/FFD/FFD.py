@@ -9,7 +9,7 @@ import adsk.core
 import adsk.fusion
 
 from ... import constants
-from ... import strings
+
 from ...helpers import Bodies
 from ...helpers import CustomFeatures
 from ...helpers import Deformations
@@ -40,57 +40,57 @@ _controlPointOffsets: list[list[float]] = []
 _selectedPointIndex: int = 0
 _isUpdatingInputs: bool = False
 _skipCompute: bool = False
-_gridSizeX: int = constants.FFDConst.defaultGridSize
-_gridSizeY: int = constants.FFDConst.defaultGridSize
-_gridSizeZ: int = constants.FFDConst.defaultGridSize
+_gridSizeX: int = constants.FFD.defaultGridSize
+_gridSizeY: int = constants.FFD.defaultGridSize
+_gridSizeZ: int = constants.FFD.defaultGridSize
 
-createCommandInputDef = strings.InputDef(strings.FFD.createCommandId, 'FFD', 'Creates a free-form deformed copy of a solid body.')
-editCommandInputDef = strings.InputDef(strings.FFD.editCommandId, 'Edit FFD', 'Edits the parameters of the FFD feature.')
+createCommandInputDef = constants.InputDef(constants.FFD.createCommandId, 'FFD', 'Creates a free-form deformed copy of a solid body.')
+editCommandInputDef = constants.InputDef(constants.FFD.editCommandId, 'Edit FFD', 'Edits the parameters of the FFD feature.')
 
-selectBodyInputDef = strings.InputDef(
-    strings.FFD.selectBodyInputId,
+selectBodyInputDef = constants.InputDef(
+    constants.FFD.selectBodyInputId,
     'Select Body',
     'Select the solid body to deform.'
 )
 
-resolutionXInputDef = strings.InputDef(
-    strings.FFD.resolutionXInputId,
+resolutionXInputDef = constants.InputDef(
+    constants.FFD.resolutionXInputId,
     'Resolution X',
     'Number of control points along the X axis.'
 )
 
-resolutionYInputDef = strings.InputDef(
-    strings.FFD.resolutionYInputId,
+resolutionYInputDef = constants.InputDef(
+    constants.FFD.resolutionYInputId,
     'Resolution Y',
     'Number of control points along the Y axis.'
 )
 
-resolutionZInputDef = strings.InputDef(
-    strings.FFD.resolutionZInputId,
+resolutionZInputDef = constants.InputDef(
+    constants.FFD.resolutionZInputId,
     'Resolution Z',
     'Number of control points along the Z axis.'
 )
 
-offsetXInputDef = strings.InputDef(
-    strings.FFD.offsetXInputId,
+offsetXInputDef = constants.InputDef(
+    constants.FFD.offsetXInputId,
     'Offset X',
     'X-axis displacement of the selected control point.'
 )
 
-offsetYInputDef = strings.InputDef(
-    strings.FFD.offsetYInputId,
+offsetYInputDef = constants.InputDef(
+    constants.FFD.offsetYInputId,
     'Offset Y',
     'Y-axis displacement of the selected control point.'
 )
 
-offsetZInputDef = strings.InputDef(
-    strings.FFD.offsetZInputId,
+offsetZInputDef = constants.InputDef(
+    constants.FFD.offsetZInputId,
     'Offset Z',
     'Z-axis displacement of the selected control point.'
 )
 
-resetButtonInputDef = strings.InputDef(
-    strings.FFD.resetButtonInputId,
+resetButtonInputDef = constants.InputDef(
+    constants.FFD.resetButtonInputId,
     'Reset All',
     'Reset all control points to zero.'
 )
@@ -132,11 +132,11 @@ def run(panel: adsk.core.ToolbarPanel) -> None:
         _handlers.append(editCommandCreated)
 
         _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(
-            strings.FFD.commandId,
+            constants.FFD.commandId,
             createCommandInputDef.name,
             RESOURCES_FOLDER
         )
-        _customFeatureDefinition.editCommandId = strings.FFD.editCommandId
+        _customFeatureDefinition.editCommandId = constants.FFD.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -149,15 +149,15 @@ def run(panel: adsk.core.ToolbarPanel) -> None:
 def stop(panel: adsk.core.ToolbarPanel) -> None:
     """Clean up the FFD command UI elements."""
     try:
-        control = panel.controls.itemById(strings.FFD.createCommandId)
+        control = panel.controls.itemById(constants.FFD.createCommandId)
         if control:
             control.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(strings.FFD.createCommandId)
+        commandDefinition = _ui.commandDefinitions.itemById(constants.FFD.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(strings.FFD.editCommandId)
+        commandDefinition = _ui.commandDefinitions.itemById(constants.FFD.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
@@ -167,7 +167,7 @@ def stop(panel: adsk.core.ToolbarPanel) -> None:
 
 def getSourceBodyFromFeature(customFeature: adsk.fusion.CustomFeature) -> Optional[adsk.fusion.BRepBody]:
     """Return the source body stored in a custom feature."""
-    sourceFaceDependency = customFeature.dependencies.itemById(strings.FFD.sourceBodyFaceDependencyId)
+    sourceFaceDependency = customFeature.dependencies.itemById(constants.FFD.sourceBodyFaceDependencyId)
     if sourceFaceDependency is None or sourceFaceDependency.entity is None:
         return None
 
@@ -183,7 +183,7 @@ def getOffsetsFromFeature(customFeature: adsk.fusion.CustomFeature) -> list[list
     gridSizes = getGridSizesFromFeature(customFeature)
     totalPoints = gridSizes[0] * gridSizes[1] * gridSizes[2]
 
-    attr = customFeature.attributes.itemByName(strings.FFD.offsetsAttributeGroup, strings.FFD.offsetsAttributeName)
+    attr = customFeature.attributes.itemByName(constants.FFD.offsetsAttributeGroup, constants.FFD.offsetsAttributeName)
     if attr is not None:
         try:
             return json.loads(attr.value)
@@ -195,14 +195,14 @@ def getOffsetsFromFeature(customFeature: adsk.fusion.CustomFeature) -> list[list
 
 def getGridSizesFromFeature(customFeature: adsk.fusion.CustomFeature) -> list[int]:
     """Return the [gridSizeX, gridSizeY, gridSizeZ] from a custom feature."""
-    attr = customFeature.attributes.itemByName(strings.FFD.offsetsAttributeGroup, strings.FFD.gridSizeAttributeName)
+    attr = customFeature.attributes.itemByName(constants.FFD.offsetsAttributeGroup, constants.FFD.gridSizeAttributeName)
     if attr is not None:
         try:
             return json.loads(attr.value)
         except:
             pass
 
-    default = constants.FFDConst.defaultGridSize
+    default = constants.FFD.defaultGridSize
     return [default, default, default]
 
 
@@ -228,8 +228,8 @@ def initializeCommandInputs(inputs: adsk.core.CommandInputs) -> None:
     _bodySelectionInput.setSelectionLimits(1, 1)
     _bodySelectionInput.tooltip = selectBodyInputDef.tooltip
 
-    minGrid = constants.FFDConst.minGridSize
-    maxGrid = constants.FFDConst.maxGridSize
+    minGrid = constants.FFD.minGridSize
+    maxGrid = constants.FFD.maxGridSize
 
     _resolutionXInput = inputs.addIntegerSpinnerCommandInput(
         resolutionXInputDef.id,
@@ -255,7 +255,7 @@ def initializeCommandInputs(inputs: adsk.core.CommandInputs) -> None:
     _resolutionZInput.tooltip = resolutionZInputDef.tooltip
     _resolutionZInput.isVisible = False
 
-    zeroValue = adsk.core.ValueInput.createByReal(constants.FFDConst.defaultOffsetCm)
+    zeroValue = adsk.core.ValueInput.createByReal(constants.FFD.defaultOffsetCm)
 
     _offsetXInput = inputs.addDistanceValueCommandInput(
         offsetXInputDef.id,
@@ -272,7 +272,7 @@ def initializeCommandInputs(inputs: adsk.core.CommandInputs) -> None:
     _offsetYInput = inputs.addDistanceValueCommandInput(
         offsetYInputDef.id,
         offsetYInputDef.name,
-        adsk.core.ValueInput.createByReal(constants.FFDConst.defaultOffsetCm)
+        adsk.core.ValueInput.createByReal(constants.FFD.defaultOffsetCm)
     )
     _offsetYInput.setManipulator(
         adsk.core.Point3D.create(0, 0, 0),
@@ -284,7 +284,7 @@ def initializeCommandInputs(inputs: adsk.core.CommandInputs) -> None:
     _offsetZInput = inputs.addDistanceValueCommandInput(
         offsetZInputDef.id,
         offsetZInputDef.name,
-        adsk.core.ValueInput.createByReal(constants.FFDConst.defaultOffsetCm)
+        adsk.core.ValueInput.createByReal(constants.FFD.defaultOffsetCm)
     )
     _offsetZInput.setManipulator(
         adsk.core.Point3D.create(0, 0, 0),
@@ -455,9 +455,9 @@ def drawLatticeGraphics(
     if diagonal < 1e-6:
         diagonal = 1.0
 
-    markerSize = diagonal * constants.FFDConst.controlPointMarkerFraction
-    selectedMarkerSize = diagonal * constants.FFDConst.selectedPointMarkerFraction
-    labelSize = diagonal * constants.FFDConst.labelSizeFraction
+    markerSize = diagonal * constants.FFD.controlPointMarkerFraction
+    selectedMarkerSize = diagonal * constants.FFD.selectedPointMarkerFraction
+    labelSize = diagonal * constants.FFD.labelSizeFraction
 
     lineCoords: list[float] = []
     for i in range(_gridSizeX):
@@ -481,11 +481,11 @@ def drawLatticeGraphics(
     if lineCoords:
         coords = adsk.fusion.CustomGraphicsCoordinates.create(lineCoords)
         cgLines = cgGroup.addLines(coords, [], False, [])
-        r, g, b, a = constants.FFDConst.latticeLineColorRGBA
+        r, g, b, a = constants.FFD.latticeLineColorRGBA
         cgLines.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
             adsk.core.Color.create(r, g, b, a)
         )
-        cgLines.weight = constants.FFDConst.latticeLineWeight
+        cgLines.weight = constants.FFD.latticeLineWeight
 
     normalCoords: list[float] = []
     selectedCoords: list[float] = []
@@ -509,24 +509,24 @@ def drawLatticeGraphics(
     if normalCoords:
         coords = adsk.fusion.CustomGraphicsCoordinates.create(normalCoords)
         markers = cgGroup.addLines(coords, [], False, [])
-        r, g, b = constants.FFDConst.normalPointColorRGB
+        r, g, b = constants.FFD.normalPointColorRGB
         markers.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
             adsk.core.Color.create(r, g, b, 255)
         )
-        markers.weight = constants.FFDConst.controlPointLineWeight
+        markers.weight = constants.FFD.controlPointLineWeight
 
     if selectedCoords:
         coords = adsk.fusion.CustomGraphicsCoordinates.create(selectedCoords)
         markers = cgGroup.addLines(coords, [], False, [])
-        r, g, b = constants.FFDConst.selectedPointColorRGB
+        r, g, b = constants.FFD.selectedPointColorRGB
         markers.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
             adsk.core.Color.create(r, g, b, 255)
         )
-        markers.weight = constants.FFDConst.selectedPointLineWeight
+        markers.weight = constants.FFD.selectedPointLineWeight
 
-    if constants.FFDConst.showPointLabels:
+    if constants.FFD.showPointLabels:
         normalLabelColor = adsk.fusion.CustomGraphicsSolidColorEffect.create(
-            adsk.core.Color.create(*constants.FFDConst.labelColorRGB, 255)
+            adsk.core.Color.create(*constants.FFD.labelColorRGB, 255)
         )
         billboard = adsk.fusion.CustomGraphicsBillBoard.create(None)
 
@@ -586,9 +586,9 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             command = eventArgs.command
             inputs = command.commandInputs
 
-            _gridSizeX = constants.FFDConst.defaultGridSize
-            _gridSizeY = constants.FFDConst.defaultGridSize
-            _gridSizeZ = constants.FFDConst.defaultGridSize
+            _gridSizeX = constants.FFD.defaultGridSize
+            _gridSizeY = constants.FFD.defaultGridSize
+            _gridSizeZ = constants.FFD.defaultGridSize
 
             initializeOffsets()
             initializeCommandInputs(inputs)
@@ -792,8 +792,8 @@ class InputChangedHandler(adsk.core.InputChangedEventHandler):
 
             elif changedInput.id == resetButtonInputDef.id:
                 if showMessage.showConfirmationDialog(
-                    strings.FFD.resetConfirmationMessage,
-                    strings.FFD.resetConfirmationTitle
+                    constants.FFD.resetConfirmationMessage,
+                    constants.FFD.resetConfirmationTitle
                 ):
                     initializeOffsets()
                     _selectedPointIndex = 0
@@ -855,7 +855,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
 
             outputBody = component.bRepBodies.add(resultBody, baseFeature)
             Bodies.copyAttributes(sourceBody, outputBody)
-            outputBody.name = strings.FFD.bodyNameTemplate.format(bodyName=sourceBody.name)
+            outputBody.name = constants.FFD.bodyNameTemplate.format(bodyName=sourceBody.name)
 
             baseFeature.finishEdit()
             isBaseFeatureEditing = False
@@ -909,7 +909,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
 
             outputBody = component.bRepBodies.add(resultBody, baseFeature)
             Bodies.copyAttributes(sourceBody, outputBody)
-            outputBody.name = strings.FFD.bodyNameTemplate.format(bodyName=sourceBody.name)
+            outputBody.name = constants.FFD.bodyNameTemplate.format(bodyName=sourceBody.name)
 
             baseFeature.finishEdit()
             isBaseFeatureEditing = False
@@ -919,7 +919,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                 return
 
             customFeatureInput = component.features.customFeatures.createInput(_customFeatureDefinition)
-            customFeatureInput.addDependency(strings.FFD.sourceBodyFaceDependencyId, sourceBody.faces.item(0))
+            customFeatureInput.addDependency(constants.FFD.sourceBodyFaceDependencyId, sourceBody.faces.item(0))
 
             customFeatureInput.setStartAndEndFeatures(baseFeature, baseFeature)
 
@@ -928,14 +928,14 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                 customFeature = component.features.customFeatures.add(customFeatureInput)
 
                 customFeature.attributes.add(
-                    strings.FFD.offsetsAttributeGroup,
-                    strings.FFD.offsetsAttributeName,
+                    constants.FFD.offsetsAttributeGroup,
+                    constants.FFD.offsetsAttributeName,
                     json.dumps(_controlPointOffsets)
                 )
 
                 customFeature.attributes.add(
-                    strings.FFD.offsetsAttributeGroup,
-                    strings.FFD.gridSizeAttributeName,
+                    constants.FFD.offsetsAttributeGroup,
+                    constants.FFD.gridSizeAttributeName,
                     json.dumps([_gridSizeX, _gridSizeY, _gridSizeZ])
                 )
             finally:
@@ -1088,29 +1088,29 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
                 return
 
             _editedCustomFeature.dependencies.deleteAll()
-            _editedCustomFeature.dependencies.add(strings.FFD.sourceBodyFaceDependencyId, sourceBody.faces.item(0))
+            _editedCustomFeature.dependencies.add(constants.FFD.sourceBodyFaceDependencyId, sourceBody.faces.item(0))
 
             attr = _editedCustomFeature.attributes.itemByName(
-                strings.FFD.offsetsAttributeGroup, strings.FFD.offsetsAttributeName
+                constants.FFD.offsetsAttributeGroup, constants.FFD.offsetsAttributeName
             )
             if attr is not None:
                 attr.deleteMe()
 
             _editedCustomFeature.attributes.add(
-                strings.FFD.offsetsAttributeGroup,
-                strings.FFD.offsetsAttributeName,
+                constants.FFD.offsetsAttributeGroup,
+                constants.FFD.offsetsAttributeName,
                 json.dumps(_controlPointOffsets)
             )
 
             gridAttr = _editedCustomFeature.attributes.itemByName(
-                strings.FFD.offsetsAttributeGroup, strings.FFD.gridSizeAttributeName
+                constants.FFD.offsetsAttributeGroup, constants.FFD.gridSizeAttributeName
             )
             if gridAttr is not None:
                 gridAttr.deleteMe()
 
             _editedCustomFeature.attributes.add(
-                strings.FFD.offsetsAttributeGroup,
-                strings.FFD.gridSizeAttributeName,
+                constants.FFD.offsetsAttributeGroup,
+                constants.FFD.gridSizeAttributeName,
                 json.dumps([_gridSizeX, _gridSizeY, _gridSizeZ])
             )
 
@@ -1179,7 +1179,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
             baseFeature.bodies.item(baseFeature.bodies.count - 1).deleteMe()
 
         Bodies.copyAttributes(sourceBody, outputBody)
-        outputBody.name = strings.FFD.bodyNameTemplate.format(bodyName=sourceBody.name)
+        outputBody.name = constants.FFD.bodyNameTemplate.format(bodyName=sourceBody.name)
 
         baseFeature.finishEdit()
         isBaseFeatureEditing = False
@@ -1245,7 +1245,7 @@ class MouseClickHandler(adsk.core.MouseEventHandler):
                     minDist = dist
                     nearestIdx = idx
 
-            if nearestIdx < 0 or minDist > constants.FFDConst.pointClickThreshold:
+            if nearestIdx < 0 or minDist > constants.FFD.pointClickThreshold:
                 return
 
             if nearestIdx >= len(_controlPointOffsets):

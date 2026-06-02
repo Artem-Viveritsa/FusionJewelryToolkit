@@ -55,7 +55,7 @@ def createTaperBody(
         dy = point.y - pivotY
         dz = point.z - pivotZ
         t = point.x * axisX + point.y * axisY + point.z * axisZ - pivotProjection
-        scale = max(constants.Deformations.minimumTaperScale, 1.0 - (t / height) * tanAngle)
+        scale = max(constants.Taper.minimumTaperScale, 1.0 - (t / height) * tanAngle)
         return adsk.core.Point3D.create(
             pivotX + t * axisX + (dx - t * axisX) * scale,
             pivotY + t * axisY + (dy - t * axisY) * scale,

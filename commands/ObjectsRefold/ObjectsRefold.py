@@ -2,7 +2,8 @@ import os
 from typing import List
 import adsk.core, adsk.fusion, traceback
 
-from ... import strings
+from ... import constants
+
 from ...helpers.showMessage import showMessage
 from ...helpers.Surface import refoldBodiesToSurface
 from ...helpers.Points import getPointGeometry
@@ -25,17 +26,17 @@ _bodiesSelectionInput: adsk.core.SelectionCommandInput = None
 
 RESOURCES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', '')
 
-createCommandInputDef = strings.InputDef(strings.ObjectsRefold.createCommandId, 'Objects Refold', 'Transfers bodies from unfolded sketch plane to the original surface.')
-editCommandInputDef = strings.InputDef(strings.ObjectsRefold.editCommandId, 'Edit Objects Refold', 'Edits the parameters of the objects refold feature.')
+createCommandInputDef = constants.InputDef(constants.ObjectsRefold.createCommandId, 'Objects Refold', 'Transfers bodies from unfolded sketch plane to the original surface.')
+editCommandInputDef = constants.InputDef(constants.ObjectsRefold.editCommandId, 'Edit Objects Refold', 'Edits the parameters of the objects refold feature.')
 
-selectSketchInputDef = strings.InputDef(
-    strings.ObjectsRefold.selectSketchInputId,
+selectSketchInputDef = constants.InputDef(
+    constants.ObjectsRefold.selectSketchInputId,
     'Select Sketch',
     'Select the sketch created by Surface Unfold command.'
 )
 
-selectBodiesInputDef = strings.InputDef(
-    strings.ObjectsRefold.selectBodiesInputId,
+selectBodiesInputDef = constants.InputDef(
+    constants.ObjectsRefold.selectBodiesInputId,
     'Select Bodies',
     'Select bodies to transfer to the surface (minimum 1).'
 )
@@ -69,8 +70,8 @@ def run(panel: adsk.core.ToolbarPanel):
         editCommandDefinition.commandCreated.add(editCommandCreated)
         _handlers.append(editCommandCreated)
 
-        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(strings.ObjectsRefold.commandId, strings.ObjectsRefold.id, RESOURCES_FOLDER)
-        _customFeatureDefinition.editCommandId = strings.ObjectsRefold.editCommandId
+        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(constants.ObjectsRefold.commandId, constants.ObjectsRefold.id, RESOURCES_FOLDER)
+        _customFeatureDefinition.editCommandId = constants.ObjectsRefold.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -82,15 +83,15 @@ def run(panel: adsk.core.ToolbarPanel):
 def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the cutters command by removing UI elements and handlers."""
     try:
-        control = panel.controls.itemById(strings.ObjectsRefold.createCommandId)
+        control = panel.controls.itemById(constants.ObjectsRefold.createCommandId)
         if control:
             control.deleteMe()
             
-        commandDefinition = _ui.commandDefinitions.itemById(strings.ObjectsRefold.createCommandId)
+        commandDefinition = _ui.commandDefinitions.itemById(constants.ObjectsRefold.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(strings.ObjectsRefold.editCommandId)
+        commandDefinition = _ui.commandDefinitions.itemById(constants.ObjectsRefold.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
     except:
@@ -114,7 +115,7 @@ def getSurfaceUnfoldFeatureFromSketch(sketch: adsk.fusion.Sketch) -> adsk.fusion
         component = nativeSketch.parentComponent
         
         for feature in component.features.customFeatures:
-            if feature.name.startswith(strings.Unfold.id):
+            if feature.name.startswith(constants.Unfold.id):
                 for subFeature in feature.features:
                     if subFeature.objectType == adsk.fusion.BaseFeature.classType():
                         baseFeature = adsk.fusion.BaseFeature.cast(subFeature)
@@ -142,25 +143,25 @@ def getDepsFromSurfaceUnfoldFeature(customFeature: adsk.fusion.CustomFeature) ->
         sourceEntity = None
         isMesh = False
         
-        sourceDep = customFeature.dependencies.itemById(strings.Unfold.sourceDependencyId)
+        sourceDep = customFeature.dependencies.itemById(constants.Unfold.sourceDependencyId)
         if sourceDep and sourceDep.entity:
             sourceEntity = sourceDep.entity
             isMesh = sourceEntity.objectType == adsk.fusion.MeshBody.classType()
         
-        originDep = customFeature.dependencies.itemById(strings.Unfold.originVertexDependencyId)
+        originDep = customFeature.dependencies.itemById(constants.Unfold.originVertexDependencyId)
         originVertex = originDep.entity if originDep else None
         
-        xDirDep = customFeature.dependencies.itemById(strings.Unfold.xDirectionVertexDependencyId)
+        xDirDep = customFeature.dependencies.itemById(constants.Unfold.xDirectionVertexDependencyId)
         xDirVertex = xDirDep.entity if xDirDep else None
         
-        yDirDep = customFeature.dependencies.itemById(strings.Unfold.yDirectionVertexDependencyId)
+        yDirDep = customFeature.dependencies.itemById(constants.Unfold.yDirectionVertexDependencyId)
         yDirVertex = yDirDep.entity if yDirDep else None
         
         originPoint = getPointGeometry(originVertex) if originVertex else None
         xDirPoint = getPointGeometry(xDirVertex) if xDirVertex else None
         yDirPoint = getPointGeometry(yDirVertex) if yDirVertex else None
 
-        constructionPlaneDep = customFeature.dependencies.itemById(strings.Unfold.constructionPlaneDependencyId)
+        constructionPlaneDep = customFeature.dependencies.itemById(constants.Unfold.constructionPlaneDependencyId)
         constructionPlane = constructionPlaneDep.entity if constructionPlaneDep else None
 
         return sourceEntity, originPoint, xDirPoint, yDirPoint, isMesh, constructionPlane

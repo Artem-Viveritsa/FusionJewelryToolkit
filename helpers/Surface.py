@@ -4,10 +4,13 @@ import traceback
 from typing import List, Dict, Tuple, Set
 import adsk.core
 import adsk.fusion
-from .. import strings, constants
+from .. import constants
 from .showMessage import showMessage
+from .Meshes.core import createFaceMesh, getMeshDataPoints, getTriangleIndicesFromMeshData
+from .Meshes import isotropic as meshIsotropic
 from .Points import point3dToStr, strToPoint3d, averagePosition, findClosestPointIndex, triangleArea, isPointInTriangle, trianglesOverlap, toPlaneSpace, projectToPlane
 from .Vectors import vector3dToStr, strToVector3d, averageVector
+
 
 
 def getClosestFace(faces: list[adsk.fusion.BRepFace], point: adsk.core.Point3D) -> adsk.fusion.BRepFace:
@@ -90,6 +93,27 @@ def getDataFromPointAndFace(face: adsk.fusion.BRepFace | adsk.fusion.Constructio
     except:
         showMessage(f'getDataFromPointAndFace: {traceback.format_exc()}\n', True)
         return None, None, None, None
+
+
+def snapPointToFaces(faces: list[adsk.fusion.BRepFace], point: adsk.core.Point3D) -> adsk.core.Point3D | None:
+    """Project a point onto the closest face and return the projected point.
+
+    Args:
+        faces: List of BRepFace entities to snap to.
+        point: The 3D point to project.
+
+    Returns:
+        The projected point on the closest face, or None if projection fails.
+    """
+    if len(faces) == 0 or point is None:
+        return None
+    if len(faces) == 1:
+        face = faces[0]
+    else:
+        face = getClosestFace(faces, point)
+
+    projected, _, _, _ = getDataFromPointAndFace(face, point)
+    return projected
 
 
 def calculateThirdPointOrdered(pointStart: adsk.core.Point2D, pointEnd: adsk.core.Point2D, 
@@ -616,15 +640,15 @@ def preprocess(
         pointData: Dict[str, str] = {}
         
         if points3D and index < len(points3D):
-            pointData[strings.Unfold.sourcePoint3D] = point3dToStr(points3D[index])
+            pointData[constants.Unfold.sourcePoint3D] = point3dToStr(points3D[index])
         
         if normals and index in normals:
-            pointData[strings.Unfold.sourceNormal] = vector3dToStr(normals[index])
+            pointData[constants.Unfold.sourceNormal] = vector3dToStr(normals[index])
         
         if pointData:
             unfoldDataAttributes[point3dStr] = pointData
 
-    sketch.attributes.add(strings.PREFIX, strings.Unfold.sourceData, json.dumps(unfoldDataAttributes))
+    sketch.attributes.add(constants.PREFIX, constants.Unfold.sourceData, json.dumps(unfoldDataAttributes))
 
     return mappedPoints
 
@@ -693,7 +717,7 @@ def drawEdgesToSketch(
 def unfoldFaceToSketch(face: adsk.fusion.BRepFace, accuracy: float, sketch: adsk.fusion.Sketch, 
                        originPoint: adsk.core.Point3D, xDirPoint: adsk.core.Point3D, yDirPoint: adsk.core.Point3D, 
                        constructionPlane: adsk.fusion.ConstructionPlane, xOffset: float, yOffset: float,
-                       algorithm: strings.UnfoldAlgorithm = strings.UnfoldAlgorithm.Mesh):
+                       algorithm: constants.UnfoldAlgorithm = constants.UnfoldAlgorithm.Mesh):
     """
     Unfold a face to a flat sketch representation.
     
@@ -701,10 +725,54 @@ def unfoldFaceToSketch(face: adsk.fusion.BRepFace, accuracy: float, sketch: adsk
     - Mesh: Uses mesh triangulation (fastest, less accurate)
     - NURBS: Uses SurfaceEvaluator with uniform grid (balanced)
     """
-    if algorithm == strings.UnfoldAlgorithm.Mesh:
+    if algorithm == constants.UnfoldAlgorithm.Mesh:
         unfoldFaceToSketchWithMesh(face, accuracy, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane, xOffset, yOffset)
     else:
         unfoldFaceToSketchWithNurbs(face, accuracy, sketch, originPoint, xDirPoint, yDirPoint, constructionPlane, xOffset, yOffset)
+
+
+def unfoldFacesToSketch(
+    faces: list[adsk.fusion.BRepFace],
+    accuracy: float,
+    sketch: adsk.fusion.Sketch,
+    originPoint: adsk.core.Point3D,
+    xDirPoint: adsk.core.Point3D,
+    yDirPoint: adsk.core.Point3D,
+    constructionPlane: adsk.fusion.ConstructionPlane,
+    xOffset: float,
+    yOffset: float,
+    algorithm: constants.UnfoldAlgorithm = constants.UnfoldAlgorithm.Mesh
+) -> None:
+    """Unfold one or more connected faces to a flat sketch representation."""
+    if not faces:
+        return
+
+    if len(faces) == 1:
+        unfoldFaceToSketch(
+            faces[0],
+            accuracy,
+            sketch,
+            originPoint,
+            xDirPoint,
+            yDirPoint,
+            constructionPlane,
+            xOffset,
+            yOffset,
+            algorithm
+        )
+        return
+
+    unfoldFacesToSketchWithMesh(
+        faces,
+        accuracy,
+        sketch,
+        originPoint,
+        xDirPoint,
+        yDirPoint,
+        constructionPlane,
+        xOffset,
+        yOffset
+    )
 
 
 def unfoldMeshToSketch(mesh: adsk.fusion.TriangleMesh, sketch: adsk.fusion.Sketch, 
@@ -723,33 +791,75 @@ def unfoldMeshToSketch(mesh: adsk.fusion.TriangleMesh, sketch: adsk.fusion.Sketc
         yOffset: Offset along the Y axis of the construction plane.
     """
     try:
-        sketch.isComputeDeferred = True
-        
         nodes = mesh.nodeCoordinates
         normalVectorsArray = mesh.normalVectors
         indices = mesh.nodeIndices
         triangleCount = mesh.triangleCount
-
-        # nodes, normalVectorsArray, indices, triangleCount = remeshMesh(mesh, targetEdgeLength=0.5, iterations=10)
-                
         triangles = [[indices[t * 3], indices[t * 3 + 1], indices[t * 3 + 2]] for t in range(triangleCount)]
-        
-        edgeToTriangles = buildEdgeToTrianglesMap(triangles)
-        
-        originIndex = findClosestPointIndex(originPoint, nodes)
-        xDirectionIndex = findClosestPointIndex(xDirPoint, nodes)
-        yDirectionIndex = findClosestPointIndex(yDirPoint, nodes)
-        
-        positions2D, visitedTriangles = unfoldTrianglesToPositions2D(triangles, nodes, originIndex, edgeToTriangles)
-        
-        normals = {index: normalVectorsArray[index] for index in range(len(normalVectorsArray)) if index in positions2D}
-        
-        mappedPoints = preprocess(positions2D, xDirectionIndex, yDirectionIndex, nodes, normals, sketch, constructionPlane, xOffset, yOffset)
-        
-        drawEdgesToSketch(triangles, visitedTriangles, mappedPoints, edgeToTriangles, sketch)
+        normals = {index: normalVectorsArray[index] for index in range(len(normalVectorsArray))}
+
+        unfoldTrianglesToSketch(
+            list(nodes),
+            triangles,
+            sketch,
+            originPoint,
+            xDirPoint,
+            yDirPoint,
+            constructionPlane,
+            xOffset,
+            yOffset,
+            normals
+        )
 
     except:
         showMessage(f'unfoldMeshToSketch: {traceback.format_exc()}\n', True)
+
+
+def unfoldTrianglesToSketch(
+    points3D: List[adsk.core.Point3D],
+    triangles: List[List[int]],
+    sketch: adsk.fusion.Sketch,
+    originPoint: adsk.core.Point3D,
+    xDirPoint: adsk.core.Point3D,
+    yDirPoint: adsk.core.Point3D,
+    constructionPlane: adsk.fusion.ConstructionPlane,
+    xOffset: float,
+    yOffset: float,
+    normals: Dict[int, adsk.core.Vector3D] | None = None
+) -> None:
+    """Unfold triangle data to a flat sketch representation."""
+    try:
+        sketch.isComputeDeferred = True
+
+        edgeToTriangles = buildEdgeToTrianglesMap(triangles)
+
+        originIndex = findClosestPointIndex(originPoint, points3D)
+        xDirectionIndex = findClosestPointIndex(xDirPoint, points3D)
+        yDirectionIndex = findClosestPointIndex(yDirPoint, points3D)
+
+        positions2D, visitedTriangles = unfoldTrianglesToPositions2D(triangles, points3D, originIndex, edgeToTriangles)
+
+        if normals is None:
+            normals = calculateVertexNormals(triangles, points3D, visitedTriangles)
+        else:
+            normals = {index: normal for index, normal in normals.items() if index in positions2D}
+
+        mappedPoints = preprocess(
+            positions2D,
+            xDirectionIndex,
+            yDirectionIndex,
+            points3D,
+            normals,
+            sketch,
+            constructionPlane,
+            xOffset,
+            yOffset
+        )
+
+        drawEdgesToSketch(triangles, visitedTriangles, mappedPoints, edgeToTriangles, sketch)
+
+    except:
+        showMessage(f'unfoldTrianglesToSketch: {traceback.format_exc()}\n', True)
 
     finally:
         sketch.isComputeDeferred = False
@@ -761,12 +871,35 @@ def unfoldFaceToSketchWithMesh(face: adsk.fusion.BRepFace, accuracy: float, sket
                            constructionPlane: adsk.fusion.ConstructionPlane, xOffset: float, yOffset: float):
     """Unfold a face to a flat sketch representation using mesh triangulation."""
     try:
-        calc = face.meshManager.createMeshCalculator()
-        calc.surfaceTolerance = 5
-        calc.maxNormalDeviation = 30
-        calc.maxAspectRatio = 10
-        calc.maxSideLength = accuracy
-        mesh = calc.calculate()
+        meshSettings = meshIsotropic.IsotropicRemeshSettings(
+            constants.MeshRemesh.surfaceTolerance,
+            constants.MeshRemesh.maxNormalDeviation,
+            constants.MeshRemesh.maxAspectRatio,
+            constants.Unfold.meshIsotropicIterationCount,
+            constants.Unfold.meshIsotropicSmoothingBlend,
+        )
+        tessellationResult = meshIsotropic.createIsotropicTessellationResult([face], accuracy, meshSettings)
+        meshData = tessellationResult.finalMeshData if tessellationResult is not None else None
+        if meshData is not None:
+            points3D = getMeshDataPoints(meshData)
+            triangleIndices = getTriangleIndicesFromMeshData(meshData)
+            triangles = [list(triangle) for triangle in triangleIndices]
+
+            if points3D and triangles:
+                unfoldTrianglesToSketch(
+                    points3D,
+                    triangles,
+                    sketch,
+                    originPoint,
+                    xDirPoint,
+                    yDirPoint,
+                    constructionPlane,
+                    xOffset,
+                    yOffset
+                )
+                return
+
+        mesh = createFaceMesh(face, accuracy)
 
         if mesh is None:
             return
@@ -775,6 +908,54 @@ def unfoldFaceToSketchWithMesh(face: adsk.fusion.BRepFace, accuracy: float, sket
 
     except:
         showMessage(f'unfoldFaceToSketchMesh: {traceback.format_exc()}\n', True)
+
+
+def unfoldFacesToSketchWithMesh(
+    faces: list[adsk.fusion.BRepFace],
+    accuracy: float,
+    sketch: adsk.fusion.Sketch,
+    originPoint: adsk.core.Point3D,
+    xDirPoint: adsk.core.Point3D,
+    yDirPoint: adsk.core.Point3D,
+    constructionPlane: adsk.fusion.ConstructionPlane,
+    xOffset: float,
+    yOffset: float
+) -> None:
+    """Unfold multiple connected faces using one combined tessellated mesh."""
+    try:
+        meshSettings = meshIsotropic.IsotropicRemeshSettings(
+            constants.MeshRemesh.surfaceTolerance,
+            constants.MeshRemesh.maxNormalDeviation,
+            constants.MeshRemesh.maxAspectRatio,
+            constants.Unfold.meshIsotropicIterationCount,
+            constants.Unfold.meshIsotropicSmoothingBlend,
+        )
+        tessellationResult = meshIsotropic.createIsotropicTessellationResult(faces, accuracy, meshSettings)
+        meshData = tessellationResult.finalMeshData if tessellationResult is not None else None
+        if meshData is None:
+            return
+
+        points3D = getMeshDataPoints(meshData)
+        triangleIndices = getTriangleIndicesFromMeshData(meshData)
+        triangles = [list(triangle) for triangle in triangleIndices]
+
+        if not points3D or not triangles:
+            return
+
+        unfoldTrianglesToSketch(
+            points3D,
+            triangles,
+            sketch,
+            originPoint,
+            xDirPoint,
+            yDirPoint,
+            constructionPlane,
+            xOffset,
+            yOffset
+        )
+
+    except:
+        showMessage(f'unfoldFacesToSketchWithMesh: {traceback.format_exc()}\n', True)
 
 
 def unfoldFaceToSketchWithNurbs(face: adsk.fusion.BRepFace, stepSize: float, sketch: adsk.fusion.Sketch, 
@@ -916,7 +1097,7 @@ def refoldBodiesToSurface(
     try:
         temporaryManager = adsk.fusion.TemporaryBRepManager.get()
 
-        unfoldDataAttr = sketch.attributes.itemByName(strings.PREFIX, strings.Unfold.sourceData)
+        unfoldDataAttr = sketch.attributes.itemByName(constants.PREFIX, constants.Unfold.sourceData)
         unfoldDataAttributes: Dict[str, Dict[str, str]] = json.loads(unfoldDataAttr.value) if unfoldDataAttr else {}
 
         basePointDataList: List[Tuple[adsk.core.Point3D, adsk.core.Point3D, adsk.core.Vector3D]] = []
@@ -925,13 +1106,13 @@ def refoldBodiesToSurface(
             point2D = strToPoint3d(point2dStr)
             if point2D is None: continue
             
-            sourcePoint3dStr = pointData.get(strings.Unfold.sourcePoint3D, "")
+            sourcePoint3dStr = pointData.get(constants.Unfold.sourcePoint3D, "")
             if not sourcePoint3dStr: continue
                 
             sourcePoint3D = strToPoint3d(sourcePoint3dStr)
             if sourcePoint3D is None: continue
 
-            normalStr = pointData.get(strings.Unfold.sourceNormal, "")
+            normalStr = pointData.get(constants.Unfold.sourceNormal, "")
             sourceNormal = strToVector3d(normalStr) if normalStr else None
 
             basePointDataList.append((point2D, sourcePoint3D, sourceNormal))

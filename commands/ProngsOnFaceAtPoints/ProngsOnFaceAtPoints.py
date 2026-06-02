@@ -1,7 +1,8 @@
 import os
 import adsk.core, adsk.fusion, traceback
 
-from ... import strings, constants
+from ... import constants
+
 from ...helpers.showMessage import showMessage
 from ...helpers.Prongs import createProng, updateProngAndNormalize, setProngAttributes, updateProngFeature
 from ...helpers.Bodies import placeBody
@@ -28,39 +29,39 @@ _heightValueInput: adsk.core.ValueCommandInput = None
 
 RESOURCES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', '')
 
-createCommandInputDef = strings.InputDef(strings.ProngsAtPoints.createCommandId, 'Create Prongs at Points', 'Creates prongs at selected points on a face.')
-editCommandInputDef = strings.InputDef(strings.ProngsAtPoints.editCommandId, 'Edit Prongs', 'Edits the parameters of existing prongs.')
+createCommandInputDef = constants.InputDef(constants.ProngsAtPoints.createCommandId, 'Create Prongs at Points', 'Creates prongs at selected points on a face.')
+editCommandInputDef = constants.InputDef(constants.ProngsAtPoints.editCommandId, 'Edit Prongs', 'Edits the parameters of existing prongs.')
 
-selectFaceInputDef = strings.InputDef(
-    strings.ProngsAtPoints.selectFaceInputId,
+selectFaceInputDef = constants.InputDef(
+    constants.ProngsAtPoints.selectFaceInputId,
     'Select Face or Plane',
     'Select the face or construction plane where the prongs will be placed.'
     )
 
-selectPointsInputDef = strings.InputDef(
-    strings.ProngsAtPoints.selectPointsInputId,
+selectPointsInputDef = constants.InputDef(
+    constants.ProngsAtPoints.selectPointsInputId,
     'Select Points',
     'Select the points on the face for the prong centers.'
     )
 
-sizeInputDef = strings.InputDef(
-    strings.ProngsAtPoints.sizeInputId, 
-    'Size', 
+sizeInputDef = constants.InputDef(
+    constants.ProngsAtPoints.sizeInputId,
+    'Size',
     "Prong base diameter.\nDetermines the width of the prong at its base."
     )
 
-heightInputDef = strings.InputDef(
-    strings.ProngsAtPoints.heightInputId, 
-    'Height', 
+heightInputDef = constants.InputDef(
+    constants.ProngsAtPoints.heightInputId,
+    'Height',
     "Prong height above the surface.\nControls how tall the prong extends."
     )
 
 
 def run(panel: adsk.core.ToolbarPanel):
     """Initialize the prongs command when the add-in is loaded.
-    
+
     Sets up command definitions, UI elements, and event handlers.
-    
+
     Args:
         panel: The toolbar panel to add the command to
     """
@@ -69,17 +70,17 @@ def run(panel: adsk.core.ToolbarPanel):
         _app = adsk.core.Application.get()
         _ui  = _app.userInterface
 
-        createCommandDefinition = _ui.commandDefinitions.addButtonDefinition(createCommandInputDef.id, 
-                                                                createCommandInputDef.name, 
-                                                                createCommandInputDef.tooltip, 
+        createCommandDefinition = _ui.commandDefinitions.addButtonDefinition(createCommandInputDef.id,
+                                                                createCommandInputDef.name,
+                                                                createCommandInputDef.tooltip,
                                                                 RESOURCES_FOLDER)
-        control = panel.controls.addCommand(createCommandDefinition, '', False)     
+        control = panel.controls.addCommand(createCommandDefinition, '', False)
         control.isPromoted = True
 
-        editCommandDefinition = _ui.commandDefinitions.addButtonDefinition(editCommandInputDef.id, 
-                                                            editCommandInputDef.name, 
-                                                            editCommandInputDef.tooltip, 
-                                                            RESOURCES_FOLDER)        
+        editCommandDefinition = _ui.commandDefinitions.addButtonDefinition(editCommandInputDef.id,
+                                                            editCommandInputDef.name,
+                                                            editCommandInputDef.tooltip,
+                                                            RESOURCES_FOLDER)
 
         createCommandCreated = CreateCommandCreatedHandler()
         createCommandDefinition.commandCreated.add(createCommandCreated)
@@ -89,8 +90,8 @@ def run(panel: adsk.core.ToolbarPanel):
         editCommandDefinition.commandCreated.add(editCommandCreated)
         _handlers.append(editCommandCreated)
 
-        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(strings.ProngsAtPoints.commandId, strings.ProngsAtPoints.id, RESOURCES_FOLDER)
-        _customFeatureDefinition.editCommandId = strings.ProngsAtPoints.editCommandId
+        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(constants.ProngsAtPoints.commandId, constants.ProngsAtPoints.id, RESOURCES_FOLDER)
+        _customFeatureDefinition.editCommandId = constants.ProngsAtPoints.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -101,22 +102,22 @@ def run(panel: adsk.core.ToolbarPanel):
 
 def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the prongs command when the add-in is unloaded.
-    
+
     Removes command definitions and UI elements.
-    
+
     Args:
         panel: The toolbar panel to remove the command from
     """
     try:
-        control = panel.controls.itemById(strings.ProngsAtPoints.createCommandId)
+        control = panel.controls.itemById(constants.ProngsAtPoints.createCommandId)
         if control:
             control.deleteMe()
-            
-        commandDefinition = _ui.commandDefinitions.itemById(strings.ProngsAtPoints.createCommandId)
+
+        commandDefinition = _ui.commandDefinitions.itemById(constants.ProngsAtPoints.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(strings.ProngsAtPoints.editCommandId)
+        commandDefinition = _ui.commandDefinitions.itemById(constants.ProngsAtPoints.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
     except:
@@ -125,9 +126,9 @@ def stop(panel: adsk.core.ToolbarPanel):
 
 class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
     """Handles the creation of the command dialog for creating new prongs at points.
-    
-    Sets up all necessary input controls, including selections for face and points, 
-    value inputs for size and height. Connects event handlers for validation, 
+
+    Sets up all necessary input controls, including selections for face and points,
+    value inputs for size and height. Connects event handlers for validation,
     preview, and execution.
     """
     def __init__(self):
@@ -135,7 +136,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
     def notify(self, args):
         try:
             global _faceSelectionInput, _pointSelectionInput, _sizeValueInput, _heightValueInput
-            
+
             eventArgs = adsk.core.CommandCreatedEventArgs.cast(args)
             command = eventArgs.command
             inputs = command.commandInputs
@@ -176,7 +177,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             onExecute = CreateExecuteHandler()
             command.execute.add(onExecute)
-            _handlers.append(onExecute)  
+            _handlers.append(onExecute)
 
         except:
             showMessage(f'CreateCommandCreatedHandler: {traceback.format_exc()}\n', True)
@@ -184,7 +185,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
 class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
     """Handles the creation of the command dialog for editing existing prongs custom feature.
-    
+
     Retrieves the selected custom feature, populates inputs with existing parameter values and dependencies,
     and connects event handlers for editing operations, including activation, validation, preview, and execution.
     """
@@ -193,7 +194,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
     def notify(self, args):
         try:
             global _editedCustomFeature, _faceSelectionInput, _pointSelectionInput, _sizeValueInput, _heightValueInput
-            
+
             eventArgs = adsk.core.CommandCreatedEventArgs.cast(args)
             command = eventArgs.command
             inputs = command.commandInputs
@@ -248,7 +249,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             onExecute = EditExecuteHandler()
             command.execute.add(onExecute)
-            _handlers.append(onExecute)  
+            _handlers.append(onExecute)
 
         except:
             showMessage(f'EditCommandCreatedHandler: {traceback.format_exc()}\n', True)
@@ -256,7 +257,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
 class PreSelectHandler(adsk.core.SelectionEventHandler):
     """Controls what the user can select when the command is running.
-    
+
     Checks to make sure the points are on a planar face and the
     body the points are on is not an external reference.
     """
@@ -271,7 +272,7 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
                 if eventArgs.selection.entity is None:
                     eventArgs.isSelectable = False
                     return
-            
+
             if type == adsk.fusion.ConstructionPlane.classType():
                 if eventArgs.selection.entity is None:
                     eventArgs.isSelectable = False
@@ -280,13 +281,13 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
             if type == adsk.fusion.SketchPoint.classType():
                 preSelectPoint: adsk.fusion.SketchPoint = eventArgs.selection.entity
 
-                
+
                 if preSelectPoint.assemblyContext:
                     occurrence = preSelectPoint.assemblyContext
                     if occurrence.isReferencedComponent:
                         eventArgs.isSelectable = False
                         return
-                                
+
         except:
             showMessage(f'PreSelectHandler: {traceback.format_exc()}\n', True)
 
@@ -307,7 +308,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                 eventArgs.areInputsValid = False
                 return
 
-            
+
             if not _faceSelectionInput.selection(0).isValid:
                 eventArgs.areInputsValid = False
                 return
@@ -317,20 +318,20 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                     eventArgs.areInputsValid = False
                     return
 
-            
+
             if not all([_sizeValueInput.isValidExpression, _heightValueInput.isValidExpression]):
                 eventArgs.areInputsValid = False
                 return
 
-            
+
             if _sizeValueInput.value < 0.01:
                 eventArgs.areInputsValid = False
                 return
-            
+
             if _heightValueInput.value < 0.01:
                 eventArgs.areInputsValid = False
                 return
-            
+
         except:
             showMessage(f'ValidateInputsHandler: {traceback.format_exc()}\n', True)
 
@@ -343,12 +344,12 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             if _faceSelectionInput.selectionCount < 1 or _pointSelectionInput.selectionCount < 1:
                 return
 
-            
+
             faceEntity = _faceSelectionInput.selection(0).entity
             if faceEntity is None:
                 return
 
-            
+
             pointEntities = []
             for i in range(_pointSelectionInput.selectionCount):
                 point = _pointSelectionInput.selection(i).entity
@@ -366,7 +367,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
                     return
                 prongs.append(prong)
 
-            
+
             if faceEntity.objectType == adsk.fusion.ConstructionPlane.classType():
                 component = faceEntity.component
             else:
@@ -392,7 +393,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
         try:
             eventArgs = adsk.core.CommandEventArgs.cast(args)
 
-            
+
             faceEntity = _faceSelectionInput.selection(0).entity
             if faceEntity.objectType == adsk.fusion.ConstructionPlane.classType():
                 component = faceEntity.component
@@ -400,12 +401,12 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                 parametricBody = faceEntity.body
                 component = parametricBody.parentComponent
 
-            
+
             pointEntities: list[adsk.fusion.SketchPoint] = []
             for i in range(_pointSelectionInput.selectionCount):
                 pointEntities.append(_pointSelectionInput.selection(i).entity)
 
-            
+
             baseFeature = component.features.baseFeatures.add()
             baseFeature.startEdit()
             for i in range(len(pointEntities)):
@@ -419,25 +420,25 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
 
             design: adsk.fusion.Design = _app.activeProduct
             defaultLengthUnits = design.unitsManager.defaultLengthUnits
-            
+
             customFeatureInput = component.features.customFeatures.createInput(_customFeatureDefinition)
 
-            
+
             customFeatureInput.addDependency('face', faceEntity)
             for i in range(len(pointEntities)):
                 customFeatureInput.addDependency(f'point{i}', pointEntities[i])
 
-            
+
             sizeInput = adsk.core.ValueInput.createByString(_sizeValueInput.expression)
             customFeatureInput.addCustomParameter(sizeInputDef.id, sizeInputDef.name, sizeInput,
                                               defaultLengthUnits, True)
-            
-            depthInput = adsk.core.ValueInput.createByString(_heightValueInput.expression)             
+
+            depthInput = adsk.core.ValueInput.createByString(_heightValueInput.expression)
             customFeatureInput.addCustomParameter(heightInputDef.id, heightInputDef.name, depthInput,
-                                              defaultLengthUnits, True) 
+                                              defaultLengthUnits, True)
 
             customFeatureInput.setStartAndEndFeatures(baseFeature, baseFeature)
-            
+
             component.features.customFeatures.add(customFeatureInput)
 
         except:
@@ -448,8 +449,8 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
 
 class EditActivateHandler(adsk.core.CommandEventHandler):
     """Event handler for the activation of the edit command for a custom feature.
-    
-    This handler rolls back the timeline to the state before the feature, sets up transaction markers 
+
+    This handler rolls back the timeline to the state before the feature, sets up transaction markers
     to preserve changes, and pre-selects the original face and point dependencies for editing.
     """
     def __init__(self):
@@ -457,26 +458,26 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
     def notify(self, args):
         try:
             global _restoreTimelineObject, _isRolledForEdit, _editedCustomFeature, _faceSelectionInput, _pointSelectionInput
-            
+
             eventArgs = adsk.core.CommandEventArgs.cast(args)
 
             if _isRolledForEdit: return
-            
-            
+
+
             design: adsk.fusion.Design = _app.activeProduct
             timeline = design.timeline
             markerPosition = timeline.markerPosition
             _restoreTimelineObject = timeline.item(markerPosition - 1)
 
-            
+
             _editedCustomFeature.timelineObject.rollTo(True)
             _isRolledForEdit = True
 
             command = eventArgs.command
-            
+
             command.beginStep()
 
-            
+
             i = 0
             while True:
                 try:
@@ -487,7 +488,7 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
                     i += 1
                 except:
                     break
-            
+
             faceEntity = _editedCustomFeature.dependencies.itemById('face').entity
             _faceSelectionInput.addSelection(faceEntity)
 
@@ -515,10 +516,10 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
         super().__init__()
     def notify(self, args):
         global _editedCustomFeature, _isRolledForEdit, _restoreTimelineObject
-        
+
         try:
-            
-            eventArgs = adsk.core.CommandEventArgs.cast(args)    
+
+            eventArgs = adsk.core.CommandEventArgs.cast(args)
 
             faceEntity = _faceSelectionInput.selection(0).entity
             pointCount = _pointSelectionInput.selectionCount
@@ -537,13 +538,13 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
 
         except:
             showMessage(f'EditExecuteHandler: {traceback.format_exc()}\n', True)
-        
+
         finally: rollBack()
 
 
 class ComputeCustomFeature(adsk.fusion.CustomFeatureEventHandler):
     """Event handler for the recomputation of the custom feature.
-    
+
     This handler updates the prong bodies within the base feature to reflect new values or geometry,
     ensuring the custom feature remains parametric and up-to-date.
     """
@@ -575,23 +576,23 @@ def createBody(face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: float
     try:
         if face is None or point is None: return None
 
-        
+
         prong = createProng(size, height)
         if prong is None:
             return None
-        
+
         pointOnFace, lengthDirection, widthDirection, normal = getDataFromPointAndFace(face, point)
         if pointOnFace is None:
             return None
-        
+
         placeBody(prong, pointOnFace, lengthDirection, widthDirection, normal)
 
         return prong
-    
+
     except:
         showMessage(f'CreateBodies: {traceback.format_exc()}\n', True)
         return None
-    
+
 def updateBody(body: adsk.fusion.BRepBody, face: adsk.fusion.BRepFace, point: adsk.core.Point3D, size: float, height: float) -> adsk.fusion.BRepBody | None:
     """Update an existing prong body with new parameters.
 
@@ -608,19 +609,19 @@ def updateBody(body: adsk.fusion.BRepBody, face: adsk.fusion.BRepFace, point: ad
     try:
         if face is None or point is None: return None
 
-        
+
         tempBody = updateProngAndNormalize(body, size, height)
         if tempBody is None:
             return None
-        
+
         pointOnFace, lengthDirection, widthDirection, normal = getDataFromPointAndFace(face, point)
         if pointOnFace is None:
             return None
-        
+
         placeBody(tempBody, pointOnFace, lengthDirection, widthDirection, normal)
 
         return tempBody
-    
+
     except:
         showMessage(f'updateBody: {traceback.format_exc()}\n', True)
 
@@ -635,7 +636,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         True if the update was successful, False otherwise.
     """
     try:
-        
+
         baseFeature: adsk.fusion.BaseFeature = None
 
         for feature in customFeature.features:
@@ -646,7 +647,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         faceEntity = customFeature.dependencies.itemById('face').entity
         if faceEntity is None: return False
 
-        
+
         points: list[adsk.fusion.SketchPoint] = []
         i = 0
         while True:
@@ -667,8 +668,8 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
             component = faceEntity.body.parentComponent
 
         baseFeature.startEdit()
-        
-        
+
+
         for i in range(len(points)):
             point = points[i]
 
@@ -688,24 +689,24 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
                 body = component.bRepBodies.add(prong, baseFeature)
                 if not _isRolledForEdit:
                     setProngAttributes(body, size, height)
-        
+
         while baseFeature.bodies.count > len(points):
             baseFeature.bodies.item(baseFeature.bodies.count - 1).deleteMe()
 
         baseFeature.finishEdit()
 
         return True
-    
+
     except:
         baseFeature.finishEdit()
         showMessage(f'UpdateBody: {traceback.format_exc()}\n', True)
         return False
-    
+
 
 def rollBack():
     """Roll back the timeline to the state before editing."""
     global _restoreTimelineObject, _isRolledForEdit, _editedCustomFeature
-    
+
     if _isRolledForEdit:
         _editedCustomFeature.timelineObject.rollTo(False)
         updateProngFeature(_editedCustomFeature)

@@ -2,8 +2,8 @@ import os
 import json
 import adsk.core, adsk.fusion, traceback
 
-from ... import strings
 from ... import constants
+
 from ...helpers.showMessage import showMessage
 from ...helpers.Curves import calculatePointsAlongCurve, getCurve3D
 from ...helpers.Surface import getDataFromPointAndFace
@@ -41,107 +41,107 @@ PRESERVE_BODIES: bool = False
 
 _handlers = []
 
-createCommandInputDef = strings.InputDef(strings.PatternAlongPath.createCommandId, 'Pattern Along Path', 'Distributes bodies along a curve on a surface.')
-editCommandInputDef = strings.InputDef(strings.PatternAlongPath.editCommandId, 'Edit Pattern', 'Edits the parameters of existing pattern.')
+createCommandInputDef = constants.InputDef(constants.PatternAlongPath.createCommandId, 'Pattern Along Path', 'Distributes bodies along a curve on a surface.')
+editCommandInputDef = constants.InputDef(constants.PatternAlongPath.editCommandId, 'Edit Pattern', 'Edits the parameters of existing pattern.')
 
-selectBodiesInputDef = strings.InputDef(
-    strings.PatternAlongPath.selectBodiesInputId,
+selectBodiesInputDef = constants.InputDef(
+    constants.PatternAlongPath.selectBodiesInputId,
     'Select Bodies',
     'Select the bodies (solid or surface) to distribute along the curve.'
     )
 
-selectBasePointInputDef = strings.InputDef(
-    strings.PatternAlongPath.selectBasePointInputId,
+selectBasePointInputDef = constants.InputDef(
+    constants.PatternAlongPath.selectBasePointInputId,
     'Base Point',
     'Select the base point (origin) of the pattern element.'
     )
 
-selectBaseSurfaceInputDef = strings.InputDef(
-    strings.PatternAlongPath.selectBaseSurfaceInputId,
+selectBaseSurfaceInputDef = constants.InputDef(
+    constants.PatternAlongPath.selectBaseSurfaceInputId,
     'Base Surface',
     'Select the base surface for the pattern element orientation.'
     )
 
-selectCurveInputDef = strings.InputDef(
-    strings.PatternAlongPath.selectCurveInputId,
+selectCurveInputDef = constants.InputDef(
+    constants.PatternAlongPath.selectCurveInputId,
     'Target Curve',
     'Select the curve along which to distribute the bodies.'
     )
 
-selectTargetSurfaceInputDef = strings.InputDef(
-    strings.PatternAlongPath.selectTargetSurfaceInputId,
+selectTargetSurfaceInputDef = constants.InputDef(
+    constants.PatternAlongPath.selectTargetSurfaceInputId,
     'Target Surface',
     'Select the surface for orienting the bodies.\nIf not selected, the orientation remains unchanged.'
     )
 
-placementModeInputDef = strings.InputDef(
-    strings.PatternAlongPath.placementModeInputId,
+placementModeInputDef = constants.InputDef(
+    constants.PatternAlongPath.placementModeInputId,
     'Placement Mode',
     'Choose where to place bodies: projected onto target surface or on the curve.'
     )
 
-flipDirectionInputDef = strings.InputDef(
-    strings.PatternAlongPath.flipDirectionInputId,
+flipDirectionInputDef = constants.InputDef(
+    constants.PatternAlongPath.flipDirectionInputId,
     'Flip Direction',
     "Flip placement direction.\nStarts placing elements from the opposite end of the curve."
     )
 
-uniformDistributionInputDef = strings.InputDef(
-    strings.PatternAlongPath.uniformDistributionInputId,
+uniformDistributionInputDef = constants.InputDef(
+    constants.PatternAlongPath.uniformDistributionInputId,
     'Uniform Distribution',
     "Distribute elements uniformly along the curve.\nAdjusts spacing to fill the entire available length."
     )
 
-startOffsetInputDef = strings.InputDef(
-    strings.PatternAlongPath.startOffsetInputId,
+startOffsetInputDef = constants.InputDef(
+    constants.PatternAlongPath.startOffsetInputId,
     'Start Offset',
     "Offset from the start of the curve.\nDistance from the beginning of the curve to the first element."
     )
 
-endOffsetInputDef = strings.InputDef(
-    strings.PatternAlongPath.endOffsetInputId,
+endOffsetInputDef = constants.InputDef(
+    constants.PatternAlongPath.endOffsetInputId,
     'End Offset',
     "Offset from the end of the curve.\nDistance from the end of the curve to the last element."
     )
 
-startRotateInputDef = strings.InputDef(
-    strings.PatternAlongPath.startRotateInputId,
+startRotateInputDef = constants.InputDef(
+    constants.PatternAlongPath.startRotateInputId,
     'Start Rotate',
     "Rotation angle for the first element around the surface normal."
     )
 
-endRotateInputDef = strings.InputDef(
-    strings.PatternAlongPath.endRotateInputId,
+endRotateInputDef = constants.InputDef(
+    constants.PatternAlongPath.endRotateInputId,
     'End Rotate',
     "Rotation angle for the last element around the surface normal."
     )
 
-spacingInputDef = strings.InputDef(
-    strings.PatternAlongPath.spacingInputId,
+spacingInputDef = constants.InputDef(
+    constants.PatternAlongPath.spacingInputId,
     'Spacing',
     "Distance between base points of adjacent elements along the curve."
     )
 
-countInputDef = strings.InputDef(
-    strings.PatternAlongPath.countInputId,
+countInputDef = constants.InputDef(
+    constants.PatternAlongPath.countInputId,
     'Count',
     "Maximum number of elements to place.\nSet to 0 for unlimited (fill the entire curve).\nWith uniform distribution, fewer elements are centered within the available length."
     )
 
-flipFaceNormalInputDef = strings.InputDef(
-    strings.PatternAlongPath.flipFaceNormalInputId,
+flipFaceNormalInputDef = constants.InputDef(
+    constants.PatternAlongPath.flipFaceNormalInputId,
     'Flip Face Normal',
     "Flip face normal direction.\nReverses the normal direction used for orientation."
     )
 
-absoluteDepthOffsetInputDef = strings.InputDef(
-    strings.PatternAlongPath.absoluteDepthOffsetInputId,
+absoluteDepthOffsetInputDef = constants.InputDef(
+    constants.PatternAlongPath.absoluteDepthOffsetInputId,
     'Absolute Depth Offset',
     "Additional depth offset along the surface normal in absolute units."
     )
 
-relativeDepthOffsetInputDef = strings.InputDef(
-    strings.PatternAlongPath.relativeDepthOffsetInputId,
+relativeDepthOffsetInputDef = constants.InputDef(
+    constants.PatternAlongPath.relativeDepthOffsetInputId,
     'Relative Depth Offset',
     "Depth offset as a fraction of the spacing distance."
     )
@@ -177,8 +177,8 @@ def run(panel: adsk.core.ToolbarPanel):
         _handlers.append(editCommandCreated)
 
         global _customFeatureDefinition
-        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(strings.PatternAlongPath.commandId, strings.PatternAlongPath.id, RESOURCES_FOLDER)
-        _customFeatureDefinition.editCommandId = strings.PatternAlongPath.editCommandId
+        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(constants.PatternAlongPath.commandId, constants.PatternAlongPath.id, RESOURCES_FOLDER)
+        _customFeatureDefinition.editCommandId = constants.PatternAlongPath.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -190,15 +190,15 @@ def run(panel: adsk.core.ToolbarPanel):
 def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the pattern along path command by removing UI elements and handlers."""
     try:
-        control = panel.controls.itemById(strings.PatternAlongPath.createCommandId)
+        control = panel.controls.itemById(constants.PatternAlongPath.createCommandId)
         if control:
             control.deleteMe()
             
-        commandDefinition = _ui.commandDefinitions.itemById(strings.PatternAlongPath.createCommandId)
+        commandDefinition = _ui.commandDefinitions.itemById(constants.PatternAlongPath.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(strings.PatternAlongPath.editCommandId)
+        commandDefinition = _ui.commandDefinitions.itemById(constants.PatternAlongPath.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
     except:
@@ -264,8 +264,8 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             _placementModeDropdownInput = inputs.addDropDownCommandInput(placementModeInputDef.id, placementModeInputDef.name, adsk.core.DropDownStyles.TextListDropDownStyle)
             _placementModeDropdownInput.tooltip = placementModeInputDef.tooltip
-            for i, modeName in enumerate(strings.PatternAlongPath.placementModes):
-                _placementModeDropdownInput.listItems.add(modeName, i == constants.patternAlongPathPlacementOnSurfaceIndex)
+            for i, modeName in enumerate(constants.PatternAlongPath.placementModes):
+                _placementModeDropdownInput.listItems.add(modeName, i == constants.PatternAlongPath.placementOnSurfaceIndex)
 
             inputs.addSeparatorCommandInput('separatorAfterTargetSurface')
 
@@ -300,7 +300,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _countValueInput = inputs.addIntegerSpinnerCommandInput(countInputDef.id, countInputDef.name, 0, 10000, 1, 0)
             _countValueInput.tooltip = countInputDef.tooltip
 
-            spacing = adsk.core.ValueInput.createByReal(constants.patternAlongPathDefaultSpacingCm)
+            spacing = adsk.core.ValueInput.createByReal(constants.PatternAlongPath.defaultSpacingCm)
             _spacingValueInput = inputs.addValueInput(spacingInputDef.id, spacingInputDef.name, defaultLengthUnits, spacing)
             _spacingValueInput.tooltip = spacingInputDef.tooltip
 
@@ -399,14 +399,14 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             _placementModeDropdownInput = inputs.addDropDownCommandInput(placementModeInputDef.id, placementModeInputDef.name, adsk.core.DropDownStyles.TextListDropDownStyle)
             _placementModeDropdownInput.tooltip = placementModeInputDef.tooltip
-            for modeName in strings.PatternAlongPath.placementModes:
+            for modeName in constants.PatternAlongPath.placementModes:
                 _placementModeDropdownInput.listItems.add(modeName, False)
 
             placementModeIndex = getPlacementModeIndexFromParameters(_editedCustomFeature.parameters)
             if 0 <= placementModeIndex < _placementModeDropdownInput.listItems.count:
                 _placementModeDropdownInput.listItems.item(placementModeIndex).isSelected = True
             else:
-                _placementModeDropdownInput.listItems.item(constants.patternAlongPathPlacementOnSurfaceIndex).isSelected = True
+                _placementModeDropdownInput.listItems.item(constants.PatternAlongPath.placementOnSurfaceIndex).isSelected = True
 
             inputs.addSeparatorCommandInput('separatorAfterTargetSurface')
 
@@ -468,7 +468,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 spacingParam = params.itemById(spacingInputDef.id)
                 spacing = adsk.core.ValueInput.createByString(spacingParam.expression)
             except:
-                spacing = adsk.core.ValueInput.createByReal(constants.patternAlongPathDefaultSpacingCm)
+                spacing = adsk.core.ValueInput.createByReal(constants.PatternAlongPath.defaultSpacingCm)
             try:
                 countParam = params.itemById(countInputDef.id)
                 countValue = int(countParam.value)
@@ -1064,7 +1064,7 @@ def computeTransform(basePoint: adsk.core.Point3D, baseLengthDir: adsk.core.Vect
     targetWidthDir = targetNormal.crossProduct(targetLengthDir)
     targetWidthDir.normalize()
 
-    if placementModeIndex == constants.patternAlongPathPlacementOnSurfaceIndex and projectedSurfacePoint is not None:
+    if placementModeIndex == constants.PatternAlongPath.placementOnSurfaceIndex and projectedSurfacePoint is not None:
         positionPoint = projectedSurfacePoint
     else:
         positionPoint = curvePoint
@@ -1143,7 +1143,7 @@ def saveTransformsToFeature(baseFeature: adsk.fusion.BaseFeature, transforms: li
             yAxis.x, yAxis.y, yAxis.z,
             zAxis.x, zAxis.y, zAxis.z
         ])
-    baseFeature.attributes.add(strings.PREFIX, strings.PatternAlongPath.appliedTransformAttributeKey, json.dumps(allData))
+    baseFeature.attributes.add(constants.PREFIX, constants.PatternAlongPath.appliedTransformAttributeKey, json.dumps(allData))
 
 
 def readTransformsFromFeature(baseFeature: adsk.fusion.BaseFeature) -> list[adsk.core.Matrix3D]:
@@ -1156,7 +1156,7 @@ def readTransformsFromFeature(baseFeature: adsk.fusion.BaseFeature) -> list[adsk
         Ordered list of Matrix3D objects, empty list if not found or on error.
     """
     try:
-        attr = baseFeature.attributes.itemByName(strings.PREFIX, strings.PatternAlongPath.appliedTransformAttributeKey)
+        attr = baseFeature.attributes.itemByName(constants.PREFIX, constants.PatternAlongPath.appliedTransformAttributeKey)
         if attr is None:
             return []
 
@@ -1205,7 +1205,7 @@ def getComponentFromEntity(entity: adsk.core.Base) -> adsk.fusion.Component:
 def getSelectedPlacementModeIndex() -> int:
     """Get the currently selected placement mode index from the command input."""
     if _placementModeDropdownInput is None or _placementModeDropdownInput.selectedItem is None:
-        return constants.patternAlongPathPlacementOnSurfaceIndex
+        return constants.PatternAlongPath.placementOnSurfaceIndex
 
     return _placementModeDropdownInput.selectedItem.index
 
@@ -1232,10 +1232,10 @@ def getPlacementModeIndexFromParameters(parameters: adsk.fusion.CustomFeaturePar
         placementModeParam = parameters.itemById(placementModeInputDef.id)
         placementModeValue = int(placementModeParam.value)
     except:
-        placementModeValue = constants.patternAlongPathPlacementOnSurfaceIndex
+        placementModeValue = constants.PatternAlongPath.placementOnSurfaceIndex
 
-    if placementModeValue not in [constants.patternAlongPathPlacementOnSurfaceIndex, constants.patternAlongPathPlacementOnCurveIndex]:
-        placementModeValue = constants.patternAlongPathPlacementOnSurfaceIndex
+    if placementModeValue not in [constants.PatternAlongPath.placementOnSurfaceIndex, constants.PatternAlongPath.placementOnCurveIndex]:
+        placementModeValue = constants.PatternAlongPath.placementOnSurfaceIndex
 
     return placementModeValue
 

@@ -9,7 +9,7 @@ def convertBodyToNurbs(body: adsk.fusion.BRepBody) -> adsk.fusion.BRepBody | Non
     if body.faces.count == 0:
         return None
 
-    return body.convert(constants.Deformations.bodyNurbsConversionOptions)
+    return body.convert(constants.Taper.bodyNurbsConversionOptions)
 
 
 def placeBody(body: adsk.fusion.BRepBody, newOriginPoint: adsk.core.Point3D, 

@@ -9,7 +9,6 @@ from .commands.ProngsBetweenGemstones import ProngsBetweenGemstones
 
 from .commands.ChannelsBetweenGemstones import ChannelsBetweenGemstones
 from .commands.CuttersForGemstones import CuttersForGemstones
-from .commands.GemstonesInfo import GemstonesInfo
 
 from .commands.SurfaceUnfold import SurfaceUnfold
 from .commands.ObjectsRefold import ObjectsRefold
@@ -18,6 +17,18 @@ from .commands.PatternAlongPathOnSurface import PatternAlongPathOnSurface
 
 from .commands.FFD import FFD
 from .commands.Taper import Taper
+
+from .commands.GemstonesInfo import GemstonesInfo
+
+try:
+    from .commands.TessellateInfo import TessellateInfo
+except ModuleNotFoundError:
+    TessellateInfo = None
+
+try:
+    from .commands.PaveOnFaces import PaveOnFaces
+except ModuleNotFoundError:
+    PaveOnFaces = None
 
 commands = [
     GemstonesOnFaceAtPoints,
@@ -42,8 +53,14 @@ commands = [
     GemstonesInfo,
     ]
 
+if PaveOnFaces is not None:
+    commands.insert(4, PaveOnFaces)
+if TessellateInfo is not None:
+    commands.append(TessellateInfo)
 
-from . import strings
+
+
+from . import constants
 
 _app: adsk.core.Application = None
 _ui: adsk.core.UserInterface = None
@@ -57,7 +74,7 @@ def run(context):
     _ui  = _app.userInterface
 
     solidWorkspace = _ui.workspaces.itemById('FusionSolidEnvironment')
-    _panel = solidWorkspace.toolbarPanels.add(strings.PANEL_ID, 'Jewelry Toolkit')
+    _panel = solidWorkspace.toolbarPanels.add(constants.PANEL_ID, 'Jewelry Toolkit')
     # _panel = solidWorkspace.toolbarPanels.itemById('SolidCreatePanel')
 
     if not _panel: return

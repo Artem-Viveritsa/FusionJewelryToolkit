@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.0] - 2026-06-02
+
+### Added
+- `GemstonesOnFaceAtPoints`: Added support for selecting multiple faces or construction planes. Each point now places its gemstone on the closest selected support, and older custom features with the previous single `face` dependency remain editable.
+- `ProngsBetweenGemstones`: Added a `Uniformity` parameter (`0.0` to `1.0`, default `0.5`) that blends generated prong size and height toward median values. Existing features without this parameter keep legacy behavior.
+- `helpers/Prongs.py`: Added curvature-aware prong pair placement for gemstone chains. Prongs can now shift and resize slightly on bent chains using `prongChainMaxConnections`, `prongChainCurvatureShiftFactor`, and `prongChainCurvatureSizeFactor`.
+- `SurfaceUnfold`: Added live mesh preview graphics that update when the source, accuracy, or algorithm changes and are cleaned up when create/edit commands close.
+- `helpers/Meshes/`: Added a shared mesh package with core mesh conversion, isotropic remeshing, ACVD tessellation, topology, projection/remesh, and preview utilities. This package is included because `SurfaceUnfold` and `helpers/Surface.py` depend on it, while unfinished `PaveOnFaces` and `TessellateInfo` commands remain outside this release.
+- `helpers/Points.py`: Added closest-point distance helpers and a 3D polygon centroid helper used by mesh and surface workflows.
+- `helpers/Surface.py`: Added `snapPointToFaces()`, shared triangle unfolding, and a multi-face mesh unfolding helper for connected BRep face sets.
+
+### Changed
+- `FusionJewelryToolkit.manifest`: Updated the add-in version to `0.12.0`.
+- `FusionJewelryToolkit.py`: Added guarded optional imports for future `PaveOnFaces` and `TessellateInfo` commands so the add-in continues to load when those command packages are not included in the release.
+- `constants.py`: Moved command ids, input ids, labels, attribute keys, enums, command defaults, deformation settings, pattern settings, channel settings, and shared remesh defaults into one constants module.
+- Updated all included command modules to use `constants.py` directly instead of `strings.py`: `ChannelsBetweenGemstones`, `CuttersForGemstones`, `FFD`, `GemstonesInfo`, `GemstonesOnFaceAtCircles`, `GemstonesOnFaceAtCurve`, `GemstonesOnFaceAtPoints`, `GemstonesOnFaceBetweenCurves`, `ObjectsRefold`, `PatternAlongPathOnSurface`, `ProngsBetweenGemstones`, `ProngsOnFaceAtPoints`, `SurfaceUnfold`, and `Taper`.
+- Updated helper modules to use `constants.py` directly: `Bodies`, `Deformations`, `Gemstones`, `Prongs`, and `Surface`.
+- `SurfaceUnfold`: Reworked the mesh algorithm to use the new isotropic tessellation pipeline before unfolding and to fall back to Fusion mesh generation when remeshing cannot produce valid triangles.
+- `helpers/Surface.py`: Refactored mesh-body unfolding through shared `unfoldTrianglesToSketch()` and stores unfold metadata through the consolidated constants keys.
+- Removed the legacy `strings.py` module after migrating its remaining command and attribute definitions into `constants.py`.
+- Removed the legacy empty `helpers/Meshes.py` file after moving active mesh utilities into the `helpers/Meshes/` package.
+
+### Fixed
+- `helpers/Meshes/core.py`: Fixed `createFaceMesh()` so Fusion's mesh calculator uses the requested `maxSideLength` instead of the surface tolerance value.
+
 ## [0.11.1] - 2026-04-02
 
 ### Added

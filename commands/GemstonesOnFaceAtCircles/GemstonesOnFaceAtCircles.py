@@ -1,7 +1,8 @@
 import os
 import adsk.core, adsk.fusion, traceback
 
-from ... import strings, constants
+from ... import constants
+
 from ...constants import minimumGemstoneSize
 from ...helpers.showMessage import showMessage
 from ...helpers.Gemstones import createGemstone, updateGemstone, setGemstoneAttributes, updateGemstoneFeature, diamondMaterial
@@ -24,42 +25,42 @@ _isRolledForEdit: bool = False
 
 _handlers = []
 
-createCommandInputDef = strings.InputDef(strings.GemstonesAtCircles.createCommandId, 'Gemstones at Circles', 'Creates gemstones at selected sketch circles on a face. The gemstone size matches the circle diameter.')
-editCommandInputDef = strings.InputDef(strings.GemstonesAtCircles.editCommandId, 'Edit Gemstones', 'Edits the parameters of existing gemstones created from circles.')
+createCommandInputDef = constants.InputDef(constants.GemstonesAtCircles.createCommandId, 'Gemstones at Circles', 'Creates gemstones at selected sketch circles on a face. The gemstone size matches the circle diameter.')
+editCommandInputDef = constants.InputDef(constants.GemstonesAtCircles.editCommandId, 'Edit Gemstones', 'Edits the parameters of existing gemstones created from circles.')
 
-selectFaceInputDef = strings.InputDef(
-    strings.GemstonesAtCircles.selectFaceInputId,
+selectFaceInputDef = constants.InputDef(
+    constants.GemstonesAtCircles.selectFaceInputId,
     'Select Face or Plane',
     'Select the face or construction plane where the gemstones will be placed.'
     )
 
-selectCirclesInputDef = strings.InputDef(
-    strings.GemstonesAtCircles.selectCirclesInputId,
+selectCirclesInputDef = constants.InputDef(
+    constants.GemstonesAtCircles.selectCirclesInputId,
     'Select Circles',
     'Select sketch circles. The gemstone will be centered at each circle center with diameter matching the circle diameter.'
     )
 
-flipInputDef = strings.InputDef(
-    strings.GemstonesAtCircles.flipInputId, 
-    'Flip Gemstones', 
+flipInputDef = constants.InputDef(
+    constants.GemstonesAtCircles.flipInputId,
+    'Flip Gemstones',
     "Flip gemstone orientation.\nReverses the direction the gemstone faces relative to the surface."
     )
 
-flipFaceNormalInputDef = strings.InputDef(
-    strings.GemstonesAtCircles.flipFaceNormalInputId,
+flipFaceNormalInputDef = constants.InputDef(
+    constants.GemstonesAtCircles.flipFaceNormalInputId,
     'Flip Face Normal',
     "Flip gemstone relative to face normal.\nRotates the gemstone 180 degrees around the face normal."
     )
 
-absoluteDepthOffsetInputDef = strings.InputDef(
-    strings.GemstonesAtCircles.absoluteDepthOffsetInputId, 
-    'Absolute Depth Offset', 
+absoluteDepthOffsetInputDef = constants.InputDef(
+    constants.GemstonesAtCircles.absoluteDepthOffsetInputId,
+    'Absolute Depth Offset',
     "Additional depth offset in absolute units.\nAdds a fixed depth to the gemstone beyond the relative offset."
     )
 
-relativeDepthOffsetInputDef = strings.InputDef(
-    strings.GemstonesAtCircles.relativeDepthOffsetInputId, 
-    'Relative Depth Offset', 
+relativeDepthOffsetInputDef = constants.InputDef(
+    constants.GemstonesAtCircles.relativeDepthOffsetInputId,
+    'Relative Depth Offset',
     "Depth offset as a fraction of gemstone size.\nControls how deep the gemstone sits (0.1 = 10% of diameter)."
     )
 
@@ -72,18 +73,18 @@ def run(panel: adsk.core.ToolbarPanel):
         _app = adsk.core.Application.get()
         _ui  = _app.userInterface
 
-        createCommandDefinition = _ui.commandDefinitions.addButtonDefinition(createCommandInputDef.id, 
-                                                                createCommandInputDef.name, 
-                                                                createCommandInputDef.tooltip, 
-                                                                RESOURCES_FOLDER)        
+        createCommandDefinition = _ui.commandDefinitions.addButtonDefinition(createCommandInputDef.id,
+                                                                createCommandInputDef.name,
+                                                                createCommandInputDef.tooltip,
+                                                                RESOURCES_FOLDER)
 
-        control = panel.controls.addCommand(createCommandDefinition, '', False)     
+        control = panel.controls.addCommand(createCommandDefinition, '', False)
         control.isPromoted = True
 
-        editCommandDefinition = _ui.commandDefinitions.addButtonDefinition(editCommandInputDef.id, 
-                                                            editCommandInputDef.name, 
-                                                            editCommandInputDef.tooltip, 
-                                                            RESOURCES_FOLDER)        
+        editCommandDefinition = _ui.commandDefinitions.addButtonDefinition(editCommandInputDef.id,
+                                                            editCommandInputDef.name,
+                                                            editCommandInputDef.tooltip,
+                                                            RESOURCES_FOLDER)
 
         createCommandCreated = CreateCommandCreatedHandler()
         createCommandDefinition.commandCreated.add(createCommandCreated)
@@ -94,8 +95,8 @@ def run(panel: adsk.core.ToolbarPanel):
         _handlers.append(editCommandCreated)
 
         global _customFeatureDefinition
-        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(strings.GemstonesAtCircles.commandId, strings.GemstonesAtCircles.id, RESOURCES_FOLDER)
-        _customFeatureDefinition.editCommandId = strings.GemstonesAtCircles.editCommandId
+        _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(constants.GemstonesAtCircles.commandId, constants.GemstonesAtCircles.id, RESOURCES_FOLDER)
+        _customFeatureDefinition.editCommandId = constants.GemstonesAtCircles.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -107,15 +108,15 @@ def run(panel: adsk.core.ToolbarPanel):
 def stop(panel: adsk.core.ToolbarPanel):
     """Clean up the gemstones command by removing UI elements and handlers."""
     try:
-        control = panel.controls.itemById(strings.GemstonesAtCircles.createCommandId)
+        control = panel.controls.itemById(constants.GemstonesAtCircles.createCommandId)
         if control:
             control.deleteMe()
-            
-        commandDefinition = _ui.commandDefinitions.itemById(strings.GemstonesAtCircles.createCommandId)
+
+        commandDefinition = _ui.commandDefinitions.itemById(constants.GemstonesAtCircles.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(strings.GemstonesAtCircles.editCommandId)
+        commandDefinition = _ui.commandDefinitions.itemById(constants.GemstonesAtCircles.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
     except:
@@ -124,7 +125,7 @@ def stop(panel: adsk.core.ToolbarPanel):
 
 class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
     """Event handler for creating the command dialog for new gemstones.
-    
+
     This handler sets up all necessary input controls including selections for face and points,
     value inputs for size, flip, and depth offset, and connects event handlers for validation,
     preview, and execution.
@@ -152,7 +153,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _faceSelectionInput.setSelectionLimits(1, 1)
 
             inputs.addSeparatorCommandInput('separatorAfterCircles')
-            
+
             flip = False
             _flipValueInput = inputs.addBoolValueInput(flipInputDef.id, flipInputDef.name, True, '', flip)
             _flipValueInput.tooltip = flipInputDef.tooltip
@@ -162,12 +163,12 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _flipFaceNormalValueInput.tooltip = flipFaceNormalInputDef.tooltip
 
             inputs.addSeparatorCommandInput('separatorAfterFlip')
-            
+
             absoluteDepthOffset = adsk.core.ValueInput.createByReal(0.0)
             _absoluteDepthOffsetValueInput = inputs.addValueInput(absoluteDepthOffsetInputDef.id, absoluteDepthOffsetInputDef.name, defaultLengthUnits, absoluteDepthOffset)
             _absoluteDepthOffsetValueInput.tooltip = absoluteDepthOffsetInputDef.tooltip
 
-            
+
             relativeDepthOffset = adsk.core.ValueInput.createByReal(0.0)
             _relativeDepthOffsetValueInput = inputs.addValueInput(relativeDepthOffsetInputDef.id, relativeDepthOffsetInputDef.name, '', relativeDepthOffset)
             _relativeDepthOffsetValueInput.tooltip = relativeDepthOffsetInputDef.tooltip
@@ -186,7 +187,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             onExecute = CreateExecuteHandler()
             command.execute.add(onExecute)
-            _handlers.append(onExecute)  
+            _handlers.append(onExecute)
 
         except:
             showMessage(f'CreateCommandCreatedHandler: {traceback.format_exc()}\n', True)
@@ -194,9 +195,9 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
 class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
     """Event handler for creating the command dialog for editing existing gemstones.
-    
-    This handler retrieves the selected custom feature, populates inputs with existing parameter 
-    values and dependencies, and connects event handlers for editing operations including 
+
+    This handler retrieves the selected custom feature, populates inputs with existing parameter
+    values and dependencies, and connects event handlers for editing operations including
     activation, validation, preview, and execution.
     """
     def __init__(self):
@@ -224,7 +225,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
             _faceSelectionInput.addSelectionFilter(adsk.core.SelectionCommandInput.ConstructionPlanes)
             _faceSelectionInput.tooltip = selectFaceInputDef.tooltip
-            _faceSelectionInput.setSelectionLimits(1, 1)  
+            _faceSelectionInput.setSelectionLimits(1, 1)
 
             inputs.addSeparatorCommandInput('separatorAfterCircles')
 
@@ -286,7 +287,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             onExecute = EditExecuteHandler()
             command.execute.add(onExecute)
-            _handlers.append(onExecute)  
+            _handlers.append(onExecute)
 
         except:
             showMessage(f'EditCommandCreatedHandler: {traceback.format_exc()}\n', True)
@@ -294,8 +295,8 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
 class PreSelectHandler(adsk.core.SelectionEventHandler):
     """Event handler for controlling user selection during command execution.
-    
-    This handler checks to ensure the circle is on a planar face and the body 
+
+    This handler checks to ensure the circle is on a planar face and the body
     the circle belongs to is not an external reference.
     """
     def __init__(self):
@@ -305,13 +306,13 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
             eventArgs = adsk.core.SelectionEventArgs.cast(args)
             type = eventArgs.selection.entity.objectType
 
-            
+
 
             if type == adsk.fusion.BRepFace.classType():
                 if eventArgs.selection.entity is None:
                     eventArgs.isSelectable = False
                     return
-            
+
             if type == adsk.fusion.ConstructionPlane.classType():
                 if eventArgs.selection.entity is None:
                     eventArgs.isSelectable = False
@@ -320,13 +321,13 @@ class PreSelectHandler(adsk.core.SelectionEventHandler):
             if type == adsk.fusion.SketchCircle.classType():
                 preSelectCircle: adsk.fusion.SketchCircle = eventArgs.selection.entity
 
-                
+
                 if preSelectCircle.assemblyContext:
                     occ = preSelectCircle.assemblyContext
                     if occ.isReferencedComponent:
                         eventArgs.isSelectable = False
                         return
-            
+
         except:
             showMessage(f'PreSelectHandler: {traceback.format_exc()}\n', True)
 
@@ -354,7 +355,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
             if not all( [_flipValueInput.isValid, _flipFaceNormalValueInput.isValid, _absoluteDepthOffsetValueInput.isValidExpression, _relativeDepthOffsetValueInput.isValidExpression] ):
                 eventArgs.areInputsValid = False
                 return
-            
+
         except:
             showMessage(f'ValidateInputsHandler: {traceback.format_exc()}\n', True)
 
@@ -366,7 +367,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
     def notify(self, args):
         try:
             faceEntity = _faceSelectionInput.selection(0).entity
-            
+
             flip = _flipValueInput.value
             flipFaceNormal = _flipFaceNormalValueInput.value
             absoluteDepthOffset = _absoluteDepthOffsetValueInput.value
@@ -389,7 +390,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
                     body.material = diamondMaterial
 
             baseFeature.finishEdit()
-            
+
 
         except:
             baseFeature.finishEdit()
@@ -402,7 +403,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
         super().__init__()
     def notify(self, args):
         try:
-            eventArgs = adsk.core.CommandEventArgs.cast(args)        
+            eventArgs = adsk.core.CommandEventArgs.cast(args)
             comp: adsk.fusion.Component = None
             faceEntity = _faceSelectionInput.selection(0).entity
             if faceEntity.objectType == adsk.fusion.ConstructionPlane.classType():
@@ -423,17 +424,17 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                 if gemstone is None:
                     eventArgs.executeFailed = True
                     return
-                
+
                 body = comp.bRepBodies.add(gemstone, baseFeature)
                 setGemstoneAttributes(body, _flipValueInput.value, _absoluteDepthOffsetValueInput.value, _relativeDepthOffsetValueInput.value, _flipFaceNormalValueInput.value)
                 body.material = diamondMaterial
 
             baseFeature.finishEdit()
-            
+
             design: adsk.fusion.Design = _app.activeProduct
             defLengthUnits = design.unitsManager.defaultLengthUnits
             customFeatureInput = comp.features.customFeatures.createInput(_customFeatureDefinition)
-                         
+
             flipInput = adsk.core.ValueInput.createByString(str(_flipValueInput.value).lower())
             customFeatureInput.addCustomParameter(flipInputDef.id, flipInputDef.name, flipInput, '', True)
 
@@ -449,7 +450,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                                               '', True)
 
             customFeatureInput.addDependency('face', faceEntity)
-            
+
             for i in range(len(circleEntities)):
                 customFeatureInput.addDependency(f'circle{i}', circleEntities[i])
 
@@ -472,7 +473,7 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
             if _isRolledForEdit: return
 
             eventArgs = adsk.core.CommandEventArgs.cast(args)
-            
+
             design: adsk.fusion.Design = _app.activeProduct
             timeline = design.timeline
             markerPosition = timeline.markerPosition
@@ -480,7 +481,7 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
 
             _editedCustomFeature.timelineObject.rollTo(True)
             _isRolledForEdit = True
-            
+
             command = eventArgs.command
             command.beginStep()
 
@@ -494,10 +495,10 @@ class EditActivateHandler(adsk.core.CommandEventHandler):
                     i += 1
                 except:
                     break
-            
+
             face = _editedCustomFeature.dependencies.itemById('face').entity
             _faceSelectionInput.addSelection(face)
-                
+
         except:
             showMessage(f'EditActivateHandler: {traceback.format_exc()}\n', True)
 
@@ -523,7 +524,7 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
         global _editedCustomFeature, _isRolledForEdit
 
         try:
-            eventArgs = adsk.core.CommandEventArgs.cast(args)    
+            eventArgs = adsk.core.CommandEventArgs.cast(args)
 
             faceEntity = _faceSelectionInput.selection(0).entity
             circleCount = _circleSelectionInput.selectionCount
@@ -540,7 +541,7 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             _editedCustomFeature.parameters.itemById(flipInputDef.id).expression = str(_flipValueInput.value).lower()
             _editedCustomFeature.parameters.itemById(absoluteDepthOffsetInputDef.id).expression = _absoluteDepthOffsetValueInput.expression
             _editedCustomFeature.parameters.itemById(relativeDepthOffsetInputDef.id).expression = _relativeDepthOffsetValueInput.expression
-            
+
             try:
                 _editedCustomFeature.parameters.itemById(flipFaceNormalInputDef.id).expression = str(_flipFaceNormalValueInput.value).lower()
             except:
@@ -576,7 +577,7 @@ def computeFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         True if the update was successful, False otherwise.
     """
     try:
-        
+
         baseFeature: adsk.fusion.BaseFeature = None
 
         for feature in customFeature.features:
@@ -587,7 +588,7 @@ def computeFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         faceEntity = customFeature.dependencies.itemById('face').entity
         if faceEntity is None: return False
 
-        
+
         circles: list[adsk.fusion.SketchCircle] = []
         i = 0
         while True:
@@ -599,22 +600,22 @@ def computeFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
             i += 1
         if len(circles) == 0: return False
 
-        
+
         try:
             flip = customFeature.parameters.itemById(flipInputDef.id).expression.lower() == 'true'
         except:
             flip = False
-        
+
         try:
             flipFaceNormal = customFeature.parameters.itemById(flipFaceNormalInputDef.id).expression.lower() == 'true'
         except:
             flipFaceNormal = False
-        
+
         try:
             absoluteDepthOffset = customFeature.parameters.itemById(absoluteDepthOffsetInputDef.id).value
         except:
             absoluteDepthOffset = 0.0
-        
+
         try:
             relativeDepthOffset = customFeature.parameters.itemById(relativeDepthOffsetInputDef.id).value
         except:
@@ -626,8 +627,8 @@ def computeFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
             component: adsk.fusion.Component = faceEntity.body.parentComponent
 
         baseFeature.startEdit()
-        
-        
+
+
         success = True
         for i in range(len(circles)):
             circle = circles[i]
@@ -649,23 +650,23 @@ def computeFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
                 else:
                     success = False
 
-        
+
         while baseFeature.bodies.count > len(circles):
             baseFeature.bodies.item(baseFeature.bodies.count - 1).deleteMe()
 
         baseFeature.finishEdit()
-        
+
         return success
-    
+
     except:
         baseFeature.finishEdit()
         showMessage(f'updateFeature: {traceback.format_exc()}\n', True)
         return False
-    
+
 def rollBack():
     """Roll back the timeline to the state before editing."""
     global _restoreTimelineObject, _isRolledForEdit, _editedCustomFeature
-    
+
     if _isRolledForEdit:
         _editedCustomFeature.timelineObject.rollTo(False)
         updateGemstoneFeature(_editedCustomFeature)

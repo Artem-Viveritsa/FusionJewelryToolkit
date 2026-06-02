@@ -8,7 +8,7 @@ import adsk.core
 import adsk.fusion
 
 from ... import constants
-from ... import strings
+
 from ...helpers import Bodies
 from ...helpers import CustomFeatures
 from ...helpers import Deformations
@@ -33,29 +33,29 @@ _hiddenSourceBody: Optional[adsk.fusion.BRepBody] = None
 
 _handlers: list[object] = []
 
-createCommandInputDef = strings.InputDef(strings.Taper.createCommandId, 'Taper', 'Creates a tapered copy of a solid body.')
-editCommandInputDef = strings.InputDef(strings.Taper.editCommandId, 'Edit Taper', 'Edits the parameters of the taper feature.')
+createCommandInputDef = constants.InputDef(constants.Taper.createCommandId, 'Taper', 'Creates a tapered copy of a solid body.')
+editCommandInputDef = constants.InputDef(constants.Taper.editCommandId, 'Edit Taper', 'Edits the parameters of the taper feature.')
 
-selectBodyInputDef = strings.InputDef(
-    strings.Taper.selectBodyInputId,
+selectBodyInputDef = constants.InputDef(
+    constants.Taper.selectBodyInputId,
     'Select Body',
     'Select the solid body to taper.'
 )
 
-selectAxisInputDef = strings.InputDef(
-    strings.Taper.selectAxisInputId,
+selectAxisInputDef = constants.InputDef(
+    constants.Taper.selectAxisInputId,
     'Axis',
     'Select a straight edge, construction axis, or sketch line as the taper axis.'
 )
 
-selectPivotPointInputDef = strings.InputDef(
-    strings.Taper.selectPivotPointInputId,
+selectPivotPointInputDef = constants.InputDef(
+    constants.Taper.selectPivotPointInputId,
     'Pivot Point',
     'Select the point on the axis where the scale is neutral. Cross-sections before it expand, after it contract.'
 )
 
-angleInputDef = strings.InputDef(
-    strings.Taper.angleInputId,
+angleInputDef = constants.InputDef(
+    constants.Taper.angleInputId,
     'Angle',
     'The taper angle in degrees.'
 )
@@ -97,11 +97,11 @@ def run(panel: adsk.core.ToolbarPanel) -> None:
         _handlers.append(editCommandCreated)
 
         _customFeatureDefinition = adsk.fusion.CustomFeatureDefinition.create(
-            strings.Taper.commandId,
+            constants.Taper.commandId,
             createCommandInputDef.name,
             RESOURCES_FOLDER
         )
-        _customFeatureDefinition.editCommandId = strings.Taper.editCommandId
+        _customFeatureDefinition.editCommandId = constants.Taper.editCommandId
 
         computeCustomFeature = ComputeCustomFeature()
         _customFeatureDefinition.customFeatureCompute.add(computeCustomFeature)
@@ -114,15 +114,15 @@ def run(panel: adsk.core.ToolbarPanel) -> None:
 def stop(panel: adsk.core.ToolbarPanel) -> None:
     """Clean up the taper command UI elements."""
     try:
-        control = panel.controls.itemById(strings.Taper.createCommandId)
+        control = panel.controls.itemById(constants.Taper.createCommandId)
         if control:
             control.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(strings.Taper.createCommandId)
+        commandDefinition = _ui.commandDefinitions.itemById(constants.Taper.createCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
-        commandDefinition = _ui.commandDefinitions.itemById(strings.Taper.editCommandId)
+        commandDefinition = _ui.commandDefinitions.itemById(constants.Taper.editCommandId)
         if commandDefinition:
             commandDefinition.deleteMe()
 
@@ -132,7 +132,7 @@ def stop(panel: adsk.core.ToolbarPanel) -> None:
 
 def getSourceBodyFromFeature(customFeature: adsk.fusion.CustomFeature) -> Optional[adsk.fusion.BRepBody]:
     """Return the source body stored in a custom feature."""
-    sourceFaceDependency = customFeature.dependencies.itemById(strings.Taper.sourceBodyFaceDependencyId)
+    sourceFaceDependency = customFeature.dependencies.itemById(constants.Taper.sourceBodyFaceDependencyId)
     if sourceFaceDependency is None or sourceFaceDependency.entity is None:
         return None
 
@@ -145,7 +145,7 @@ def getSourceBodyFromFeature(customFeature: adsk.fusion.CustomFeature) -> Option
 
 def getAxisEntityFromFeature(customFeature: adsk.fusion.CustomFeature) -> Optional[adsk.core.Base]:
     """Return the axis entity stored in a custom feature."""
-    dependency = customFeature.dependencies.itemById(strings.Taper.axisDependencyId)
+    dependency = customFeature.dependencies.itemById(constants.Taper.axisDependencyId)
     if dependency is None:
         return None
 
@@ -154,7 +154,7 @@ def getAxisEntityFromFeature(customFeature: adsk.fusion.CustomFeature) -> Option
 
 def getPivotEntityFromFeature(customFeature: adsk.fusion.CustomFeature) -> Optional[adsk.core.Base]:
     """Return the pivot point entity stored in a custom feature."""
-    dependency = customFeature.dependencies.itemById(strings.Taper.pivotPointDependencyId)
+    dependency = customFeature.dependencies.itemById(constants.Taper.pivotPointDependencyId)
     if dependency is None:
         return None
 
@@ -350,7 +350,7 @@ def transformTaperPreviewPoint(
     dy = point.y - pivotY
     dz = point.z - pivotZ
     projection = point.x * axisX + point.y * axisY + point.z * axisZ - pivotProjection
-    scale = max(constants.Deformations.minimumTaperScale, 1.0 - (projection / height) * tanAngle)
+    scale = max(constants.Taper.minimumTaperScale, 1.0 - (projection / height) * tanAngle)
 
     return adsk.core.Point3D.create(
         pivotX + projection * axisX + (dx - projection * axisX) * scale,
@@ -390,9 +390,9 @@ def buildTaperBoundingBoxLineCoordinates(
 
     corners = getBoundingBoxCorners(body)
     lineCoordinates: list[float] = []
-    edgeSegments = max(constants.Deformations.taperPreviewEdgeSegments, 1)
+    edgeSegments = max(constants.Taper.taperPreviewEdgeSegments, 1)
 
-    for startIndex, endIndex in constants.Deformations.taperBoundingBoxEdgeIndices:
+    for startIndex, endIndex in constants.Taper.taperBoundingBoxEdgeIndices:
         edgeStart = corners[startIndex]
         edgeEnd = corners[endIndex]
         previousPoint = transformTaperPreviewPoint(edgeStart, axisDirection, pivotPoint, angleValue, height)
@@ -429,11 +429,11 @@ def drawTaperGraphics(lineCoordinates: list[float], refreshViewport: bool = True
     cgGroup = design.rootComponent.customGraphicsGroups.add()
     coords = adsk.fusion.CustomGraphicsCoordinates.create(lineCoordinates)
     cgLines = cgGroup.addLines(coords, [], False, [])
-    red, green, blue, alpha = constants.Deformations.taperPreviewLineColorRGBA
+    red, green, blue, alpha = constants.Taper.taperPreviewLineColorRGBA
     cgLines.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
         adsk.core.Color.create(red, green, blue, alpha)
     )
-    cgLines.weight = constants.Deformations.taperPreviewLineWeight
+    cgLines.weight = constants.Taper.taperPreviewLineWeight
 
     if refreshViewport:
         _app.activeViewport.refresh()
@@ -463,7 +463,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             command = eventArgs.command
             inputs = command.commandInputs
 
-            angleExpression = f'{constants.Deformations.defaultTaperAngleDeg} deg'
+            angleExpression = f'{constants.Taper.defaultTaperAngleDeg} deg'
             initializeCommandInputs(inputs, angleExpression)
 
             onPreSelect = PreSelectHandler()
@@ -512,7 +512,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             if _editedCustomFeature is None:
                 return
 
-            angleExpression = f'{constants.Deformations.defaultTaperAngleDeg} deg'
+            angleExpression = f'{constants.Taper.defaultTaperAngleDeg} deg'
             angleParameter = _editedCustomFeature.parameters.itemById(angleInputDef.id)
             if angleParameter is not None:
                 angleExpression = angleParameter.expression
@@ -587,8 +587,8 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                 eventArgs.areInputsValid = False
                 return
 
-            minAngle = math.radians(constants.Deformations.minTaperAngleDeg)
-            maxAngle = math.radians(constants.Deformations.maxTaperAngleDeg)
+            minAngle = math.radians(constants.Taper.minTaperAngleDeg)
+            maxAngle = math.radians(constants.Taper.maxTaperAngleDeg)
 
             if _angleValueInput.value < minAngle or _angleValueInput.value > maxAngle:
                 eventArgs.areInputsValid = False
@@ -648,7 +648,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
 
             outputBody = component.bRepBodies.add(resultBody, baseFeature)
             Bodies.copyAttributes(sourceBody, outputBody)
-            outputBody.name = strings.Taper.bodyNameTemplate.format(bodyName=sourceBody.name)
+            outputBody.name = constants.Taper.bodyNameTemplate.format(bodyName=sourceBody.name)
 
             baseFeature.finishEdit()
             isBaseFeatureEditing = False
@@ -717,7 +717,7 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
 
             outputBody = component.bRepBodies.add(resultBody, baseFeature)
             Bodies.copyAttributes(sourceBody, outputBody)
-            outputBody.name = strings.Taper.bodyNameTemplate.format(bodyName=sourceBody.name)
+            outputBody.name = constants.Taper.bodyNameTemplate.format(bodyName=sourceBody.name)
 
             baseFeature.finishEdit()
             isBaseFeatureEditing = False
@@ -727,9 +727,9 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                 return
 
             customFeatureInput = component.features.customFeatures.createInput(_customFeatureDefinition)
-            customFeatureInput.addDependency(strings.Taper.sourceBodyFaceDependencyId, sourceBody.faces.item(0))
-            customFeatureInput.addDependency(strings.Taper.axisDependencyId, axisEntity)
-            customFeatureInput.addDependency(strings.Taper.pivotPointDependencyId, pivotEntity)
+            customFeatureInput.addDependency(constants.Taper.sourceBodyFaceDependencyId, sourceBody.faces.item(0))
+            customFeatureInput.addDependency(constants.Taper.axisDependencyId, axisEntity)
+            customFeatureInput.addDependency(constants.Taper.pivotPointDependencyId, pivotEntity)
 
             angleInput = adsk.core.ValueInput.createByString(_angleValueInput.expression)
             customFeatureInput.addCustomParameter(
@@ -900,9 +900,9 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
                 return
 
             _editedCustomFeature.dependencies.deleteAll()
-            _editedCustomFeature.dependencies.add(strings.Taper.sourceBodyFaceDependencyId, sourceBody.faces.item(0))
-            _editedCustomFeature.dependencies.add(strings.Taper.axisDependencyId, axisEntity)
-            _editedCustomFeature.dependencies.add(strings.Taper.pivotPointDependencyId, pivotEntity)
+            _editedCustomFeature.dependencies.add(constants.Taper.sourceBodyFaceDependencyId, sourceBody.faces.item(0))
+            _editedCustomFeature.dependencies.add(constants.Taper.axisDependencyId, axisEntity)
+            _editedCustomFeature.dependencies.add(constants.Taper.pivotPointDependencyId, pivotEntity)
 
             _editedCustomFeature.parameters.itemById(angleInputDef.id).expression = _angleValueInput.expression
 
@@ -979,7 +979,7 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
             baseFeature.bodies.item(baseFeature.bodies.count - 1).deleteMe()
 
         Bodies.copyAttributes(sourceBody, outputBody)
-        outputBody.name = strings.Taper.bodyNameTemplate.format(bodyName=sourceBody.name)
+        outputBody.name = constants.Taper.bodyNameTemplate.format(bodyName=sourceBody.name)
 
         baseFeature.finishEdit()
         isBaseFeatureEditing = False
