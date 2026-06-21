@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.0] - 2026-06-21
+
+### Added
+- `ScallopSettingCutters`: New command for scallop-style setting preparation. It creates editable triangular separator cutters between neighboring gemstone girdles and cylindrical scallop cutters centered on each selected gemstone.
+- `assets/prism.sat`: Added the reusable triangular prism asset used by `ScallopSettingCutters` separator cutters.
+
+### Changed
+- `FusionJewelryToolkit.py`: Registered `ScallopSettingCutters` in the add-in command list.
+- `constants.py`: Added `ScallopSettingCutters` command ids, input ids, defaults, validation ranges, cutter body names, and shared geometry settings.
+
 ## [0.12.0] - 2026-06-02
 
 ### Added

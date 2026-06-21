@@ -256,6 +256,40 @@ class ProngsBetweenGemstonesStrings(CommandStrings):
 ProngsBetweenGemstones = ProngsBetweenGemstonesStrings()
 
 
+class ScallopSettingCuttersStrings(CommandStrings):
+    """Constants for the Scallop Setting Cutters command."""
+
+    def __init__(self):
+        super().__init__('ScallopSettingCutters')
+
+    selectGemstonesInputId = 'selectGemstones'
+    separatorWidthInputId = 'separatorWidth'
+    separatorDepthInputId = 'separatorDepth'
+    scallopDiameterInputId = 'scallopDiameter'
+    offsetRatioInputId = 'offsetRatio'
+    separatorCutterName = 'separator cutter'
+    scallopCutterName = 'scallop cutter'
+    prismAssetFile = os.path.join(ASSETS_FOLDER, 'prism.sat')
+    defaultSeparatorWidth = 0.10
+    minSeparatorWidth = 0.01
+    maxSeparatorWidth = 0.50
+    defaultSeparatorDepth = 0.20
+    minSeparatorDepth = 0.01
+    maxSeparatorDepth = 0.80
+    defaultScallopDiameter = 0.60
+    minScallopDiameter = 0.20
+    maxScallopDiameter = 0.80
+    defaultOffsetRatio = 0.0
+    minOffsetRatio = -0.50
+    maxOffsetRatio = 0.50
+    defaultConnectionGap = 0.05
+    cutterWidthRatio = 1.5
+    minVectorLength = 1e-9
+
+
+ScallopSettingCutters = ScallopSettingCuttersStrings()
+
+
 class ChannelsBetweenGemstonesStrings(CommandStrings):
     """Constants for the Channels Between Gemstones command."""
 

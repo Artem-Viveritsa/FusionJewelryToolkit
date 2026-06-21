@@ -1,8 +1,8 @@
 # Fusion 360 Jewelry Toolkit
 
-A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in adds specialized commands for gemstone placement, prong creation, channels, cutters, body patterning along paths, free-form deformation, tapering, and surface manipulation.
+A small collection of utilities that speed up jewelry modeling in Fusion 360. The add-in adds specialized commands for gemstone placement, prong creation, scallop setting cutters, channels, cutters, body patterning along paths, free-form deformation, tapering, and surface manipulation.
 
-[![Gemstones icon](commands/GemstonesOnFaceAtPoints/resources/32x32@2x.png)](#gemstonesonfaceatpoints--place-round-gemstones-on-a-face-at-specified-points) [![Gemstones icon](commands/GemstonesOnFaceAtCircles/resources/32x32@2x.png)](#gemstonesonfaceatcircles--place-round-gemstones-on-a-face-at-sketch-circles) [![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)](#gemstonesonfaceatcurve--place-gemstones-along-a-curve-with-variable-sizes) [![Gemstones icon](commands/GemstonesOnFaceBetweenCurves/resources/32x32@2x.png)](#gemstonesonfacebetweencurves--place-gemstones-between-two-curves) [![Prongs icon](commands/ProngsOnFaceAtPoints/resources/32x32@2x.png)](#prongsonfaceatpoints--generate-prongs-on-a-face-at-specified-points) [![ProngsBetweenGemstones icon](commands/ProngsBetweenGemstones/resources/32x32@2x.png)](#prongsbetweengemstones--create-prongs-between-gemstones) [![ChannelsBetweenGemstones icon](commands/ChannelsBetweenGemstones/resources/32x32@2x.png)](#channelsbetweengemstones--create-channels-between-gemstones) [![CuttersForGemstones icon](commands/CuttersForGemstones/resources/32x32@2x.png)](#cuttersforgemstones--create-cutter-bodies-for-gemstone-seating) [![PatternAlongPathOnSurface icon](commands/PatternAlongPathOnSurface/resources/32x32@2x.png)](#patternalongpathonsurface--distribute-bodies-along-a-curve-on-a-surface) [![FFD icon](commands/FFD/resources/32x32@2x.png)](#ffd--free-form-deform-a-solid-body-with-a-control-lattice-early-preview) [![Taper icon](commands/Taper/resources/32x32@2x.png)](#taper--create-a-tapered-copy-of-a-solid-body-along-an-axis-early-preview) [![SurfaceUnfold icon](commands/SurfaceUnfold/resources/32x32@2x.png)](#surfaceunfold--unfold-curved-surfaces-to-flat-2d-sketches-early-preview) [![ObjectsRefold icon](commands/ObjectsRefold/resources/32x32@2x.png)](#objectsrefold--refold-flat-patterns-onto-curved-surfaces-early-preview) [![Gemstones Info icon](commands/GemstonesInfo/resources/32x32@2x.png)](#gemstonesinfo--show-detected-gemstone-diameters-on-model-early-preview)
+[![Gemstones icon](commands/GemstonesOnFaceAtPoints/resources/32x32@2x.png)](#gemstonesonfaceatpoints--place-round-gemstones-on-a-face-at-specified-points) [![Gemstones icon](commands/GemstonesOnFaceAtCircles/resources/32x32@2x.png)](#gemstonesonfaceatcircles--place-round-gemstones-on-a-face-at-sketch-circles) [![Gemstones icon](commands/GemstonesOnFaceAtCurve/resources/32x32@2x.png)](#gemstonesonfaceatcurve--place-gemstones-along-a-curve-with-variable-sizes) [![Gemstones icon](commands/GemstonesOnFaceBetweenCurves/resources/32x32@2x.png)](#gemstonesonfacebetweencurves--place-gemstones-between-two-curves) [![Prongs icon](commands/ProngsOnFaceAtPoints/resources/32x32@2x.png)](#prongsonfaceatpoints--generate-prongs-on-a-face-at-specified-points) [![ProngsBetweenGemstones icon](commands/ProngsBetweenGemstones/resources/32x32@2x.png)](#prongsbetweengemstones--create-prongs-between-gemstones) [![ChannelsBetweenGemstones icon](commands/ChannelsBetweenGemstones/resources/32x32@2x.png)](#channelsbetweengemstones--create-channels-between-gemstones) [![CuttersForGemstones icon](commands/CuttersForGemstones/resources/32x32@2x.png)](#cuttersforgemstones--create-cutter-bodies-for-gemstone-seating) [![ScallopSettingCutters icon](commands/ScallopSettingCutters/resources/32x32@2x.png)](#scallopsettingcutters--create-scallop-setting-cutters) [![SurfaceUnfold icon](commands/SurfaceUnfold/resources/32x32@2x.png)](#surfaceunfold--unfold-curved-surfaces-to-flat-2d-sketches-early-preview) [![ObjectsRefold icon](commands/ObjectsRefold/resources/32x32@2x.png)](#objectsrefold--refold-flat-patterns-onto-curved-surfaces-early-preview) [![PatternAlongPathOnSurface icon](commands/PatternAlongPathOnSurface/resources/32x32@2x.png)](#patternalongpathonsurface--distribute-bodies-along-a-curve-on-a-surface) [![FFD icon](commands/FFD/resources/32x32@2x.png)](#ffd--free-form-deform-a-solid-body-with-a-control-lattice-early-preview) [![Taper icon](commands/Taper/resources/32x32@2x.png)](#taper--create-a-tapered-copy-of-a-solid-body-along-an-axis-early-preview) [![Gemstones Info icon](commands/GemstonesInfo/resources/32x32@2x.png)](#gemstonesinfo--show-detected-gemstone-diameters-on-model-early-preview)
 
 ## ⚠️ Important
 Command creation and editing work correctly only with **Hybrid Design Type**. Part and Assembly design types may have limitations. Ensure you're using Hybrid Design for full functionality of all commands.
@@ -17,6 +17,7 @@ Command creation and editing work correctly only with **Hybrid Design Type**. Pa
 Note: This add-in uses the Custom Feature Fusion API, which is currently in preview. Future Fusion 360 updates may require changes to the add-in.
 
 ## What's new
+- **ScallopSettingCutters:** New command creates editable separator cutters between neighboring gemstones and scallop cylinder cutters centered on each gemstone for scallop-style seat preparation.
 - **GemstonesOnFaceAtPoints:** Select multiple faces or construction planes and place each gemstone on the closest selected support.
 - **ProngsBetweenGemstones:** New **Uniformity** control blends prong size and height toward consistent values while preserving existing features.
 - **ProngsBetweenGemstones:** Prongs on curved gemstone chains now adapt their position and size to the local bend for cleaner spacing.
@@ -93,7 +94,6 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
 
 ---
 
----
 ![Prongs icon](commands/ProngsOnFaceAtPoints/resources/32x32@2x.png)
 ## ProngsOnFaceAtPoints — Generate prongs on a face at specified points
 - **Description:** Generates prong bodies at selected sketch points on a chosen face or construction plane.
@@ -143,6 +143,47 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
   - When you edit an existing CuttersForGemstones operation, the add-in currently creates a new body instead of modifying the original. This behavior preserves the ability to change parameters (height, depth, scale, etc.) after the initial creation.
   - Do not manually edit cutter bodies with other modeling tools. If you modify a generated body and later change CuttersForGemstones parameters, the resulting geometry and dependency links can become unpredictable.
   - To update cutters, change parameters using the CuttersForGemstones command (so the operation regenerates correctly), then use Boolean operations to subtract the cutters from target bodies.
+
+---
+
+![ScallopSettingCutters icon](commands/ScallopSettingCutters/resources/32x32@2x.png)
+## ScallopSettingCutters — Create scallop setting cutters
+- **Description:** Creates cutter bodies for scallop-style settings: triangular separator cutters between neighboring gemstone girdles and cylindrical scallop cutters centered on each selected gemstone. The generated bodies are stored in an editable custom feature and update in place when parameters change.
+- **Selection:** At least 2 gemstone bodies.
+- **Key parameters:**
+  - **Separator Width** — Width of the separator triangle at table level, as a ratio of average neighboring gemstone diameter. Default: `0.10`. Range: `0.01–0.50`.
+  - **Separator Depth** — Depth of the separator triangle, as a ratio of average neighboring gemstone diameter. Default: `0.20`. Range: `0.01–0.80`.
+  - **Scallop Diameter** — Diameter of the large cylindrical scallop cutters, as a ratio of gemstone diameter. Default: `0.60`. Range: `0.20–0.80`.
+  - **Offset** — Height offset from table alignment, relative to gemstone diameter. Default: `0.00`. Range: `-0.50–0.50`.
+- **Behavior:** Separator cutters are placed midway between neighboring girdles. Scallop cutters are centered on each gemstone. Both cutter types are oriented perpendicular to the local gemstone-to-gemstone direction and use a shared cutter length of `1.5 ×` gemstone diameter.
+
+---
+
+![SurfaceUnfold icon](commands/SurfaceUnfold/resources/32x32@2x.png)
+## SurfaceUnfold — Unfold curved surfaces to flat 2D sketches (Early Preview)
+- **Description:** Unfolds curved BRep faces or mesh bodies to flat 2D sketch patterns. Useful for creating manufacturing templates, patterns for flat materials, or analyzing surface distortion.
+- **Selection:** 1 BRep face or 1 mesh body, plus 3 vertices for orientation (origin, X-direction, Y-direction).
+- **Key parameters:**
+  - **Select Source** — Select the face or mesh body to unfold.
+  - **Origin Point** — Select a vertex or sketch point on the face to be the origin (0,0) of the sketch.
+  - **X Direction Point** — Select a vertex or sketch point on the face to define the +X direction from origin.
+  - **Y Direction Point** — Select a vertex or sketch point on the face to define the rotation (orientation) of the unfolded sketch.
+  - **Construction Plane** — Select the construction plane where the unfolded sketch will be created. Default: XY plane.
+  - **X Offset** — Offset along the X axis of the construction plane. Default: `0 mm`.
+  - **Y Offset** — Offset along the Y axis of the construction plane. Default: `0 mm`.
+  - **Accuracy** — Unfolding accuracy (0.5 - 10 mm). Minimum allowed is 0.5 mm to avoid excessive computation. Default: `0.5 mm`.
+  - **Algorithm** — Select the unfolding algorithm: NURBS (parametric grid) or Mesh (remeshed tessellation). Default: `Mesh`.
+- **Behavior:** The command previews the generated tessellation in the viewport while editing the source, accuracy, or algorithm.
+- **Limitations:** This feature is in early preview and may have limitations with highly complex or distorted surfaces.
+
+---
+
+![ObjectsRefold icon](commands/ObjectsRefold/resources/32x32@2x.png)
+## ObjectsRefold — Refold flat patterns onto curved surfaces (Early Preview)
+- **Description:** Takes any BRep bodies and wraps them onto a curved surface created by SurfaceUnfold. This is the inverse operation of SurfaceUnfold.
+- **Selection:** 1 sketch (created by SurfaceUnfold) and one or more BRep bodies to refold onto the original curved surface.
+- **Key parameters:** None — the command uses metadata from the SurfaceUnfold sketch to reverse the unfolding transformation.
+- **Limitations:** Currently, the command creates copies of the selected bodies instead of moving the existing ones. 
 
 ---
 
@@ -197,34 +238,6 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
   - Apply this modifier as late as possible in the modeling process.
   - Avoid editing the bodies created by this modifier with later operations that depend on their faces or surfaces.
   - In the current Fusion API, the body cannot be edited in place, so each update recreates the tapered result as a new body. Downstream face- and surface-based dependencies can therefore be lost.
-
----
-
-![SurfaceUnfold icon](commands/SurfaceUnfold/resources/32x32@2x.png)
-## SurfaceUnfold — Unfold curved surfaces to flat 2D sketches (Early Preview)
-- **Description:** Unfolds curved BRep faces or mesh bodies to flat 2D sketch patterns. Useful for creating manufacturing templates, patterns for flat materials, or analyzing surface distortion.
-- **Selection:** 1 BRep face or 1 mesh body, plus 3 vertices for orientation (origin, X-direction, Y-direction).
-- **Key parameters:**
-  - **Select Source** — Select the face or mesh body to unfold.
-  - **Origin Point** — Select a vertex or sketch point on the face to be the origin (0,0) of the sketch.
-  - **X Direction Point** — Select a vertex or sketch point on the face to define the +X direction from origin.
-  - **Y Direction Point** — Select a vertex or sketch point on the face to define the rotation (orientation) of the unfolded sketch.
-  - **Construction Plane** — Select the construction plane where the unfolded sketch will be created. Default: XY plane.
-  - **X Offset** — Offset along the X axis of the construction plane. Default: `0 mm`.
-  - **Y Offset** — Offset along the Y axis of the construction plane. Default: `0 mm`.
-  - **Accuracy** — Unfolding accuracy (0.5 - 10 mm). Minimum allowed is 0.5 mm to avoid excessive computation. Default: `0.5 mm`.
-  - **Algorithm** — Select the unfolding algorithm: NURBS (parametric grid) or Mesh (remeshed tessellation). Default: `Mesh`.
-- **Behavior:** The command previews the generated tessellation in the viewport while editing the source, accuracy, or algorithm.
-- **Limitations:** This feature is in early preview and may have limitations with highly complex or distorted surfaces.
-
----
-
-![ObjectsRefold icon](commands/ObjectsRefold/resources/32x32@2x.png)
-## ObjectsRefold — Refold flat patterns onto curved surfaces (Early Preview)
-- **Description:** Takes any BRep bodies and wraps them onto a curved surface created by SurfaceUnfold. This is the inverse operation of SurfaceUnfold.
-- **Selection:** 1 sketch (created by SurfaceUnfold) and one or more BRep bodies to refold onto the original curved surface.
-- **Key parameters:** None — the command uses metadata from the SurfaceUnfold sketch to reverse the unfolding transformation.
-- **Limitations:** Currently, the command creates copies of the selected bodies instead of moving the existing ones. 
 
 ---
 

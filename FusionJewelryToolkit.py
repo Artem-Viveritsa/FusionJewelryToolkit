@@ -6,6 +6,7 @@ from .commands.GemstonesOnFaceBetweenCurves import GemstonesOnFaceBetweenCurves
 
 from .commands.ProngsOnFaceAtPoints import ProngsOnFaceAtPoints
 from .commands.ProngsBetweenGemstones import ProngsBetweenGemstones
+from .commands.ScallopSettingCutters import ScallopSettingCutters
 
 from .commands.ChannelsBetweenGemstones import ChannelsBetweenGemstones
 from .commands.CuttersForGemstones import CuttersForGemstones
@@ -41,6 +42,7 @@ commands = [
     
     ChannelsBetweenGemstones,
     CuttersForGemstones,
+    ScallopSettingCutters,
     
     SurfaceUnfold,
     ObjectsRefold,
