@@ -154,7 +154,8 @@ Note: This add-in uses the Custom Feature Fusion API, which is currently in prev
   - **Separator Width** — Width of the separator triangle at table level, as a ratio of average neighboring gemstone diameter. Default: `0.10`. Range: `0.01–0.50`.
   - **Separator Depth** — Depth of the separator triangle, as a ratio of average neighboring gemstone diameter. Default: `0.20`. Range: `0.01–0.80`.
   - **Scallop Diameter** — Diameter of the large cylindrical scallop cutters, as a ratio of gemstone diameter. Default: `0.60`. Range: `0.20–0.80`.
-  - **Offset** — Height offset from table alignment, relative to gemstone diameter. Default: `0.00`. Range: `-0.50–0.50`.
+  - **Separator Offset** — Separator height offset from table alignment, relative to average neighboring gemstone diameter. Default: `0.00`. Range: `-0.50–0.50`.
+  - **Scallop Offset** — Scallop cutter height offset from table alignment, relative to gemstone diameter. Default: `0.00`. Range: `-0.50–0.50`.
 - **Behavior:** Separator cutters are placed midway between neighboring girdles. Scallop cutters are centered on each gemstone. Both cutter types are oriented perpendicular to the local gemstone-to-gemstone direction and use a shared cutter length of `1.5 ×` gemstone diameter.
 
 ---

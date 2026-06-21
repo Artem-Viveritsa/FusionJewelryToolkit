@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.1] - 2026-06-21
+
+### Changed
+- `ScallopSettingCutters`: Split the shared height `Offset` into separate `Separator Offset` and `Scallop Offset` controls.
+
 ## [0.13.0] - 2026-06-21
 
 ### Added

@@ -266,7 +266,8 @@ class ScallopSettingCuttersStrings(CommandStrings):
     separatorWidthInputId = 'separatorWidth'
     separatorDepthInputId = 'separatorDepth'
     scallopDiameterInputId = 'scallopDiameter'
-    offsetRatioInputId = 'offsetRatio'
+    separatorOffsetRatioInputId = 'separatorOffsetRatio'
+    scallopOffsetRatioInputId = 'scallopOffsetRatio'
     separatorCutterName = 'separator cutter'
     scallopCutterName = 'scallop cutter'
     prismAssetFile = os.path.join(ASSETS_FOLDER, 'prism.sat')
@@ -279,7 +280,8 @@ class ScallopSettingCuttersStrings(CommandStrings):
     defaultScallopDiameter = 0.60
     minScallopDiameter = 0.20
     maxScallopDiameter = 0.80
-    defaultOffsetRatio = 0.0
+    defaultSeparatorOffsetRatio = 0.0
+    defaultScallopOffsetRatio = 0.0
     minOffsetRatio = -0.50
     maxOffsetRatio = 0.50
     defaultConnectionGap = 0.05
