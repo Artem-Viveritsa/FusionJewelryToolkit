@@ -28,7 +28,8 @@ _gemstonesSelectionInput: adsk.core.SelectionCommandInput = None
 _separatorWidthValueInput: adsk.core.ValueCommandInput = None
 _separatorDepthValueInput: adsk.core.ValueCommandInput = None
 _scallopDiameterValueInput: adsk.core.ValueCommandInput = None
-_offsetRatioValueInput: adsk.core.ValueCommandInput = None
+_separatorOffsetRatioValueInput: adsk.core.ValueCommandInput = None
+_scallopOffsetRatioValueInput: adsk.core.ValueCommandInput = None
 
 
 COMMAND = constants.ScallopSettingCutters
@@ -93,10 +94,16 @@ scallopDiameterInputDef = constants.InputDef(
     'Diameter ratio of the large U cutters relative to gemstone diameter.\nFrom 0.20 to 0.80 (0.60 default).'
     )
 
-offsetRatioInputDef = constants.InputDef(
-    COMMAND.offsetRatioInputId,
-    'Offset',
-    'Offset from table alignment, relative to gemstone diameter.\nFrom -0.50 to 0.50 (0.00 default).'
+separatorOffsetRatioInputDef = constants.InputDef(
+    COMMAND.separatorOffsetRatioInputId,
+    'Separator Offset',
+    'Separator height offset from table alignment, relative to average neighboring gemstone diameter.\nFrom -0.50 to 0.50 (0.00 default).'
+    )
+
+scallopOffsetRatioInputDef = constants.InputDef(
+    COMMAND.scallopOffsetRatioInputId,
+    'Scallop Offset',
+    'Scallop cutter height offset from table alignment, relative to gemstone diameter.\nFrom -0.50 to 0.50 (0.00 default).'
     )
 
 
@@ -166,7 +173,7 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
     def notify(self, args):
         try:
-            global _gemstonesSelectionInput, _separatorWidthValueInput, _separatorDepthValueInput, _scallopDiameterValueInput, _offsetRatioValueInput
+            global _gemstonesSelectionInput, _separatorWidthValueInput, _separatorDepthValueInput, _scallopDiameterValueInput, _separatorOffsetRatioValueInput, _scallopOffsetRatioValueInput
 
             eventArgs = adsk.core.CommandCreatedEventArgs.cast(args)
             command = eventArgs.command
@@ -193,9 +200,13 @@ class CreateCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             inputs.addSeparatorCommandInput('separatorAfterRatios')
 
-            offsetRatio = adsk.core.ValueInput.createByReal(COMMAND.defaultOffsetRatio)
-            _offsetRatioValueInput = inputs.addValueInput(offsetRatioInputDef.id, offsetRatioInputDef.name, '', offsetRatio)
-            _offsetRatioValueInput.tooltip = offsetRatioInputDef.tooltip
+            separatorOffsetRatio = adsk.core.ValueInput.createByReal(COMMAND.defaultSeparatorOffsetRatio)
+            _separatorOffsetRatioValueInput = inputs.addValueInput(separatorOffsetRatioInputDef.id, separatorOffsetRatioInputDef.name, '', separatorOffsetRatio)
+            _separatorOffsetRatioValueInput.tooltip = separatorOffsetRatioInputDef.tooltip
+
+            scallopOffsetRatio = adsk.core.ValueInput.createByReal(COMMAND.defaultScallopOffsetRatio)
+            _scallopOffsetRatioValueInput = inputs.addValueInput(scallopOffsetRatioInputDef.id, scallopOffsetRatioInputDef.name, '', scallopOffsetRatio)
+            _scallopOffsetRatioValueInput.tooltip = scallopOffsetRatioInputDef.tooltip
 
             onPreSelect = PreSelectHandler()
             command.preSelect.add(onPreSelect)
@@ -224,7 +235,7 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
     def notify(self, args):
         try:
-            global _editedCustomFeature, _gemstonesSelectionInput, _separatorWidthValueInput, _separatorDepthValueInput, _scallopDiameterValueInput, _offsetRatioValueInput
+            global _editedCustomFeature, _gemstonesSelectionInput, _separatorWidthValueInput, _separatorDepthValueInput, _scallopDiameterValueInput, _separatorOffsetRatioValueInput, _scallopOffsetRatioValueInput
 
             eventArgs = adsk.core.CommandCreatedEventArgs.cast(args)
             command = eventArgs.command
@@ -257,9 +268,13 @@ class EditCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             inputs.addSeparatorCommandInput('separatorAfterRatios')
 
-            offsetRatio = adsk.core.ValueInput.createByString(parameters.itemById(offsetRatioInputDef.id).expression)
-            _offsetRatioValueInput = inputs.addValueInput(offsetRatioInputDef.id, offsetRatioInputDef.name, '', offsetRatio)
-            _offsetRatioValueInput.tooltip = offsetRatioInputDef.tooltip
+            separatorOffsetRatio = adsk.core.ValueInput.createByString(parameters.itemById(separatorOffsetRatioInputDef.id).expression)
+            _separatorOffsetRatioValueInput = inputs.addValueInput(separatorOffsetRatioInputDef.id, separatorOffsetRatioInputDef.name, '', separatorOffsetRatio)
+            _separatorOffsetRatioValueInput.tooltip = separatorOffsetRatioInputDef.tooltip
+
+            scallopOffsetRatio = adsk.core.ValueInput.createByString(parameters.itemById(scallopOffsetRatioInputDef.id).expression)
+            _scallopOffsetRatioValueInput = inputs.addValueInput(scallopOffsetRatioInputDef.id, scallopOffsetRatioInputDef.name, '', scallopOffsetRatio)
+            _scallopOffsetRatioValueInput.tooltip = scallopOffsetRatioInputDef.tooltip
 
             onPreSelect = PreSelectHandler()
             command.preSelect.add(onPreSelect)
@@ -349,7 +364,11 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
                 eventArgs.areInputsValid = False
                 return
 
-            if not isValueInRange(_offsetRatioValueInput, COMMAND.minOffsetRatio, COMMAND.maxOffsetRatio):
+            if not isValueInRange(_separatorOffsetRatioValueInput, COMMAND.minOffsetRatio, COMMAND.maxOffsetRatio):
+                eventArgs.areInputsValid = False
+                return
+
+            if not isValueInRange(_scallopOffsetRatioValueInput, COMMAND.minOffsetRatio, COMMAND.maxOffsetRatio):
                 eventArgs.areInputsValid = False
                 return
 
@@ -378,7 +397,8 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
                 _separatorWidthValueInput.value,
                 _separatorDepthValueInput.value,
                 _scallopDiameterValueInput.value,
-                _offsetRatioValueInput.value
+                _separatorOffsetRatioValueInput.value,
+                _scallopOffsetRatioValueInput.value
                 )
             if not cutters:
                 return
@@ -420,7 +440,8 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
                 _separatorWidthValueInput.value,
                 _separatorDepthValueInput.value,
                 _scallopDiameterValueInput.value,
-                _offsetRatioValueInput.value
+                _separatorOffsetRatioValueInput.value,
+                _scallopOffsetRatioValueInput.value
                 )
             if not cutters:
                 eventArgs.executeFailed = True
@@ -455,8 +476,11 @@ class CreateExecuteHandler(adsk.core.CommandEventHandler):
             scallopDiameter = adsk.core.ValueInput.createByString(_scallopDiameterValueInput.expression)
             customFeatureInput.addCustomParameter(scallopDiameterInputDef.id, scallopDiameterInputDef.name, scallopDiameter, '', True)
 
-            offsetRatio = adsk.core.ValueInput.createByString(_offsetRatioValueInput.expression)
-            customFeatureInput.addCustomParameter(offsetRatioInputDef.id, offsetRatioInputDef.name, offsetRatio, '', True)
+            separatorOffsetRatio = adsk.core.ValueInput.createByString(_separatorOffsetRatioValueInput.expression)
+            customFeatureInput.addCustomParameter(separatorOffsetRatioInputDef.id, separatorOffsetRatioInputDef.name, separatorOffsetRatio, '', True)
+
+            scallopOffsetRatio = adsk.core.ValueInput.createByString(_scallopOffsetRatioValueInput.expression)
+            customFeatureInput.addCustomParameter(scallopOffsetRatioInputDef.id, scallopOffsetRatioInputDef.name, scallopOffsetRatio, '', True)
 
             customFeatureInput.setStartAndEndFeatures(baseFeature, baseFeature)
             component.features.customFeatures.add(customFeatureInput)
@@ -554,7 +578,8 @@ class EditExecuteHandler(adsk.core.CommandEventHandler):
             _editedCustomFeature.parameters.itemById(separatorWidthInputDef.id).expression = _separatorWidthValueInput.expression
             _editedCustomFeature.parameters.itemById(separatorDepthInputDef.id).expression = _separatorDepthValueInput.expression
             _editedCustomFeature.parameters.itemById(scallopDiameterInputDef.id).expression = _scallopDiameterValueInput.expression
-            _editedCustomFeature.parameters.itemById(offsetRatioInputDef.id).expression = _offsetRatioValueInput.expression
+            _editedCustomFeature.parameters.itemById(separatorOffsetRatioInputDef.id).expression = _separatorOffsetRatioValueInput.expression
+            _editedCustomFeature.parameters.itemById(scallopOffsetRatioInputDef.id).expression = _scallopOffsetRatioValueInput.expression
 
         except:
             showMessage(f'EditExecuteHandler: {traceback.format_exc()}\n', True)
@@ -578,7 +603,7 @@ class ComputeCustomFeature(adsk.fusion.CustomFeatureEventHandler):
             showMessage(f'ComputeCustomFeature: {traceback.format_exc()}\n', True)
 
 
-def createBodies(gemstones: list[adsk.fusion.BRepBody], separatorWidth: float, separatorDepth: float, scallopDiameter: float, offsetRatio: float, includeBodies: bool = True) -> list[CutterBodyInfo] | None:
+def createBodies(gemstones: list[adsk.fusion.BRepBody], separatorWidth: float, separatorDepth: float, scallopDiameter: float, separatorOffsetRatio: float, scallopOffsetRatio: float, includeBodies: bool = True) -> list[CutterBodyInfo] | None:
     """Create separator triangle cutters and scallop cylinder cutters for nearby gemstones."""
     try:
         if not gemstones or len(gemstones) < 2:
@@ -595,13 +620,13 @@ def createBodies(gemstones: list[adsk.fusion.BRepBody], separatorWidth: float, s
         cutters: list[CutterBodyInfo] = []
 
         for info1, info2 in connections:
-            cutterInfo = createSeparatorCutterInfo(info1, info2, separatorWidth, separatorDepth, offsetRatio, includeBodies)
+            cutterInfo = createSeparatorCutterInfo(info1, info2, separatorWidth, separatorDepth, separatorOffsetRatio, includeBodies)
             if cutterInfo is not None:
                 cutters.append(cutterInfo)
 
         neighborMap = createNeighborMap(gemstoneInfos, connections)
         for info in gemstoneInfos:
-            cutterInfo = createScallopCutterInfo(info, gemstoneInfos, neighborMap, scallopDiameter, offsetRatio, includeBodies)
+            cutterInfo = createScallopCutterInfo(info, gemstoneInfos, neighborMap, scallopDiameter, scallopOffsetRatio, includeBodies)
             if cutterInfo is not None:
                 cutters.append(cutterInfo)
 
@@ -612,7 +637,7 @@ def createBodies(gemstones: list[adsk.fusion.BRepBody], separatorWidth: float, s
         return None
 
 
-def createSeparatorCutterInfo(info1: GemstoneInfo, info2: GemstoneInfo, separatorWidth: float, separatorDepth: float, offsetRatio: float, includeBody: bool = True) -> CutterBodyInfo | None:
+def createSeparatorCutterInfo(info1: GemstoneInfo, info2: GemstoneInfo, separatorWidth: float, separatorDepth: float, separatorOffsetRatio: float, includeBody: bool = True) -> CutterBodyInfo | None:
     """Create separator cutter data exactly between two gemstone girdles."""
     try:
         normal = averageNormal(info1, info2)
@@ -632,7 +657,7 @@ def createSeparatorCutterInfo(info1: GemstoneInfo, info2: GemstoneInfo, separato
         position = midpoint(firstGirdlePoint, secondGirdlePoint)
 
         avgDiameter = info1.radius + info2.radius
-        position = tableAlignedPoint(position, normal, [info1, info2], avgDiameter, offsetRatio)
+        position = tableAlignedPoint(position, normal, [info1, info2], avgDiameter, separatorOffsetRatio)
 
         width = avgDiameter * separatorWidth
         depth = avgDiameter * separatorDepth
@@ -649,7 +674,7 @@ def createSeparatorCutterInfo(info1: GemstoneInfo, info2: GemstoneInfo, separato
         return None
 
 
-def createScallopCutterInfo(info: GemstoneInfo, gemstoneInfos: list[GemstoneInfo], neighborMap: dict[int, list[GemstoneInfo]], scallopDiameter: float, offsetRatio: float, includeBody: bool = True) -> CutterBodyInfo | None:
+def createScallopCutterInfo(info: GemstoneInfo, gemstoneInfos: list[GemstoneInfo], neighborMap: dict[int, list[GemstoneInfo]], scallopDiameter: float, scallopOffsetRatio: float, includeBody: bool = True) -> CutterBodyInfo | None:
     """Create scallop cutter data centered on one gemstone."""
     try:
         normal = info.getNormalizedNormal()
@@ -665,7 +690,7 @@ def createScallopCutterInfo(info: GemstoneInfo, gemstoneInfos: list[GemstoneInfo
         if cutterAxis is None:
             return None
 
-        position = tableAlignedPoint(info.centroid.copy(), normal, [info], info.diameter, offsetRatio)
+        position = tableAlignedPoint(info.centroid.copy(), normal, [info], info.diameter, scallopOffsetRatio)
 
         diameter = info.diameter * scallopDiameter
         length = info.diameter * COMMAND.cutterWidthRatio
@@ -1122,9 +1147,10 @@ def updateFeature(customFeature: adsk.fusion.CustomFeature) -> bool:
         separatorWidth = customFeature.parameters.itemById(separatorWidthInputDef.id).value
         separatorDepth = customFeature.parameters.itemById(separatorDepthInputDef.id).value
         scallopDiameter = customFeature.parameters.itemById(scallopDiameterInputDef.id).value
-        offsetRatio = customFeature.parameters.itemById(offsetRatioInputDef.id).value
+        separatorOffsetRatio = customFeature.parameters.itemById(separatorOffsetRatioInputDef.id).value
+        scallopOffsetRatio = customFeature.parameters.itemById(scallopOffsetRatioInputDef.id).value
 
-        cutters = createBodies(gemstones, separatorWidth, separatorDepth, scallopDiameter, offsetRatio, False)
+        cutters = createBodies(gemstones, separatorWidth, separatorDepth, scallopDiameter, separatorOffsetRatio, scallopOffsetRatio, False)
 
         baseFeature.startEdit()
 
